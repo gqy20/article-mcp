@@ -17,6 +17,7 @@ def create_mcp_server():
     from fastmcp import FastMCP
     from src.europe_pmc import create_europe_pmc_service
     from src.reference_service import create_reference_service, get_references_by_doi_sync
+    from src.pubmed_search import create_pubmed_service
 
     # 创建 MCP 服务器实例
     mcp = FastMCP("Europe PMC MCP Server", version="1.0.0")
@@ -27,6 +28,7 @@ def create_mcp_server():
     
     europe_pmc_service = create_europe_pmc_service(logger)
     reference_service = create_reference_service(logger)
+    pubmed_service = create_pubmed_service(logger)
 
 
 
@@ -74,13 +76,27 @@ def create_mcp_server():
         - 自动重试机制
         - 并发控制和速率限制
         """
+        # 先尝试 PubMed 搜索
+        pubmed_result = pubmed_service.search(
+            keyword=keyword,
+            email=email,
+            start_date=start_date,
+            end_date=end_date,
+            max_results=max_results
+        )
+
+        # 如果 PubMed 返回有效结果，则直接使用
+        if pubmed_result.get("articles"):
+            return pubmed_result
+
+        # 否则回退到 Europe PMC
         return europe_pmc_service.search(
             query=keyword,
             email=email,
             start_date=start_date,
             end_date=end_date,
             max_results=max_results,
-            mode="async"
+            mode="sync"
         )
 
 
@@ -117,7 +133,7 @@ def create_mcp_server():
         - 自动重试机制
         - 并发控制
         """
-        return europe_pmc_service.fetch(pmid, mode="async")
+        return europe_pmc_service.fetch(pmid, mode="sync")
     
 
     
