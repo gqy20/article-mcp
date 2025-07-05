@@ -93,6 +93,16 @@ class PubMedService:
             abs_parts = ["".join(n.itertext()).strip() for n in article.findall("./Abstract/AbstractText")]
             abstract = " ".join([p for p in abs_parts if p]) if abs_parts else "无摘要"
 
+            # 提取 DOI（从 PubmedData 或 Article 中）
+            doi = None
+            doi_link = None
+            pubmed_data = article_xml.find("./PubmedData")
+            if pubmed_data is not None:
+                doi_elem = pubmed_data.find("./ArticleIdList/ArticleId[@IdType='doi']")
+                if doi_elem is not None and doi_elem.text:
+                    doi = doi_elem.text.strip()
+                    doi_link = f"https://doi.org/{doi}"
+
             return {
                 "pmid": pmid or "N/A",
                 "pmid_link": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else None,
@@ -100,7 +110,13 @@ class PubMedService:
                 "authors": authors,
                 "journal_name": journal,
                 "publication_date": pub_date,
-                "abstract": abstract
+                "abstract": abstract,
+                "doi": doi,
+                "doi_link": doi_link,
+                "arxiv_id": None,
+                "arxiv_link": None,
+                "semantic_scholar_id": None,
+                "semantic_scholar_link": None
             }
         except Exception as e:
             self.logger.warning(f"解析文献失败: {e}")
@@ -170,6 +186,104 @@ class PubMedService:
             return {"articles": [], "error": f"网络请求错误: {e}", "message": None}
         except Exception as e:
             return {"articles": [], "error": f"处理错误: {e}", "message": None}
+
+    # ------------------------ 引用文献获取 ------------------------ #
+    def get_citing_articles(self, pmid: str, email: str = None, max_results: int = 20):
+        """获取引用该 PMID 的文献信息（Semantic Scholar → PubMed 补全）"""
+        import requests, xml.etree.ElementTree as ET, time
+        start_time = time.time()
+        try:
+            if not pmid or not pmid.isdigit():
+                return {"citing_articles": [], "error": "PMID 无效", "message": None}
+            if email and not self._validate_email(email):
+                email = None
+
+            # 1. 使用 Semantic Scholar Graph API 获取引用列表
+            ss_url = f"https://api.semanticscholar.org/graph/v1/paper/PMID:{pmid}/citations"
+            ss_params = {
+                "fields": "title,year,authors,venue,externalIds,publicationDate",
+                "limit": max_results
+            }
+            self.logger.info(f"Semantic Scholar 查询引用: {ss_url}")
+            ss_resp = requests.get(ss_url, params=ss_params, timeout=20)
+            if ss_resp.status_code != 200:
+                return {"citing_articles": [], "error": f"Semantic Scholar 错误 {ss_resp.status_code}", "message": None}
+
+            ss_data = ss_resp.json()
+            ss_items = ss_data.get("data", [])
+            if not ss_items:
+                return {"citing_articles": [], "total_count": 0, "message": "未找到引用文献", "error": None}
+
+            pmid_list = []
+            interim_articles = []
+            for item in ss_items:
+                paper = item.get("citingPaper") or item.get("paper") or {}
+                ext_ids = paper.get("externalIds", {})
+                ss_pmid = ext_ids.get("PubMed") or ext_ids.get("PMID")
+                if ss_pmid and str(ss_pmid).isdigit():
+                    pmid_list.append(str(ss_pmid))
+                else:
+                    # 为没有PMID的文献构建完整信息
+                    doi = ext_ids.get("DOI")
+                    arxiv_id = ext_ids.get("ArXiv")
+                    ss_paper_id = paper.get("paperId")
+                    
+                    # 构建各种链接
+                    pmid_link = None
+                    doi_link = f"https://doi.org/{doi}" if doi else None
+                    arxiv_link = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else None
+                    ss_link = f"https://www.semanticscholar.org/paper/{ss_paper_id}" if ss_paper_id else None
+                    
+                    # 优先级：DOI > ArXiv > Semantic Scholar
+                    primary_link = doi_link or arxiv_link or ss_link
+                    
+                    interim_articles.append({
+                        "pmid": None,
+                        "pmid_link": primary_link,
+                        "title": paper.get("title"),
+                        "authors": [a.get("name") for a in paper.get("authors", [])] if paper.get("authors") else None,
+                        "journal_name": paper.get("venue"),
+                        "publication_date": paper.get("publicationDate") or str(paper.get("year")),
+                        "abstract": None,
+                        "doi": doi,
+                        "doi_link": doi_link,
+                        "arxiv_id": arxiv_id,
+                        "arxiv_link": arxiv_link,
+                        "semantic_scholar_id": ss_paper_id,
+                        "semantic_scholar_link": ss_link
+                    })
+
+            # 2. 使用 PubMed EFetch 批量补全
+            citing_articles = []
+            if pmid_list:
+                efetch_params = {
+                    "db": "pubmed",
+                    "id": ",".join(pmid_list),
+                    "retmode": "xml",
+                    "rettype": "xml"
+                }
+                if email:
+                    efetch_params["email"] = email
+                r2 = requests.get(self.base_url + "efetch.fcgi", params=efetch_params, headers=self.headers, timeout=20)
+                r2.raise_for_status()
+                root = ET.fromstring(r2.content)
+                for art in root.findall(".//PubmedArticle"):
+                    info = self._process_article(art)
+                    if info:
+                        citing_articles.append(info)
+
+            citing_articles.extend(interim_articles)
+            return {
+                "citing_articles": citing_articles,
+                "total_count": len(ss_items),
+                "error": None,
+                "message": f"获取 {len(citing_articles)} 条引用文献 (Semantic Scholar + PubMed)",
+                "processing_time": round(time.time() - start_time, 2)
+            }
+        except requests.exceptions.RequestException as e:
+            return {"citing_articles": [], "error": f"网络请求错误: {e}", "message": None}
+        except Exception as e:
+            return {"citing_articles": [], "error": f"处理错误: {e}", "message": None}
 
 
 def create_pubmed_service(logger=None):

@@ -471,6 +471,48 @@ def create_mcp_server():
                 "error": str(e)
             }
 
+    @mcp.tool()
+    def get_citing_articles(
+        pmid: str,
+        max_results: int = 20,
+        email: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """获取引用该文献的文献信息
+
+        处理流程：
+        1. 使用 PubMed `elink`+`efetch` 获取引用 PMID 列表及详情。
+        2. 如 PubMed 未返回结果，则回退到 Europe PMC `/citations` 接口。
+        3. 返回统一结构：citing_articles、total_count、message、error。
+        """
+        # 先通过 PubMed
+        result = pubmed_service.get_citing_articles(pmid=pmid.strip(), email=email, max_results=max_results)
+        if result.get("citing_articles"):
+            return result
+
+        # 回退 Europe PMC
+        try:
+            import requests, json
+            url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/MED/{pmid.strip()}/citations.json"
+            resp = requests.get(url, timeout=20)
+            if resp.status_code != 200:
+                return result  # 返回原始 PubMed 结果（为空）
+            data = resp.json()
+            articles_json = data.get("resultList", {}).get("result", [])
+            citing_articles = []
+            for art in articles_json[:max_results]:
+                info = europe_pmc_service.process_europe_pmc_article(art)
+                if info:
+                    citing_articles.append(info)
+            return {
+                "citing_articles": citing_articles,
+                "total_count": data.get("hitCount", len(citing_articles)),
+                "message": "来自 Europe PMC 的引用文献" if citing_articles else "未找到引用文献",
+                "error": None
+            }
+        except Exception as e:
+            result["error"] = f"Europe PMC 获取引用失败: {e}"
+            return result
+
     return mcp
 
 
@@ -621,6 +663,11 @@ def show_info():
     print("   参数：keyword, email, start_date, end_date, max_results")
     print("   适用：预印本文献检索、最新研究发现、计算机科学/物理学/数学等领域")
     print("   特点：支持关键词搜索、日期范围过滤、完整错误处理")
+    print("7. get_citing_articles")
+    print("   功能：获取引用该文献的文献信息")
+    print("   参数：pmid, max_results, email")
+    print("   适用：文献引用分析、学术研究、文献数据库构建")
+    print("   特点：基于PubMed和Europe PMC的引用文献获取")
     print("\n使用 'python main.py --help' 查看更多选项")
 
 
