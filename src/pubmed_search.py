@@ -122,6 +122,200 @@ class PubMedService:
             self.logger.warning(f"解析文献失败: {e}")
             return None
 
+    # ------------------------ 期刊质量评估 ------------------------ #
+    def _load_journal_cache(self):
+        """加载本地期刊信息缓存"""
+        import json, os
+        try:
+            cache_path = os.path.join(os.path.dirname(__file__), "resource", "journal_info.json")
+            if os.path.exists(cache_path):
+                with open(cache_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            self.logger.warning(f"加载期刊缓存失败: {e}")
+            return {}
+
+    def _save_journal_cache(self, cache_data):
+        """保存期刊信息到本地缓存"""
+        import json, os
+        try:
+            cache_path = os.path.join(os.path.dirname(__file__), "resource", "journal_info.json")
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.logger.warning(f"保存期刊缓存失败: {e}")
+
+    def _query_easyscholar_api(self, journal_name: str, secret_key: str):
+        """调用 EasyScholar API 获取期刊信息"""
+        import requests
+        try:
+            url = "https://www.easyscholar.cc/open/getPublicationRank"
+            params = {
+                "secretKey": secret_key,
+                "publicationName": journal_name
+            }
+            
+            self.logger.info(f"调用 EasyScholar API 查询期刊: {journal_name}")
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data.get("code") == 200 and data.get("data"):
+                return data["data"]
+            else:
+                self.logger.warning(f"EasyScholar API 返回错误: {data.get('msg', 'Unknown error')}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            self.logger.warning(f"EasyScholar API 请求失败: {e}")
+            return None
+        except Exception as e:
+            self.logger.warning(f"EasyScholar API 处理错误: {e}")
+            return None
+
+    def _extract_quality_metrics(self, rank_data):
+        """从期刊排名数据中提取质量指标"""
+        if not rank_data:
+            return {}
+        
+        metrics = {}
+        
+        # 提取影响因子
+        if "sciif" in rank_data:
+            metrics["impact_factor"] = rank_data["sciif"]
+        
+        # 提取分区信息
+        if "sci" in rank_data:
+            metrics["sci_quartile"] = rank_data["sci"]
+        
+        if "sciUp" in rank_data:
+            metrics["sci_zone"] = rank_data["sciUp"]
+            
+        if "sciUpSmall" in rank_data:
+            metrics["sci_zone_detail"] = rank_data["sciUpSmall"]
+        
+        # 提取JCI
+        if "jci" in rank_data:
+            metrics["jci"] = rank_data["jci"]
+            
+        # 提取5年影响因子
+        if "sciif5" in rank_data:
+            metrics["impact_factor_5year"] = rank_data["sciif5"]
+        
+        return metrics
+
+    def get_journal_quality(self, journal_name: str, secret_key: str = None):
+        """获取期刊质量评估信息（影响因子、分区等）"""
+        if not journal_name or not journal_name.strip():
+            return {"error": "期刊名称不能为空"}
+        
+        journal_name = journal_name.strip()
+        
+        # 1. 先从本地缓存查询
+        cache = self._load_journal_cache()
+        if journal_name in cache:
+            rank_data = cache[journal_name].get("rank", {})
+            metrics = self._extract_quality_metrics(rank_data)
+            if metrics:
+                self.logger.info(f"从本地缓存获取期刊信息: {journal_name}")
+                return {
+                    "journal_name": journal_name,
+                    "source": "local_cache",
+                    "quality_metrics": metrics,
+                    "error": None
+                }
+        
+        # 2. 如果本地没有且提供了API密钥，则调用EasyScholar API
+        if secret_key:
+            api_data = self._query_easyscholar_api(journal_name, secret_key)
+            if api_data:
+                # 保存到缓存
+                if journal_name not in cache:
+                    cache[journal_name] = {}
+                cache[journal_name]["rank"] = {}
+                
+                # 处理官方排名数据
+                if "officialRank" in api_data:
+                    official = api_data["officialRank"]
+                    if "select" in official:
+                        cache[journal_name]["rank"].update(official["select"])
+                    elif "all" in official:
+                        cache[journal_name]["rank"].update(official["all"])
+                
+                # 处理自定义排名数据
+                if "customRank" in api_data:
+                    custom = api_data["customRank"]
+                    if "rankInfo" in custom and "rank" in custom:
+                        # 解析自定义排名
+                        rank_info_map = {info["uuid"]: info for info in custom["rankInfo"]}
+                        for rank_entry in custom["rank"]:
+                            if "&&&" in rank_entry:
+                                uuid, rank_level = rank_entry.split("&&&", 1)
+                                if uuid in rank_info_map:
+                                    info = rank_info_map[uuid]
+                                    abbr_name = info.get("abbName", "")
+                                    rank_text = ""
+                                    if rank_level == "1":
+                                        rank_text = info.get("oneRankText", "")
+                                    elif rank_level == "2":
+                                        rank_text = info.get("twoRankText", "")
+                                    elif rank_level == "3":
+                                        rank_text = info.get("threeRankText", "")
+                                    elif rank_level == "4":
+                                        rank_text = info.get("fourRankText", "")
+                                    elif rank_level == "5":
+                                        rank_text = info.get("fiveRankText", "")
+                                    
+                                    if abbr_name and rank_text:
+                                        cache[journal_name]["rank"][abbr_name.lower()] = rank_text
+                
+                self._save_journal_cache(cache)
+                
+                # 提取质量指标
+                metrics = self._extract_quality_metrics(cache[journal_name]["rank"])
+                self.logger.info(f"从 EasyScholar API 获取期刊信息: {journal_name}")
+                return {
+                    "journal_name": journal_name,
+                    "source": "easyscholar_api",
+                    "quality_metrics": metrics,
+                    "error": None
+                }
+        
+        # 3. 都没有找到
+        return {
+            "journal_name": journal_name,
+            "source": None,
+            "quality_metrics": {},
+            "error": "未找到期刊质量信息" + ("（未提供 EasyScholar API 密钥）" if not secret_key else "")
+        }
+
+    def evaluate_articles_quality(self, articles: list, secret_key: str = None):
+        """批量评估文献的期刊质量"""
+        if not articles:
+            return []
+        
+        evaluated_articles = []
+        for article in articles:
+            journal_name = article.get("journal_name")
+            if journal_name:
+                quality_info = self.get_journal_quality(journal_name, secret_key)
+                article_copy = article.copy()
+                article_copy["journal_quality"] = quality_info
+                evaluated_articles.append(article_copy)
+            else:
+                article_copy = article.copy()
+                article_copy["journal_quality"] = {
+                    "journal_name": None,
+                    "source": None,
+                    "quality_metrics": {},
+                    "error": "无期刊信息"
+                }
+                evaluated_articles.append(article_copy)
+        
+        return evaluated_articles
+
     # ------------------------ 对外接口 ------------------------ #
     def search(self, keyword: str, email: str = None, start_date: str = None, end_date: str = None, max_results: int = 10):
         """关键词搜索 PubMed，返回与 Europe PMC 一致的结构"""

@@ -9,6 +9,7 @@ import argparse
 import sys
 import asyncio
 import logging
+import os
 from typing import Optional, Dict, Any, List
 
 
@@ -513,6 +514,101 @@ def create_mcp_server():
             result["error"] = f"Europe PMC 获取引用失败: {e}"
             return result
 
+    @mcp.tool()
+    def get_journal_quality(
+        journal_name: str,
+        secret_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """获取期刊质量评估信息（影响因子、分区等）
+        
+        功能说明：
+        - 先从本地缓存（journal_info.json）查询期刊信息
+        - 如果本地没有且提供了API密钥，则调用EasyScholar API获取
+        - 返回期刊的影响因子、分区、JCI等质量指标
+        
+        参数说明：
+        - journal_name: 必需，期刊名称
+        - secret_key: 可选，EasyScholar API密钥（可从环境变量EASYSCHOLAR_SECRET_KEY获取）
+        
+        返回值说明：
+        - journal_name: 期刊名称
+        - source: 数据来源（local_cache 或 easyscholar_api）
+        - quality_metrics: 质量指标字典
+          - impact_factor: 影响因子
+          - sci_quartile: SCI分区
+          - sci_zone: SCI大区
+          - jci: JCI指数
+          - impact_factor_5year: 5年影响因子
+        - error: 错误信息（如果有）
+        
+        使用场景：
+        - 评估期刊质量
+        - 选择投稿期刊
+        - 文献质量评估
+        """
+        # 如果没有提供密钥，尝试从环境变量获取
+        if not secret_key:
+            secret_key = os.getenv('EASYSCHOLAR_SECRET_KEY')
+        
+        return pubmed_service.get_journal_quality(journal_name, secret_key)
+
+    @mcp.tool()
+    def evaluate_articles_quality(
+        articles: List[Dict[str, Any]],
+        secret_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """批量评估文献的期刊质量
+        
+        功能说明：
+        - 为文献列表中的每篇文献评估其期刊质量
+        - 先从本地缓存查询，没有则调用EasyScholar API
+        - 返回包含期刊质量信息的完整文献列表
+        
+        参数说明：
+        - articles: 必需，文献列表（来自搜索结果）
+        - secret_key: 可选，EasyScholar API密钥（可从环境变量EASYSCHOLAR_SECRET_KEY获取）
+        
+        返回值说明：
+        - evaluated_articles: 包含期刊质量信息的文献列表
+        - total_count: 评估的文献总数
+        - message: 处理信息
+        - error: 错误信息（如果有）
+        
+        使用场景：
+        - 批量评估搜索结果的期刊质量
+        - 文献质量筛选
+        - 学术研究质量评估
+        """
+        try:
+            # 如果没有提供密钥，尝试从环境变量获取
+            if not secret_key:
+                secret_key = os.getenv('EASYSCHOLAR_SECRET_KEY')
+            
+            if not articles:
+                return {
+                    "evaluated_articles": [],
+                    "total_count": 0,
+                    "message": "没有文献需要评估",
+                    "error": None
+                }
+            
+            evaluated_articles = pubmed_service.evaluate_articles_quality(articles, secret_key)
+            
+            return {
+                "evaluated_articles": evaluated_articles,
+                "total_count": len(evaluated_articles),
+                "message": f"成功评估 {len(evaluated_articles)} 篇文献的期刊质量",
+                "error": None
+            }
+            
+        except Exception as e:
+            return {
+                "evaluated_articles": [],
+                "total_count": 0,
+                "message": None,
+                "error": f"期刊质量评估失败: {e}"
+            }
+
     return mcp
 
 
@@ -545,6 +641,18 @@ def start_server(transport: str = "stdio", host: str = "localhost", port: int = 
     print("   - 搜索arXiv文献数据库（基于arXiv官方API）")
     print("   - 适用于：预印本文献检索、最新研究发现、计算机科学/物理学/数学等领域")
     print("   - 特点：支持关键词搜索、日期范围过滤、完整错误处理")
+    print("7. get_citing_articles")
+    print("   - 获取引用该文献的文献信息")
+    print("   - 适用于：文献引用分析、学术研究、文献数据库构建")
+    print("   - 特点：基于PubMed和Europe PMC的引用文献获取")
+    print("8. get_journal_quality")
+    print("   - 获取期刊质量评估信息（影响因子、分区等）")
+    print("   - 适用于：期刊质量评估、投稿期刊选择、文献质量筛选")
+    print("   - 特点：本地缓存优先，支持EasyScholar API补全")
+    print("9. evaluate_articles_quality")
+    print("   - 批量评估文献的期刊质量")
+    print("   - 适用于：文献质量筛选、学术研究质量评估")
+    print("   - 特点：批量处理，智能缓存，完整质量指标")
     
     mcp = create_mcp_server()
     
@@ -668,6 +776,16 @@ def show_info():
     print("   参数：pmid, max_results, email")
     print("   适用：文献引用分析、学术研究、文献数据库构建")
     print("   特点：基于PubMed和Europe PMC的引用文献获取")
+    print("8. get_journal_quality")
+    print("   功能：获取期刊质量评估信息（影响因子、分区等）")
+    print("   参数：journal_name, secret_key")
+    print("   适用：期刊质量评估、投稿期刊选择、文献质量筛选")
+    print("   特点：本地缓存优先，支持EasyScholar API补全")
+    print("9. evaluate_articles_quality")
+    print("   功能：批量评估文献的期刊质量")
+    print("   参数：articles, secret_key")
+    print("   适用：文献质量筛选、学术研究质量评估")
+    print("   特点：批量处理，智能缓存，完整质量指标")
     print("\n使用 'python main.py --help' 查看更多选项")
 
 
