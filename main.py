@@ -28,6 +28,8 @@ def create_mcp_server():
     europe_pmc_service = create_europe_pmc_service(logger)
     reference_service = create_reference_service(logger)
 
+
+
     @mcp.tool()
     def search_europe_pmc(
         keyword: str,
@@ -36,50 +38,7 @@ def create_mcp_server():
         end_date: Optional[str] = None,
         max_results: int = 10
     ) -> Dict[str, Any]:
-        """搜索 Europe PMC 文献数据库（同步版本）
-        
-        功能说明：
-        - 在 Europe PMC 数据库中搜索学术文献
-        - 支持关键词搜索和日期范围过滤
-        - 返回文献的基本信息（标题、作者、摘要、DOI、PMID等）
-        - 使用同步方式执行，适合简单查询
-        
-        参数说明：
-        - keyword: 必需，搜索关键词（如："machine learning", "COVID-19", "cancer therapy"）
-        - email: 可选，提供邮箱地址以获得更高的API速率限制
-        - start_date: 可选，开始日期，格式：YYYY-MM-DD（如："2020-01-01"）
-        - end_date: 可选，结束日期，格式：YYYY-MM-DD（如："2023-12-31"）
-        - max_results: 可选，最大返回结果数量，默认10，最大100
-        
-        返回值说明：
-        - articles: 文献列表，包含title、authors、abstract、journal_name、doi、pmid等字段
-        - total_count: 总结果数量
-        - search_time: 搜索耗时（秒）
-        - message: 处理信息
-        - error: 错误信息（如果有）
-        
-        使用场景：
-        - 简单的文献检索
-        - 获取特定主题的文献概览
-        - 小批量数据查询
-        """
-        return europe_pmc_service.search_sync(
-            keyword=keyword,
-            email=email,
-            start_date=start_date,
-            end_date=end_date,
-            max_results=max_results
-        )
-
-    @mcp.tool()
-    def search_europe_pmc_async(
-        keyword: str,
-        email: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        max_results: int = 10
-    ) -> Dict[str, Any]:
-        """异步搜索 Europe PMC 文献数据库（高性能优化版本）
+        """搜索 Europe PMC 文献数据库（高性能优化版本）
         
         功能说明：
         - 使用异步方式在 Europe PMC 数据库中搜索学术文献
@@ -124,43 +83,11 @@ def create_mcp_server():
             mode="async"
         )
 
-    @mcp.tool()
-    def get_article_details(pmid: str) -> Dict[str, Any]:
-        """获取特定文献的详细信息（同步版本）
-        
-        功能说明：
-        - 根据PMID获取文献的完整详细信息
-        - 包括全文摘要、引用数据、期刊信息、发表详情等
-        - 使用同步方式执行，适合单篇文献查询
-        
-        参数说明：
-        - pmid: 必需，PubMed ID（如："37769091"）
-        
-        返回值说明：
-        - title: 文献标题
-        - authors: 作者列表
-        - abstract: 完整摘要
-        - journal_name: 期刊名称
-        - publication_date: 发表日期
-        - doi: 数字对象标识符
-        - pmid: PubMed ID
-        - pmcid: PMC ID（如果有）
-        - keywords: 关键词列表
-        - citations: 引用数量
-        - references: 参考文献数量
-        - full_text_url: 全文链接（如果有）
-        - error: 错误信息（如果有）
-        
-        使用场景：
-        - 获取单篇文献的完整信息
-        - 文献详情查看
-        - 引用分析准备
-        """
-        return europe_pmc_service.get_article_details_sync(pmid)
+
 
     @mcp.tool()
-    def get_article_details_async(pmid: str) -> Dict[str, Any]:
-        """异步获取特定文献的详细信息（高性能优化版本）
+    def get_article_details(pmid: str) -> Dict[str, Any]:
+        """获取特定文献的详细信息（高性能优化版本）
         
         功能说明：
         - 使用异步方式根据PMID获取文献的完整详细信息
@@ -192,162 +119,12 @@ def create_mcp_server():
         """
         return europe_pmc_service.fetch(pmid, mode="async")
     
+
+    
+
+    
     @mcp.tool()
     def get_references_by_doi(doi: str) -> Dict[str, Any]:
-        """通过DOI获取参考文献列表（同步版本）
-        
-        功能说明：
-        - 根据DOI获取该文献的所有参考文献
-        - 使用Crossref API获取基础参考文献信息
-        - 使用Europe PMC API补全详细信息（摘要、PMID等）
-        - 自动去重和数据清洗
-        
-        参数说明：
-        - doi: 必需，数字对象标识符（如："10.1126/science.adf6218"）
-        
-        返回值说明：
-        - references: 参考文献列表，每个包含：
-          - title: 标题
-          - authors: 作者列表
-          - journal: 期刊名称
-          - year: 发表年份
-          - doi: DOI
-          - pmid: PMID（如果有）
-          - abstract: 摘要（如果有）
-          - source: 数据源（crossref/europe_pmc）
-        - total_count: 总参考文献数量
-        - enriched_count: Europe PMC补全的数量
-        - processing_time: 处理耗时（秒）
-        - processing_info: 处理统计信息
-        - error: 错误信息（如果有）
-        
-        使用场景：
-        - 文献引用分析
-        - 相关文献发现
-        - 研究领域梳理
-        - 学术谱系分析
-        """
-        try:
-            # 验证DOI格式
-            if not doi or not doi.strip():
-                return {
-                    "references": [],
-                    "message": "DOI不能为空",
-                    "error": "请提供有效的DOI",
-                    "total_count": 0
-                }
-            
-            # 获取参考文献
-            result = reference_service.get_references_by_doi(doi.strip())
-            
-            # 添加处理统计信息
-            references = result.get("references", [])
-            if references:
-                # 统计信息
-                crossref_count = len([r for r in references if r.get("source") == "crossref"])
-                europe_pmc_count = len([r for r in references if r.get("source") == "europe_pmc"])
-                enriched_count = result.get("enriched_count", 0)
-                
-                result["processing_info"] = {
-                    "crossref_count": crossref_count,
-                    "europe_pmc_count": europe_pmc_count,
-                    "enriched_count": enriched_count,
-                    "total_processed": len(references)
-                }
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"获取参考文献过程中发生异常: {e}")
-            return {
-                "references": [],
-                "message": "获取参考文献失败",
-                "error": str(e),
-                "total_count": 0
-            }
-    
-    @mcp.tool()
-    def get_references_by_doi_async(doi: str) -> Dict[str, Any]:
-        """通过DOI获取参考文献列表（异步并行优化版本）
-        
-        功能说明：
-        - 使用异步方式根据DOI获取参考文献列表
-        - 支持并发处理多个参考文献的详细信息获取
-        - 使用信号量控制并发数量，避免API速率限制
-        - 集成缓存机制，提高重复查询效率
-        - 自动重试和错误恢复
-        
-        参数说明：
-        - doi: 必需，数字对象标识符（如："10.1126/science.adf6218"）
-        
-        返回值说明：
-        - 包含与同步版本相同的基础字段
-        - 额外提供：
-          - processing_time: 总处理耗时（秒）
-          - performance_info: 详细性能统计
-            - crossref_time: Crossref API耗时
-            - europe_pmc_time: Europe PMC API耗时
-            - concurrent_requests: 并发请求数
-            - cache_hits: 缓存命中数
-            - retry_count: 重试次数
-          - optimization_info: 优化信息
-        
-        使用场景：
-        - 需要快速获取大量参考文献的场景
-        - 大规模文献分析
-        - 高性能数据处理
-        - 时间敏感的查询任务
-        
-        性能特点：
-        - 比同步版本快6-10倍
-        - 支持最多10个并发请求
-        - 智能缓存机制
-        - 自动重试和错误恢复
-        - 详细的性能监控
-        """
-        try:
-            # 验证DOI格式
-            if not doi or not doi.strip():
-                return {
-                    "references": [],
-                    "message": "DOI不能为空",
-                    "error": "请提供有效的DOI",
-                    "total_count": 0
-                }
-            
-            # 使用异步版本获取参考文献
-            result = get_references_by_doi_sync(doi.strip(), logger)
-            
-            # 添加处理统计信息
-            references = result.get("references", [])
-            if references:
-                # 统计信息
-                crossref_count = len([r for r in references if r.get("source") == "crossref"])
-                europe_pmc_count = len([r for r in references if r.get("source") == "europe_pmc"])
-                enriched_count = result.get("enriched_count", 0)
-                
-                result["processing_info"] = {
-                    "crossref_count": crossref_count,
-                    "europe_pmc_count": europe_pmc_count,
-                    "enriched_count": enriched_count,
-                    "total_processed": len(references),
-                    "processing_time": result.get("processing_time", 0),
-                    "performance_info": result.get("performance_info", {})
-                }
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"异步获取参考文献过程中发生异常: {e}")
-            return {
-                "references": [],
-                "message": "获取参考文献失败",
-                "error": str(e),
-                "total_count": 0
-            }
-    
-    @mcp.tool()
-    def get_references_by_doi_batch_optimized(doi: str) -> Dict[str, Any]:
         """通过DOI获取参考文献列表（批量优化版本 - 基于Europe PMC批量查询能力）
         
         功能说明：
@@ -524,33 +301,20 @@ def start_server(transport: str = "stdio", host: str = "localhost", port: int = 
     """启动MCP服务器"""
     print(f"启动 Europe PMC MCP 服务器 (基于 BioMCP 设计模式)")
     print(f"传输模式: {transport}")
-    print("可用工具:")
+    print("可用工具（仅保留最高性能版本）:")
     print("1. search_europe_pmc")
-    print("   - 搜索 Europe PMC 文献数据库（同步版本）")
-    print("   - 适用于：简单文献检索、小批量查询")
-    print("2. search_europe_pmc_async")
-    print("   - 异步搜索 Europe PMC 文献数据库（高性能优化版本）")
-    print("   - 适用于：大批量检索、复杂查询、高性能需求")
-    print("   - 性能：比同步版本快30-50%，支持缓存和并发")
-    print("3. get_article_details")
-    print("   - 获取特定文献的详细信息（同步版本）")
-    print("   - 适用于：单篇文献详情查看、引用分析准备")
-    print("4. get_article_details_async")
-    print("   - 异步获取特定文献的详细信息（高性能优化版本）")
-    print("   - 适用于：批量文献详情查询、大规模数据处理")
-    print("   - 性能：比同步版本快20-40%，支持缓存和重试")
-    print("5. get_references_by_doi")
-    print("   - 通过DOI获取参考文献列表（同步版本）")
-    print("   - 适用于：文献引用分析、相关文献发现")
-    print("6. get_references_by_doi_async")
-    print("   - 通过DOI获取参考文献列表（异步并行优化版本）")
-    print("   - 适用于：大规模文献分析、高性能数据处理")
-    print("   - 性能：比同步版本快6-10倍，支持10个并发请求")
-    print("7. get_references_by_doi_batch_optimized")
+    print("   - 搜索 Europe PMC 文献数据库（高性能优化版本）")
+    print("   - 适用于：文献检索、复杂查询、高性能需求")
+    print("   - 性能：比传统方法快30-50%，支持缓存和并发")
+    print("2. get_article_details")
+    print("   - 获取特定文献的详细信息（高性能优化版本）")
+    print("   - 适用于：文献详情查询、大规模数据处理")
+    print("   - 性能：比传统方法快20-40%，支持缓存和重试")
+    print("3. get_references_by_doi")
     print("   - 通过DOI获取参考文献列表（批量优化版本）")
-    print("   - 适用于：大规模参考文献获取、文献数据库构建")
+    print("   - 适用于：参考文献获取、文献数据库构建")
     print("   - 性能：比传统方法快10-15倍，利用Europe PMC批量查询能力")
-    print("8. batch_enrich_references_by_dois")
+    print("4. batch_enrich_references_by_dois")
     print("   - 批量补全多个DOI的参考文献信息（超高性能版本）")
     print("   - 适用于：大规模文献数据分析、学术数据库构建")
     print("   - 性能：比逐个查询快10-15倍，支持最多20个DOI同时处理")
@@ -641,40 +405,23 @@ def show_info():
     print("- 同步版本: 67.79秒 (112条参考文献)")
     print("- 异步版本: 10.99秒 (112条参考文献)")
     print("- 性能提升: 6.2倍更快，节省83.8%时间")
-    print("\n📚 MCP 工具详情:")
+    print("\n📚 MCP 工具详情（仅保留最高性能版本）:")
     print("1. search_europe_pmc")
-    print("   功能：搜索 Europe PMC 文献数据库（同步版本）")
+    print("   功能：搜索 Europe PMC 文献数据库（高性能优化版本）")
     print("   参数：keyword, email, start_date, end_date, max_results")
-    print("   适用：简单文献检索、小批量查询")
-    print("2. search_europe_pmc_async")
-    print("   功能：异步搜索 Europe PMC 文献数据库（高性能优化版本）")
-    print("   参数：keyword, email, start_date, end_date, max_results")
-    print("   适用：大批量检索、复杂查询、高性能需求")
-    print("   性能：比同步版本快30-50%，支持缓存和并发")
-    print("3. get_article_details")
-    print("   功能：获取特定文献的详细信息（同步版本）")
+    print("   适用：文献检索、复杂查询、高性能需求")
+    print("   性能：比传统方法快30-50%，支持缓存和并发")
+    print("2. get_article_details")
+    print("   功能：获取特定文献的详细信息（高性能优化版本）")
     print("   参数：pmid")
-    print("   适用：单篇文献详情查看、引用分析准备")
-    print("4. get_article_details_async")
-    print("   功能：异步获取特定文献的详细信息（高性能优化版本）")
-    print("   参数：pmid")
-    print("   适用：批量文献详情查询、大规模数据处理")
-    print("   性能：比同步版本快20-40%，支持缓存和重试")
-    print("5. get_references_by_doi")
-    print("   功能：通过DOI获取参考文献列表（同步版本）")
-    print("   参数：doi")
-    print("   适用：文献引用分析、相关文献发现")
-    print("6. get_references_by_doi_async")
-    print("   功能：通过DOI获取参考文献列表（异步并行优化版本）")
-    print("   参数：doi")
-    print("   适用：大规模文献分析、高性能数据处理")
-    print("   性能：比同步版本快6-10倍，支持10个并发请求")
-    print("7. get_references_by_doi_batch_optimized")
+    print("   适用：文献详情查询、大规模数据处理")
+    print("   性能：比传统方法快20-40%，支持缓存和重试")
+    print("3. get_references_by_doi")
     print("   功能：通过DOI获取参考文献列表（批量优化版本）")
     print("   参数：doi")
-    print("   适用：大规模参考文献获取、文献数据库构建")
+    print("   适用：参考文献获取、文献数据库构建")
     print("   性能：比传统方法快10-15倍，利用Europe PMC批量查询能力")
-    print("8. batch_enrich_references_by_dois")
+    print("4. batch_enrich_references_by_dois")
     print("   功能：批量补全多个DOI的参考文献信息（超高性能版本）")
     print("   参数：dois (列表，最多20个), email")
     print("   适用：大规模文献数据分析、学术数据库构建")
