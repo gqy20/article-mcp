@@ -371,6 +371,90 @@ def create_mcp_server():
                 "error": str(e)
             }
 
+    @mcp.tool()
+    def search_arxiv_papers(
+        keyword: str,
+        email: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        max_results: int = 10
+    ) -> Dict[str, Any]:
+        """搜索arXiv文献数据库（基于arXiv官方API）
+        
+        功能说明：
+        - 基于arXiv官方API搜索预印本论文
+        - 支持关键词搜索和日期范围过滤
+        - 自动重试和错误恢复机制
+        - 分页获取，支持大量结果检索
+        
+        参数说明：
+        - keyword: 必需，搜索关键词，支持复杂查询语法
+        - email: 可选，联系邮箱，用于获得更好的API服务
+        - start_date: 可选，开始日期，格式：YYYY-MM-DD
+        - end_date: 可选，结束日期，格式：YYYY-MM-DD
+        - max_results: 可选，最大返回结果数量，默认10，最大1000
+        
+        返回值说明：
+        - articles: arXiv文章列表
+          - arxiv_id: arXiv标识符
+          - title: 文章标题
+          - authors: 作者列表
+          - category: arXiv分类
+          - publication_date: 发表日期
+          - abstract: 摘要
+          - arxiv_link: arXiv摘要页链接
+          - pdf_link: PDF下载链接
+        - total_count: 实际获取的文章数量
+        - search_info: 搜索信息
+        - message: 处理信息
+        - error: 错误信息（如果有）
+        
+        使用场景：
+        - 预印本文献搜索
+        - 最新研究发现
+        - 计算机科学、物理学、数学等领域文献检索
+        - 跟踪最新研究动态
+        
+        技术特点：
+        - 基于arXiv官方API
+        - 支持复杂查询语法
+        - 自动分页获取
+        - 完整的错误处理
+        - 支持日期范围过滤
+        """
+        try:
+            if not keyword or not keyword.strip():
+                return {
+                    "articles": [],
+                    "total_count": 0,
+                    "search_info": {},
+                    "message": "关键词不能为空",
+                    "error": "关键词不能为空"
+                }
+            
+            # 导入并调用arXiv搜索函数
+            from src.arxiv_search import search_arxiv
+            
+            result = search_arxiv(
+                keyword=keyword.strip(),
+                email=email,
+                start_date=start_date,
+                end_date=end_date,
+                max_results=max_results
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"搜索arXiv时发生异常: {e}")
+            return {
+                "articles": [],
+                "total_count": 0,
+                "search_info": {},
+                "message": f"搜索失败: {str(e)}",
+                "error": str(e)
+            }
+
     return mcp
 
 
@@ -399,6 +483,10 @@ def start_server(transport: str = "stdio", host: str = "localhost", port: int = 
     print("   - 根据DOI获取相似文章（基于PubMed相关文章算法）")
     print("   - 适用于：文献综述研究、寻找相关研究、学术调研")
     print("   - 特点：基于PubMed官方算法，自动过滤最近5年文献")
+    print("6. search_arxiv_papers")
+    print("   - 搜索arXiv文献数据库（基于arXiv官方API）")
+    print("   - 适用于：预印本文献检索、最新研究发现、计算机科学/物理学/数学等领域")
+    print("   - 特点：支持关键词搜索、日期范围过滤、完整错误处理")
     
     mcp = create_mcp_server()
     
@@ -512,6 +600,11 @@ def show_info():
     print("   参数：doi, email, max_results")
     print("   适用：文献综述研究、寻找相关研究、学术调研")
     print("   特点：基于PubMed官方算法，自动过滤最近5年文献")
+    print("6. search_arxiv_papers")
+    print("   功能：搜索arXiv文献数据库（基于arXiv官方API）")
+    print("   参数：keyword, email, start_date, end_date, max_results")
+    print("   适用：预印本文献检索、最新研究发现、计算机科学/物理学/数学等领域")
+    print("   特点：支持关键词搜索、日期范围过滤、完整错误处理")
     print("\n使用 'python main.py --help' 查看更多选项")
 
 
