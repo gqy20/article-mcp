@@ -4,8 +4,10 @@ Europe PMC 文献搜索和参考文献获取模块
 
 from .reference_service import UnifiedReferenceService
 from .europe_pmc import EuropePMCService
+from .similar_articles import get_similar_articles_by_doi
 
 __all__ = [
     "UnifiedReferenceService",
-    "EuropePMCService"
+    "EuropePMCService",
+    "get_similar_articles_by_doi"
 ] 

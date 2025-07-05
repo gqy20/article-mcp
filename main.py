@@ -294,6 +294,83 @@ def create_mcp_server():
                 "error": str(e)
             }
     
+    @mcp.tool()
+    def get_similar_articles(
+        doi: str,
+        email: Optional[str] = None,
+        max_results: int = 20
+    ) -> Dict[str, Any]:
+        """根据DOI获取相似文章（基于PubMed相关文章算法）
+        
+        功能说明：
+        - 基于PubMed的相关文章算法查找与给定DOI相似的文献
+        - 使用NCBI eLink服务查找相关文章
+        - 自动过滤最近5年内的文献
+        - 批量获取相关文章的详细信息
+        
+        参数说明：
+        - doi: 必需，数字对象标识符（如："10.1126/science.adf6218"）
+        - email: 可选，联系邮箱，用于获得更高的API访问限制
+        - max_results: 可选，返回的最大相似文章数量，默认20篇
+        
+        返回值说明：
+        - original_article: 原始文章信息
+          - title: 文章标题
+          - authors: 作者列表
+          - journal: 期刊名称
+          - publication_date: 发表日期
+          - pmid: PubMed ID
+          - pmcid: PMC ID（如果有）
+          - abstract: 摘要
+        - similar_articles: 相似文章列表（格式同原始文章）
+        - total_similar_count: 总相似文章数量
+        - retrieved_count: 实际获取的文章数量
+        - message: 处理信息
+        - error: 错误信息（如果有）
+        
+        使用场景：
+        - 文献综述研究
+        - 寻找相关研究
+        - 学术调研
+        - 相关工作分析
+        
+        技术特点：
+        - 基于PubMed官方相关文章算法
+        - 自动日期过滤（最近5年）
+        - 批量获取详细信息
+        - 完整的错误处理
+        """
+        try:
+            if not doi or not doi.strip():
+                return {
+                    "original_article": None,
+                    "similar_articles": [],
+                    "total_similar_count": 0,
+                    "retrieved_count": 0,
+                    "error": "DOI不能为空"
+                }
+            
+            # 导入并调用相似文章获取函数
+            from src.similar_articles import get_similar_articles_by_doi
+            
+            result = get_similar_articles_by_doi(
+                doi=doi.strip(),
+                email=email,
+                max_results=max_results
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"获取相似文章过程中发生异常: {e}")
+            return {
+                "original_article": None,
+                "similar_articles": [],
+                "total_similar_count": 0,
+                "retrieved_count": 0,
+                "error": str(e)
+            }
+
     return mcp
 
 
@@ -318,6 +395,10 @@ def start_server(transport: str = "stdio", host: str = "localhost", port: int = 
     print("   - 批量补全多个DOI的参考文献信息（超高性能版本）")
     print("   - 适用于：大规模文献数据分析、学术数据库构建")
     print("   - 性能：比逐个查询快10-15倍，支持最多20个DOI同时处理")
+    print("5. get_similar_articles")
+    print("   - 根据DOI获取相似文章（基于PubMed相关文章算法）")
+    print("   - 适用于：文献综述研究、寻找相关研究、学术调研")
+    print("   - 特点：基于PubMed官方算法，自动过滤最近5年文献")
     
     mcp = create_mcp_server()
     
@@ -426,6 +507,11 @@ def show_info():
     print("   参数：dois (列表，最多20个), email")
     print("   适用：大规模文献数据分析、学术数据库构建")
     print("   性能：比逐个查询快10-15倍，支持最多20个DOI同时处理")
+    print("5. get_similar_articles")
+    print("   功能：根据DOI获取相似文章（基于PubMed相关文章算法）")
+    print("   参数：doi, email, max_results")
+    print("   适用：文献综述研究、寻找相关研究、学术调研")
+    print("   特点：基于PubMed官方算法，自动过滤最近5年文献")
     print("\n使用 'python main.py --help' 查看更多选项")
 
 
