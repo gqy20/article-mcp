@@ -6,12 +6,14 @@
 
 - 🔍 搜索 Europe PMC 文献数据库
 - 📄 获取文献详细信息
-- 📚 获取参考文献列表 (通过DOI)
+- �� 获取参考文献列表 (通过DOI)
+- 🧩 **批量补全参考文献列表 (多个DOI)**
+- 📰 **搜索 arXiv 预印本文献**
 - ⚡ 异步并行优化版本（提升5-10倍性能）
 - 🔗 支持多种标识符 (PMID, PMCID, DOI)
 - 📅 支持日期范围过滤
 - 💾 智能缓存机制（24小时）
-- 🌐 支持 stdio 和 HTTP 两种传输方式
+- 🌐 支持 stdio、SSE 和 HTTP 三种传输方式
 - 📊 详细性能统计信息
 
 ## 安装依赖
@@ -149,7 +151,7 @@ python main.py server
 
 ### 3. get_references_by_doi
 
-通过DOI获取参考文献列表（同步版本）
+通过 DOI 获取参考文献列表
 
 **参数:**
 - `doi` (必需): 文献的 DOI 标识符
@@ -161,23 +163,59 @@ python main.py server
 }
 ```
 
-### 4. get_references_by_doi_async
+### 4. batch_enrich_references_by_dois
 
-通过DOI获取参考文献列表（异步并行优化版本）
+**批量补全多个 DOI 的参考文献信息（高性能并行版本）**
 
 **参数:**
-- `doi` (必需): 文献的 DOI 标识符
-
-**特性:**
-- 🚀 5-10倍性能提升
-- 💾 智能缓存机制
-- 📊 详细性能统计
-- 🔄 并行处理多个API调用
+- `dois` (必需): DOI 字符串数组，最多 20 个
+- `email` (可选): 用户邮箱地址（提高 API 服务质量）
 
 **示例:**
 ```json
 {
-  "doi": "10.1126/science.adf6218"
+  "dois": [
+    "10.1126/science.adf6218",
+    "10.1038/s41586-020-2649-2"
+  ]
+}
+```
+
+### 5. get_similar_articles
+
+根据 DOI 获取相似文章（基于 PubMed 官方相关文章算法）
+
+**参数:**
+- `doi` (必需): 原始文章 DOI
+- `email` (可选): 用户邮箱地址
+- `max_results` (可选): 最大返回相似文章数 (默认20)
+
+**示例:**
+```json
+{
+  "doi": "10.1126/science.adf6218",
+  "max_results": 10
+}
+```
+
+### 6. search_arxiv_papers
+
+搜索 arXiv 预印本文献数据库（基于 arXiv 官方 API）
+
+**参数:**
+- `keyword` (必需): 搜索关键词，支持复杂查询语法
+- `email` (可选): 联系邮箱
+- `start_date` (可选): 开始日期 (YYYY-MM-DD)
+- `end_date` (可选): 结束日期 (YYYY-MM-DD)
+- `max_results` (可选): 最大返回结果数 (默认10，最大1000)
+
+**示例:**
+```json
+{
+  "keyword": "artificial intelligence",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-31",
+  "max_results": 20
 }
 ```
 
