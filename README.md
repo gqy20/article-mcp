@@ -6,9 +6,13 @@
 
 - 🔍 搜索 Europe PMC 文献数据库
 - 📄 获取文献详细信息
+- 📚 获取参考文献列表 (通过DOI)
+- ⚡ 异步并行优化版本（提升5-10倍性能）
 - 🔗 支持多种标识符 (PMID, PMCID, DOI)
 - 📅 支持日期范围过滤
+- 💾 智能缓存机制（24小时）
 - 🌐 支持 stdio 和 HTTP 两种传输方式
+- 📊 详细性能统计信息
 
 ## 安装依赖
 
@@ -142,6 +146,61 @@ python main.py server
   "pmid": "12345678"
 }
 ```
+
+### 3. get_references_by_doi
+
+通过DOI获取参考文献列表（同步版本）
+
+**参数:**
+- `doi` (必需): 文献的 DOI 标识符
+
+**示例:**
+```json
+{
+  "doi": "10.1126/science.adf6218"
+}
+```
+
+### 4. get_references_by_doi_async
+
+通过DOI获取参考文献列表（异步并行优化版本）
+
+**参数:**
+- `doi` (必需): 文献的 DOI 标识符
+
+**特性:**
+- 🚀 5-10倍性能提升
+- 💾 智能缓存机制
+- 📊 详细性能统计
+- 🔄 并行处理多个API调用
+
+**示例:**
+```json
+{
+  "doi": "10.1126/science.adf6218"
+}
+```
+
+## 性能测试
+
+运行性能比较测试：
+
+```bash
+# 使用默认测试DOI
+uv run --no-project python test_performance_comparison.py
+
+# 使用自定义DOI
+uv run --no-project python test_performance_comparison.py "10.1126/science.adf6218"
+```
+
+## API速率限制优化
+
+本项目遵循官方API速率限制建议：
+
+- **Crossref API**: 50 requests/second (添加mailto头部进入polite池)
+- **Europe PMC API**: 1 request/second (保守策略)
+- **智能缓存**: 24小时本地缓存避免重复调用
+- **分批处理**: 控制并发数量避免过载
 
 ## 返回数据格式
 

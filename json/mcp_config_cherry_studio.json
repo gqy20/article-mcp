@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "europe-pmc-reference": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "D:\\C\\Documents\\Program\\Python_file\\mcp_serve\\mcp1",
+        "main.py",
+        "server",
+        "--transport",
+        "stdio"
+      ],
+      "cwd": "D:\\C\\Documents\\Program\\Python_file\\mcp_serve\\mcp1",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "UV_LINK_MODE": "copy",
+        "PATH": "%PATH%"
+      }
+    }
+  }
+} 
