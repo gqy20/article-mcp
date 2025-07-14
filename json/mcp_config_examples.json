@@ -1,8 +1,8 @@
 {
-  "description": "Europe PMC 文献搜索与参考文献获取 MCP 服务器配置 - 整合优化版",
+  "description": "Article MCP 文献搜索与参考文献获取服务器配置 - 整合优化版",
   "version": "2.0.0",
   "features": [
-    "📚 Europe PMC 文献搜索（同步/异步）",
+    "📚 Article MCP 文献搜索（同步/异步）",
     "📖 文献详情获取（同步/异步）",
     "📝 参考文献获取（同步/异步/批量优化）",
     "⚡ 批量查询优化（10倍性能提升）",
@@ -15,7 +15,7 @@
       "description": "Claude Desktop 配置 - 使用 uv (推荐)",
       "config": {
         "mcpServers": {
-          "europe-pmc-reference": {
+          "article-mcp": {
             "command": "uv",
             "args": [
               "--directory",
@@ -35,7 +35,7 @@
       "description": "Claude Desktop 配置 - 直接使用 Python",
       "config": {
         "mcpServers": {
-          "europe-pmc-reference": {
+          "article-mcp": {
             "command": "python",
             "args": ["main.py", "server"],
             "cwd": "D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
@@ -68,7 +68,7 @@
       "description": "Cursor 配置 (settings.json)",
       "config": {
         "mcp.servers": {
-          "europe-pmc-reference": {
+          "article-mcp": {
             "command": "uv",
             "args": [
               "--directory",
@@ -84,260 +84,138 @@
         }
       }
     },
-    "http_server": {
-      "description": "HTTP 服务器模式配置 (SSE)",
-      "command": "python main.py server --transport sse --host 0.0.0.0 --port 9000",
-      "url": "http://localhost:9000/sse"
+    "vscode": {
+      "description": "VS Code 配置 (settings.json)",
+      "config": {
+        "mcp.servers": {
+          "article-mcp": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
+              "run",
+              "main.py",
+              "server"
+            ],
+            "env": {
+              "PYTHONUNBUFFERED": "1"
+            }
+          }
+        }
+      }
     },
-    "streamable_http": {
-      "description": "Streamable HTTP 服务器模式配置",
-      "command": "python main.py server --transport streamable-http --host 0.0.0.0 --port 9000 --path /mcp",
-      "url": "http://localhost:9000/mcp"
+    "cline": {
+      "description": "Cline 插件配置",
+      "config": {
+        "mcpServers": {
+          "article-mcp": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
+              "run",
+              "main.py",
+              "server"
+            ],
+            "env": {
+              "PYTHONUNBUFFERED": "1"
+            }
+          }
+        }
+      }
+    },
+    "continue": {
+      "description": "Continue 插件配置",
+      "config": {
+        "mcpServers": {
+          "article-mcp": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
+              "run",
+              "main.py",
+              "server"
+            ],
+            "env": {
+              "PYTHONUNBUFFERED": "1"
+            }
+          }
+        }
+      }
+    },
+    "openai_compatible": {
+      "description": "兼容 OpenAI API 的客户端配置",
+      "config": {
+        "mcpServers": {
+          "article-mcp": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
+              "run",
+              "main.py",
+              "server"
+            ],
+            "env": {
+              "PYTHONUNBUFFERED": "1"
+            }
+          }
+        }
+      }
     }
   },
-  "tools": {
-    "available_tools": [
-      {
-        "name": "search_europe_pmc",
-        "description": "搜索 Europe PMC 文献数据库（同步版本）",
-        "performance": "标准"
-      },
-      {
-        "name": "search_europe_pmc_async",
-        "description": "搜索 Europe PMC 文献数据库（异步优化版本）",
-        "performance": "优化",
-        "features": ["智能缓存", "并发控制"]
-      },
-      {
-        "name": "get_article_details",
-        "description": "获取特定文献的详细信息（同步版本）",
-        "performance": "标准"
-      },
-      {
-        "name": "get_article_details_async",
-        "description": "获取特定文献的详细信息（异步优化版本）",
-        "performance": "优化",
-        "features": ["智能缓存", "重试机制"]
-      },
-      {
-        "name": "get_references_by_doi",
-        "description": "通过DOI获取参考文献列表（同步版本）",
-        "performance": "标准"
-      },
-      {
-        "name": "get_references_by_doi_async",
-        "description": "通过DOI获取参考文献列表（异步并行优化版本）",
-        "performance": "高性能",
-        "features": ["并行处理", "智能去重", "Europe PMC 补全"]
-      },
-      {
-        "name": "get_references_by_doi_batch_optimized",
-        "description": "通过DOI获取参考文献列表（批量优化版本 - 10倍性能提升）",
-        "performance": "超高性能",
-        "features": ["批量查询", "10倍速度提升", "智能缓存"],
-        "recommended": true
-      },
-      {
-        "name": "batch_enrich_references_by_dois",
-        "description": "批量补全多个DOI的参考文献信息（超高性能版本）",
-        "performance": "极致性能",
-        "features": ["批量DOI处理", "15倍速度提升", "智能分批", "最多20个DOI"],
-        "recommended": true,
-        "use_case": "大规模文献数据分析、学术数据库构建"
-      }
-    ]
-  },
-  "usage_examples": {
-    "search_basic": {
-      "description": "基本搜索示例",
-      "tool": "search_europe_pmc",
-      "parameters": {
-        "keyword": "机器学习",
-        "max_results": 10
-      }
-    },
-    "search_with_date": {
-      "description": "带日期范围的搜索（推荐异步版本）",
-      "tool": "search_europe_pmc_async",
-      "parameters": {
-        "keyword": "人工智能",
-        "start_date": "2020-01-01",
-        "end_date": "2023-12-31",
-        "max_results": 20
-      }
-    },
-    "get_article": {
-      "description": "获取特定文献详情（推荐异步版本）",
-      "tool": "get_article_details_async",
-      "parameters": {
-        "pmid": "12345678"
-      }
-    },
-    "get_references_sync": {
-      "description": "获取参考文献列表（同步版本）",
-      "tool": "get_references_by_doi",
-      "parameters": {
-        "doi": "10.1126/science.adf6218"
-      }
-    },
-    "get_references_async": {
-      "description": "获取参考文献列表（异步并行优化版本）",
-      "tool": "get_references_by_doi_async",
-      "parameters": {
-        "doi": "10.1126/science.adf6218"
-      },
-      "benefits": [
-        "🔄 并行处理优化",
-        "💾 智能缓存机制",
-        "📊 详细性能统计",
-        "🔍 Europe PMC 信息补全"
-      ]
-    },
-    "get_references_batch_optimized": {
-      "description": "获取参考文献列表（批量优化版本，强烈推荐）",
-      "tool": "get_references_by_doi_batch_optimized",
-      "parameters": {
-        "doi": "10.1126/science.adf6218"
-      },
-      "benefits": [
-        "⚡ 10倍性能提升",
-        "🚀 批量查询优化",
-        "💾 智能缓存机制",
-        "📈 基于 Europe PMC 批量 API"
-      ],
-      "recommended": true
-    },
-    "batch_enrich_dois": {
-      "description": "批量补全多个DOI的参考文献信息（超高性能版本）",
-      "tool": "batch_enrich_references_by_dois",
-      "parameters": {
-        "dois": [
-          "10.1126/science.adf6218",
-          "10.1038/nature12373",
-          "10.1126/science.1260419"
-        ],
-        "email": "researcher@example.com"
-      },
-      "benefits": [
-        "🚀 15倍性能提升",
-        "📊 批量DOI处理（最多20个）",
-        "💾 智能分批处理",
-        "🎯 自动去重和完整性检查",
-        "📈 适合大规模文献数据分析"
-      ],
-      "recommended": true,
-      "note": "最适合处理多个DOI的批量信息补全任务"
-    }
-  },
-  "performance_comparison": {
-    "reference_retrieval": {
-      "同步版本": "标准速度",
-      "异步版本": "中等优化",
-      "批量优化版本": "10倍性能提升"
-    },
-    "batch_doi_processing": {
-      "传统逐个处理": "标准速度",
-      "批量DOI处理": "15倍性能提升",
-      "最大批量大小": "20个DOI/次",
-      "实测效率": "0.168秒/DOI"
-    },
-    "search_operations": {
-      "同步搜索": "标准速度",
-      "异步搜索": "缓存优化，重复查询99.9%速度提升"
-    }
-  },
+  
+  "installation_steps": [
+    "1. 安装 uv: curl -LsSf https://astral.sh/uv/install.sh | sh",
+    "2. 进入项目目录: cd D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
+    "3. 安装依赖: uv sync",
+    "4. 测试运行: uv run main.py test",
+    "5. 配置客户端: 使用上述配置文件",
+    "6. 重启客户端完成集成"
+  ],
+  
+  "usage_notes": [
+    "1. 推荐使用 uv 方式（性能更好，依赖管理更好）",
+    "2. 如果遇到 uv 问题，可以使用 Python 直接运行",
+    "3. 服务器名称: article-mcp",
+    "4. 支持 stdio、sse、streamable-http 三种传输方式",
+    "5. 默认使用 stdio 模式（适用于大多数 AI 客户端）"
+  ],
+  
   "troubleshooting": {
-    "common_issues": [
-      {
-        "issue": "无法连接到 Europe PMC API",
-        "solution": "检查网络连接，确保可以访问 https://www.ebi.ac.uk"
+    "common_issues": {
+      "uv_not_found": {
+        "problem": "找不到 uv 命令",
+        "solution": "确保 uv 已正确安装并在 PATH 中，或使用绝对路径"
       },
-      {
-        "issue": "搜索结果为空",
-        "solution": "尝试更通用的关键词，或调整日期范围"
+      "permission_denied": {
+        "problem": "权限被拒绝",
+        "solution": "确保对项目目录有读写权限，或以管理员身份运行"
       },
-      {
-        "issue": "工具未在客户端显示",
-        "solution": "检查配置文件路径，确保 Python 环境正确，使用 uv 配置"
+      "import_error": {
+        "problem": "模块导入错误",
+        "solution": "运行 'uv sync' 确保依赖已正确安装"
       },
-      {
-        "issue": "uv 命令找不到",
-        "solution": "安装 uv: curl -LsSf https://astral.sh/uv/install.sh | sh，或使用直接 Python 配置"
-      },
-      {
-        "issue": "批量优化版本性能未提升",
-        "solution": "网络状况不佳时，批量优化效果可能不明显，尝试异步版本"
-      },
-      {
-        "issue": "Cherry Studio 参数配置",
-        "solution": "使用按行分隔的参数格式，确保包含 --directory 参数"
+      "network_error": {
+        "problem": "网络连接错误",
+        "solution": "检查网络连接，确保可以访问 Europe PMC 和 Crossref API"
       }
-    ],
+    },
     "performance_tips": [
-      {
-        "tip": "优先使用批量优化版本",
-        "detail": "get_references_by_doi_batch_optimized 是单DOI处理的性能最佳选择"
-      },
-      {
-        "tip": "多DOI处理使用超高性能版本",
-        "detail": "batch_enrich_references_by_dois 适合处理多个DOI，一次最多20个"
-      },
-      {
-        "tip": "利用缓存机制",
-        "detail": "重复查询同一DOI会使用24小时缓存，大幅提升速度"
-      },
-      {
-        "tip": "网络环境优化",
-        "detail": "良好的网络环境可以最大化批量查询和并行处理优势"
-      },
-      {
-        "tip": "选择合适的工具版本",
-        "detail": "单DOI用批量优化版本，多DOI用批量补全版本"
-      },
-      {
-        "tip": "批量大小优化",
-        "detail": "建议每次处理10-20个DOI，既保证性能又避免API限制"
-      }
+      "1. 提供邮箱地址可提高 API 请求成功率",
+      "2. 使用批量查询功能处理多个 DOI",
+      "3. 启用缓存机制避免重复请求",
+      "4. 适当设置 max_results 参数平衡性能和完整性"
     ]
   },
-  "cherry_studio_setup": {
-    "description": "Cherry Studio 详细配置说明",
-    "steps": [
-      "1. 打开 Cherry Studio MCP 配置",
-      "2. 添加新的 MCP 服务器",
-      "3. 服务器名称: europe-pmc-reference",
-      "4. 按行输入命令参数（见下方配置）",
-      "5. 设置工作目录为项目根目录",
-      "6. 保存并重启服务"
-    ],
-    "command_lines": [
-      "uv",
-      "--directory",
-      "D:/C/Documents/Program/Python_file/mcp_serve/mcp1",
-      "run",
-      "main.py",
-      "server"
-    ],
-    "working_directory": "D:/C/Documents/Program/Python_file/mcp_serve/mcp1"
-  },
-  "project_info": {
-    "code_optimization": {
-      "files_reduced": "从5个核心文件减少到3个（减少40%）",
-      "lines_reduced": "从1,875行减少到1,009行（减少46.2%）",
-      "performance_improved": "批量查询实现10-15倍性能提升"
-    },
-    "tools_available": {
-      "total_tools": 8,
-      "sync_tools": 3,
-      "async_tools": 2,
-      "batch_optimized_tools": 2,
-      "super_performance_tools": 1
-    },
-    "architecture": {
-      "main.py": "主程序和工具接口 (8个MCP工具)",
-      "src/europe_pmc.py": "Europe PMC 服务 (352行)",
-      "src/reference_service.py": "统一参考文献服务 (296行，含批量功能)",
-      "src/__init__.py": "模块导出 (9行)"
+  
+  "testing": {
+    "quick_test": "uv run main.py test",
+    "manual_test": {
+      "step1": "启动服务器: uv run main.py server",
+      "step2": "在 AI 客户端中测试搜索功能",
+      "step3": "验证返回结果的完整性"
     }
   }
 } 

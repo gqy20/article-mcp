@@ -1,17 +1,16 @@
 {
   "mcpServers": {
-    "europe-pmc-reference": {
+    "article-mcp": {
       "command": "uv",
       "args": [
+        "run",
         "--directory",
         "D:\\C\\Documents\\Program\\Python_file\\mcp_serve\\mcp1",
-        "run",
         "main.py",
         "server"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1",
-        "UV_LINK_MODE": "copy"
+        "PYTHONUNBUFFERED": "1"
       }
     }
   }

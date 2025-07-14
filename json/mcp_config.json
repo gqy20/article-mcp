@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "europe-pmc-reference": {
+    "article-mcp": {
       "command": "uv",
       "args": [
         "--directory",

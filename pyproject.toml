@@ -1,7 +1,7 @@
 [project]
-name = "europe-pmc-mcp"
-version = "0.1.0"
-description = "Europe PMC文献搜索MCP服务器"
+name = "article-mcp"
+version = "0.2.0"
+description = "Article MCP文献搜索服务器"
 authors = [
     {name = "Developer", email = "developer@example.com"}
 ]

@@ -21,7 +21,7 @@ def create_mcp_server():
     from src.pubmed_search import create_pubmed_service
 
     # 创建 MCP 服务器实例
-    mcp = FastMCP("Europe PMC MCP Server", version="1.0.0")
+    mcp = FastMCP("Article MCP Server", version="1.0.0")
     
     # 创建服务实例
     logger = logging.getLogger(__name__)
@@ -614,7 +614,7 @@ def create_mcp_server():
 
 def start_server(transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"):
     """启动MCP服务器"""
-    print(f"启动 Europe PMC MCP 服务器 (基于 BioMCP 设计模式)")
+    print(f"启动 Article MCP 服务器 (基于 BioMCP 设计模式)")
     print(f"传输模式: {transport}")
     print("可用工具（仅保留最高性能版本）:")
     print("1. search_europe_pmc")
@@ -714,10 +714,10 @@ async def run_test():
 
 def show_info():
     """显示项目信息"""
-    print("Europe PMC 文献搜索 MCP 服务器 (基于 BioMCP 设计模式)")
+    print("Article MCP 文献搜索服务器 (基于 BioMCP 设计模式)")
     print("=" * 70)
     print("基于 FastMCP 框架和 BioMCP 设计模式开发的文献搜索工具")
-    print("支持搜索 Europe PMC 文献数据库")
+    print("支持搜索 Europe PMC、arXiv 等多个文献数据库")
     print("\n🚀 核心功能:")
     print("- 🔍 搜索 Europe PMC 文献数据库 (同步 & 异步版本)")
     print("- 📄 获取文献详细信息 (同步 & 异步版本)")
@@ -792,7 +792,7 @@ def show_info():
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(
-        description='Europe PMC 文献搜索 MCP 服务器',
+        description='Article MCP 文献搜索服务器',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
