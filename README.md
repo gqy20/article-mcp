@@ -258,6 +258,191 @@ mcp1/
 
 ---
 
+## 🌐 魔搭MCP广场部署
+
+### 快速托管到魔搭MCP广场
+
+魔搭（ModelScope）MCP广场为MCP服务提供云托管服务，基于阿里云函数计算，支持：
+- ⚡ 毫秒级弹性启动
+- 🔒 多租安全隔离  
+- 🌐 自动生成SSE服务地址
+- 🛡️ 内置Bearer鉴权能力
+- 📊 按实际调用计费
+
+### 部署步骤
+
+1. **访问魔搭MCP广场**：[https://modelscope.cn/mcp](https://modelscope.cn/mcp)
+
+2. **添加MCP服务**，使用以下配置：
+
+#### 推荐配置（完整版）
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "main.py",
+        "server"
+      ],
+      "repository": "https://github.com/gqy20/article-mcp.git",
+      "branch": "master",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      },
+      "protocol": "stdio",
+      "runtime": "debian12",
+      "metadata": {
+        "name": "文献检索MCP",
+        "description": "基于Europe PMC、arXiv等多个数据源的学术文献搜索工具",
+        "version": "0.2.0",
+        "author": "gqy20",
+        "category": "学术工具",
+        "tags": ["文献检索", "学术搜索", "Europe PMC", "arXiv", "引用分析"]
+      }
+    }
+  }
+}
+```
+
+#### 简化配置（最小版）
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "main.py",
+        "server"
+      ],
+      "repository": "https://github.com/gqy20/article-mcp.git",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+3. **提交配置**，魔搭将自动：
+   - 拉取GitHub仓库代码
+   - 安装依赖（通过uv）
+   - 部署到函数计算
+   - 生成SSE服务地址
+
+4. **测试服务**：在MCP Playground中测试您的服务
+
+### 特性优势
+
+- 🚀 **秒级部署**：约1秒完成MCP服务部署
+- 📦 **零运维**：无需管理服务器和基础设施
+- 🔄 **自动转换**：STDIO模式自动转换为SSE服务
+- 💰 **按需付费**：仅为实际使用时长付费
+- 🛡️ **安全隔离**：每个租户独立的SSE地址和运行环境
+
+---
+
+## 📦 发布包管理
+
+### PyPI 包发布
+
+项目已准备发布到 PyPI，支持通过 `uvx` 命令直接运行：
+
+```bash
+# 使用uvx直接运行（推荐）
+uvx article-mcp@latest server
+
+# 或安装后运行
+pip install article-mcp
+article-mcp server
+```
+
+### NPM 包装器
+
+为兼容性提供了 NPM 包装器：
+
+```bash
+# 使用npx运行
+npx @gqy20/article-mcp-wrapper@latest server
+```
+
+### 魔搭MCP广场配置选项
+
+根据部署检测要求，提供三种配置方案：
+
+#### 🥇 方案1：使用 uvx（推荐）
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uvx",
+      "args": [
+        "article-mcp@latest",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+#### 🥈 方案2：使用 npx
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@gqy20/article-mcp-wrapper@latest",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+#### 🥉 方案3：GitHub 仓库（需手动审核）
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uvx",
+      "args": [
+        "git+https://github.com/gqy20/article-mcp.git",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+### 发布说明
+
+- **PyPI 包名**: `article-mcp`
+- **NPM 包名**: `@gqy20/article-mcp-wrapper`
+- **版本管理**: 统一使用语义化版本控制
+- **自动更新**: 使用 `@latest` 标签确保获取最新版本
+
+---
+
 ## 📜 许可证
 
 本项目遵循 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。

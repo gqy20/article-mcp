@@ -1,0 +1,86 @@
+{
+  "description": "Article MCP SSE 部署配置指南",
+  "modes": {
+    "local_development": {
+      "description": "本地开发环境",
+      "command": "uv run main.py server --transport sse",
+      "url": "http://localhost:9000/sse",
+      "use_case": "开发测试、本地调试"
+    },
+    "remote_access": {
+      "description": "远程访问服务器",
+      "command": "uv run main.py server --transport sse --host 0.0.0.0 --port 9000",
+      "url": "http://YOUR_SERVER_IP:9000/sse",
+      "use_case": "团队协作、远程访问"
+    },
+    "custom_port": {
+      "description": "自定义端口",
+      "command": "uv run main.py server --transport sse --host 0.0.0.0 --port 8080",
+      "url": "http://YOUR_SERVER_IP:8080/sse",
+      "use_case": "避免端口冲突"
+    },
+    "production": {
+      "description": "生产环境(推荐使用反向代理)",
+      "command": "uv run main.py server --transport sse --host 127.0.0.1 --port 9000",
+      "url": "http://127.0.0.1:9000/sse",
+      "use_case": "配合Nginx/Apache使用"
+    }
+  },
+  "client_configurations": {
+    "web_application": {
+      "description": "Web应用集成",
+      "javascript_example": {
+        "url": "http://your-server:9000/sse",
+        "code": "const eventSource = new EventSource('http://your-server:9000/sse');"
+      }
+    },
+    "api_client": {
+      "description": "API客户端",
+      "curl_example": "curl -X POST http://your-server:9000/sse -H 'Content-Type: application/json' -d '{\"method\":\"tools/list\"}'"
+    }
+  },
+  "deployment_steps": [
+    "1. 克隆项目: git clone https://github.com/gqy20/article-mcp.git",
+    "2. 进入目录: cd article-mcp",
+    "3. 安装依赖: uv sync",
+    "4. 测试启动: uv run main.py server --transport sse",
+    "5. 检查服务: 访问 http://localhost:9000/sse",
+    "6. 配置防火墙: 开放9000端口(如需远程访问)",
+    "7. 配置客户端: 使用SSE URL连接"
+  ],
+  "production_deployment": {
+    "nginx_config": {
+      "description": "Nginx反向代理配置",
+      "config": "location /mcp/ {\n    proxy_pass http://127.0.0.1:9000/;\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n    proxy_cache_bypass $http_upgrade;\n}"
+    },
+    "systemd_service": {
+      "description": "系统服务配置",
+      "file_path": "/etc/systemd/system/article-mcp.service",
+      "content": "[Unit]\nDescription=Article MCP Server\nAfter=network.target\n\n[Service]\nType=simple\nUser=your-user\nWorkingDirectory=/path/to/article-mcp\nExecStart=/path/to/uv run main.py server --transport sse --host 127.0.0.1 --port 9000\nRestart=always\n\n[Install]\nWantedBy=multi-user.target"
+    }
+  },
+  "monitoring": {
+    "health_check": "curl http://localhost:9000/sse",
+    "log_location": "服务器控制台输出",
+    "performance_tips": [
+      "使用反向代理(Nginx/Apache)提高性能",
+      "配置SSL证书启用HTTPS",
+      "监控内存和CPU使用率",
+      "设置日志轮转"
+    ]
+  },
+  "troubleshooting": {
+    "port_in_use": {
+      "error": "端口9000已被占用",
+      "solution": "使用 --port 参数指定其他端口"
+    },
+    "connection_refused": {
+      "error": "连接被拒绝",
+      "solution": "检查防火墙设置，确保端口开放"
+    },
+    "cors_issues": {
+      "error": "跨域请求问题",
+      "solution": "配置反向代理或设置CORS头"
+    }
+  }
+} 

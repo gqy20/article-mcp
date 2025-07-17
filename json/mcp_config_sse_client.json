@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "article-mcp-sse": {
+      "url": "http://localhost:9000/sse",
+      "transport": "sse",
+      "description": "Article MCP Server (SSE Mode) - 文献搜索服务器",
+      "capabilities": [
+        "search_europe_pmc",
+        "get_article_details", 
+        "get_references_by_doi",
+        "batch_enrich_references_by_dois",
+        "get_similar_articles",
+        "search_arxiv_papers",
+        "get_citing_articles",
+        "get_journal_quality",
+        "evaluate_articles_quality"
+      ]
+    }
+  }
+} 

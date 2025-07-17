@@ -1,12 +1,25 @@
 [project]
 name = "article-mcp"
 version = "0.2.0"
-description = "Article MCP文献搜索服务器"
+description = "Article MCP文献搜索服务器 - 基于Europe PMC、arXiv等多个数据源的学术文献搜索工具"
 authors = [
-    {name = "Developer", email = "developer@example.com"}
+    {name = "gqy20", email = "developer@example.com"}
 ]
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
+keywords = ["mcp", "literature", "search", "europe-pmc", "arxiv", "academic"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Text Processing :: Indexing",
+]
 dependencies = [
     "fastmcp>=2.0.0",
     "requests>=2.25.0",
@@ -14,6 +27,14 @@ dependencies = [
     "urllib3>=1.26.0",
     "aiohttp>=3.9.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/gqy20/article-mcp"
+Repository = "https://github.com/gqy20/article-mcp"
+Issues = "https://github.com/gqy20/article-mcp/issues"
+
+[project.scripts]
+article-mcp = "main:main"
 
 [project.optional-dependencies]
 dev = [
@@ -23,12 +44,12 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py310']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
