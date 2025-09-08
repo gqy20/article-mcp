@@ -185,6 +185,16 @@ uv run main.py server
 npx @gqy20/article-mcp-wrapper@latest server
 ```
 
+### UVX 安装（推荐）
+```bash
+# 直接通过uvx安装并运行（无需克隆项目）
+uvx --from git+https://github.com/gqy20/article-mcp.git article-mcp server
+
+# 或从PyPI安装
+pip install article-mcp
+article-mcp server
+```
+
 ## 开发规范
 
 ### 代码风格
