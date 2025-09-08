@@ -1,4 +1,4 @@
-# Europe PMC 文献搜索 MCP 服务器
+# Article MCP 文献搜索服务器
 
 > 🔬 基于 FastMCP 框架开发的专业文献搜索工具，可与 Claude Desktop、Cherry Studio 等 AI 助手无缝集成
 
@@ -20,7 +20,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh  # 安装 uv
 uv sync  # 安装项目依赖
 
 # 方法二：使用 pip
-pip install fastmcp requests python-dateutil aiohttp
+pip install fastmcp requests python-dateutil aiohttp markdownify
 ```
 
 ### 2️⃣ 启动服务器
@@ -47,7 +47,7 @@ python main.py server
       "args": [
         "run",
         "--directory",
-        "D:\\你的项目路径\\article-mcp",
+        "/path/to/your/article-mcp",
         "main.py",
         "server"
       ],
@@ -69,7 +69,7 @@ python main.py server
       "args": [
         "run",
         "--directory",
-        "你的项目路径\\article-mcp",
+        "/path/to/your/article-mcp",
         "main.py",
         "server"
       ],
@@ -91,6 +91,9 @@ python main.py server
 - 🔗 批量处理DOI (`batch_enrich_references_by_dois`)
 - 📰 搜索arXiv预印本 (`search_arxiv_papers`)
 - ⭐ 评估期刊质量 (`get_journal_quality`)
+- 🔗 获取相似文章 (`get_similar_articles`)
+- 🔗 获取引用文献 (`get_citing_articles`)
+- 🔄 获取所有关联信息 (`get_literature_relations`)
 
 ---
 
@@ -100,18 +103,18 @@ python main.py server
 
 | 工具名称 | 功能描述 | 主要参数 |
 |---------|---------|----------|
-| `search_europe_pmc` | 搜索 Europe PMC 文献数据库 | `keyword`, `start_date`, `end_date`, `max_results` |
-| `get_article_details` | 获取特定文献详细信息（支持PMID、DOI、PMCID） | `identifier`, `id_type`, `mode` |
-| `search_arxiv_papers` | 搜索 arXiv 预印本文献 | `keyword`, `start_date`, `end_date`, `max_results` |
+| `search_europe_pmc` | 搜索 Europe PMC 文献数据库（高性能优化版本） | `keyword`, `email`, `start_date`, `end_date`, `max_results` |
+| `get_article_details` | 获取特定文献详细信息（高性能优化版本） | `identifier`, `id_type`, `mode`, `include_fulltext` |
+| `search_arxiv_papers` | 搜索 arXiv 预印本文献 | `keyword`, `email`, `start_date`, `end_date`, `max_results` |
 
 ### 参考文献工具
 
 | 工具名称 | 功能描述 | 主要参数 |
 |---------|---------|----------|
-| `get_references_by_doi` | 通过DOI获取参考文献列表 | `doi` |
-| `batch_enrich_references_by_dois` | 批量补全多个DOI参考文献 | `dois[]` (最多20个) |
-| `get_similar_articles` | 获取相似文章推荐 | `identifier`, `id_type`, `max_results` |
-| `get_citing_articles` | 获取引用该文献的文章 | `identifier`, `id_type`, `max_results` |
+| `get_references_by_doi` | 通过DOI获取参考文献列表（批量优化版本） | `doi` |
+| `batch_enrich_references_by_dois` | 批量补全多个DOI参考文献（超高性能版本） | `dois[]` (最多20个), `email` |
+| `get_similar_articles` | 获取相似文章推荐（基于PubMed相关文章算法） | `identifier`, `id_type`, `email`, `max_results` |
+| `get_citing_articles` | 获取引用该文献的文章 | `identifier`, `id_type`, `max_results`, `email` |
 | `get_literature_relations` | 获取文献的所有关联信息 | `identifier`, `id_type`, `max_results` |
 
 ### 质量评估工具
@@ -140,6 +143,7 @@ python main.py server
 ```bash
 export PYTHONUNBUFFERED=1     # 禁用Python输出缓冲
 export UV_LINK_MODE=copy      # uv链接模式(可选)
+export EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API密钥(可选)
 ```
 
 ### 传输模式
@@ -163,18 +167,6 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 
 ---
 
-#### 获取文献的所有关联信息
-
-```json
-{
-  "identifier": "10.1000/xyz123",
-  "id_type": "doi",
-  "max_results": 10
-}
-```
-
----
-
 ## 🛠️ 开发与测试
 
 ### 运行测试
@@ -182,9 +174,6 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 ```bash
 # 运行功能测试
 uv run main.py test
-
-# 性能测试
-uv run python test_performance_comparison.py
 
 # 查看项目信息
 uv run main.py info
@@ -197,20 +186,30 @@ uv run main.py info
 | `cannot import name 'hdrs' from 'aiohttp'` | 运行 `uv sync --upgrade` 更新依赖 |
 | `MCP服务器启动失败` | 检查路径配置，确保使用绝对路径 |
 | `API请求失败` | 提供邮箱地址，检查网络连接 |
-| `找不到uv命令` | 使用完整路径：`C:\Users\用户名\.local\bin\uv.exe` |
+| `找不到uv命令` | 使用完整路径：`~/.local/bin/uv` |
 
 ### 项目结构
 
 ```
-mcp1/
+article-mcp/
 ├── main.py              # 主入口文件
+├── pyproject.toml       # 项目配置文件
+├── README.md            # 项目文档
 ├── src/                 # 核心服务模块
-│   ├── europe_pmc.py    # Europe PMC API
+│   ├── europe_pmc.py    # Europe PMC API 接口
 │   ├── reference_service.py  # 参考文献服务
-│   └── pubmed_search.py # PubMed搜索
-├── pyproject.toml       # 项目配置
-├── uv.lock             # 依赖锁定文件
-└── README.md           # 项目文档
+│   ├── pubmed_search.py # PubMed 搜索服务
+│   ├── similar_articles.py   # 相似文章获取
+│   ├── arxiv_search.py  # arXiv 搜索服务
+│   ├── literature_relation_service.py  # 文献关联服务
+│   └── resource/        # 资源文件目录
+│       └── journal_info.json  # 期刊信息缓存
+└── tool_modules/        # 工具模块
+    ├── search_tools.py       # 搜索工具
+    ├── article_detail_tools.py  # 文献详情工具
+    ├── reference_tools.py    # 参考文献工具
+    ├── relation_tools.py     # 关联文献工具
+    └── quality_tools.py      # 期刊质量工具
 ```
 
 ---
@@ -234,96 +233,6 @@ mcp1/
 
 ---
 
-## 🌐 魔搭MCP广场部署
-
-### 快速托管到魔搭MCP广场
-
-魔搭（ModelScope）MCP广场为MCP服务提供云托管服务，基于阿里云函数计算，支持：
-- ⚡ 毫秒级弹性启动
-- 🔒 多租安全隔离  
-- 🌐 自动生成SSE服务地址
-- 🛡️ 内置Bearer鉴权能力
-- 📊 按实际调用计费
-
-### 部署步骤
-
-1. **访问魔搭MCP广场**：[https://modelscope.cn/mcp](https://modelscope.cn/mcp)
-
-2. **添加MCP服务**，使用以下配置：
-
-#### 推荐配置（完整版）
-
-```json
-{
-  "mcpServers": {
-    "article-mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "python",
-        "main.py",
-        "server"
-      ],
-      "repository": "https://github.com/gqy20/article-mcp.git",
-      "branch": "master",
-      "env": {
-        "PYTHONUNBUFFERED": "1"
-      },
-      "protocol": "stdio",
-      "runtime": "debian12",
-      "metadata": {
-        "name": "文献检索MCP",
-        "description": "基于Europe PMC、arXiv等多个数据源的学术文献搜索工具",
-        "version": "0.2.0",
-        "author": "gqy20",
-        "category": "学术工具",
-        "tags": ["文献检索", "学术搜索", "Europe PMC", "arXiv", "引用分析"]
-      }
-    }
-  }
-}
-```
-
-#### 简化配置（最小版）
-
-```json
-{
-  "mcpServers": {
-    "article-mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "python",
-        "main.py",
-        "server"
-      ],
-      "repository": "https://github.com/gqy20/article-mcp.git",
-      "env": {
-        "PYTHONUNBUFFERED": "1"
-      }
-    }
-  }
-}
-```
-
-3. **提交配置**，魔搭将自动：
-   - 拉取GitHub仓库代码
-   - 安装依赖（通过uv）
-   - 部署到函数计算
-   - 生成SSE服务地址
-
-4. **测试服务**：在MCP Playground中测试您的服务
-
-### 特性优势
-
-- 🚀 **秒级部署**：约1秒完成MCP服务部署
-- 📦 **零运维**：无需管理服务器和基础设施
-- 🔄 **自动转换**：STDIO模式自动转换为SSE服务
-- 💰 **按需付费**：仅为实际使用时长付费
-- 🛡️ **安全隔离**：每个租户独立的SSE地址和运行环境
-
----
-
 ## 📦 发布包管理
 
 ### PyPI 包发布
@@ -342,85 +251,9 @@ article-mcp server
 uvx --from . article-mcp server
 ```
 
-### NPM 包装器
-
-为兼容性提供了 NPM 包装器：
-
-```bash
-# 使用npx运行
-npx @gqy20/article-mcp-wrapper@latest server
-```
-
-### 魔搭MCP广场配置选项
-
-根据部署检测要求，提供三种配置方案：
-
-#### 🥇 方案1：使用 uvx（推荐）
-
-```json
-{
-  "mcpServers": {
-    "article-mcp": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/gqy20/article-mcp.git",
-        "article-mcp",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1"
-      }
-    }
-  }
-}
-```
-
-#### 🥈 方案2：使用 npx
-
-```json
-{
-  "mcpServers": {
-    "article-mcp": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@gqy20/article-mcp-wrapper@latest",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1"
-      }
-    }
-  }
-}
-```
-
-#### 🥉 方案3：GitHub 仓库（需手动审核）
-
-```json
-{
-  "mcpServers": {
-    "article-mcp": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/gqy20/article-mcp.git",
-        "article-mcp",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1"
-      }
-    }
-  }
-}
-```
-
 ### 发布说明
 
 - **PyPI 包名**: `article-mcp`
-- **NPM 包名**: `@gqy20/article-mcp-wrapper`
 - **版本管理**: 统一使用语义化版本控制
 - **自动更新**: 使用 `@latest` 标签确保获取最新版本
 
@@ -446,13 +279,24 @@ npx @gqy20/article-mcp-wrapper@latest server
 
 ## 📞 支持
 
-- 📧 提交 Issue：[GitHub Issues](https://github.com/your-repo/issues)
-- 📚 文档：[项目Wiki](https://github.com/your-repo/wiki)
-- 💬 讨论：[GitHub Discussions](https://github.com/your-repo/discussions)
+- 📧 提交 Issue：[GitHub Issues](https://github.com/gqy20/article-mcp/issues)
+- 📚 文档：查看 README 和源代码注释
+- 💬 讨论：[GitHub Discussions](https://github.com/gqy20/article-mcp/discussions)
 
 ---
 
 ## 📖 使用示例
+
+### 搜索 Europe PMC 文献
+
+```json
+{
+  "keyword": "machine learning cancer detection",
+  "start_date": "2020-01-01",
+  "end_date": "2024-12-31",
+  "max_results": 20
+}
+```
 
 ### 获取文献详情（通过PMID）
 
@@ -488,6 +332,28 @@ npx @gqy20/article-mcp-wrapper@latest server
   "identifier": "12345678",
   "id_type": "pmid",
   "mode": "async"
+}
+```
+
+### 批量获取参考文献
+
+```json
+{
+  "dois": [
+    "10.1126/science.adf6218",
+    "10.1038/s41586-020-2649-2",
+    "10.1056/NEJMoa2034577"
+  ],
+  "email": "your.email@example.com"
+}
+```
+
+### 期刊质量评估
+
+```json
+{
+  "journal_name": "Nature",
+  "secret_key": "your_easyscholar_key"
 }
 ```
 

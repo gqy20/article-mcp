@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "main.py",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
