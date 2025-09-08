@@ -328,13 +328,13 @@ mcp1/
 
 ### PyPI 包发布
 
-项目已准备发布到 PyPI，支持通过 `uvx` 命令直接运行：
+项目已发布到 PyPI，支持通过 `uvx` 命令直接运行：
 
 ```bash
 # 使用uvx直接运行（推荐）
-uvx article-mcp@latest server
+uvx --from git+https://github.com/gqy20/article-mcp.git article-mcp server
 
-# 或安装后运行
+# 或从PyPI安装
 pip install article-mcp
 article-mcp server
 ```
@@ -360,7 +360,9 @@ npx @gqy20/article-mcp-wrapper@latest server
     "article-mcp": {
       "command": "uvx",
       "args": [
-        "article-mcp@latest",
+        "--from",
+        "git+https://github.com/gqy20/article-mcp.git",
+        "article-mcp",
         "server"
       ],
       "env": {
@@ -399,7 +401,9 @@ npx @gqy20/article-mcp-wrapper@latest server
     "article-mcp": {
       "command": "uvx",
       "args": [
+        "--from",
         "git+https://github.com/gqy20/article-mcp.git",
+        "article-mcp",
         "server"
       ],
       "env": {
