@@ -1,0 +1,10 @@
+
+搜索结果设置影响因子范围，一般默认为大于5
+IMPACTFACTOR
+JCRQUARTILE
+CASBLOCK
+TOP/NON-TOP JOURNAL 
+SCI/NON-SCI INDEXED JOURNAI
+HIGHLY CITED PAPERS
+
+参考 https://github.com/naivenaive/EasyPubMed

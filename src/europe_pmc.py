@@ -44,16 +44,54 @@ class EuropePMCService:
         session.headers.update(self.headers)
         return session
     
-    async def _get_cached_or_fetch(self, key: str, fetch_func, cache_duration_hours: int = 24):
-        """获取缓存或执行获取函数"""
+    def _get_cached_or_fetch_sync(self, key: str, fetch_func, cache_duration_hours: int = 24):
+        """获取缓存或执行获取函数（同步版本），返回结果和缓存命中信息"""
         now = datetime.now()
+        cache_hit = False
         if key in self.cache and key in self.cache_expiry:
             if now < self.cache_expiry[key]:
-                return self.cache[key]
+                cache_hit = True
+                result = self.cache[key]
+            else:
+                # 缓存过期，需要重新获取
+                result = fetch_func()
+                self.cache[key] = result
+                self.cache_expiry[key] = now + timedelta(hours=cache_duration_hours)
+        else:
+            # 没有缓存，需要获取
+            result = fetch_func()
+            self.cache[key] = result
+            self.cache_expiry[key] = now + timedelta(hours=cache_duration_hours)
+            
+        # 添加缓存命中信息到结果中
+        if isinstance(result, dict):
+            result["cache_hit"] = cache_hit
         
-        result = await fetch_func()
-        self.cache[key] = result
-        self.cache_expiry[key] = now + timedelta(hours=cache_duration_hours)
+        return result
+    
+    async def _get_cached_or_fetch(self, key: str, fetch_func, cache_duration_hours: int = 24):
+        """获取缓存或执行获取函数，返回结果和缓存命中信息"""
+        now = datetime.now()
+        cache_hit = False
+        if key in self.cache and key in self.cache_expiry:
+            if now < self.cache_expiry[key]:
+                cache_hit = True
+                result = self.cache[key]
+            else:
+                # 缓存过期，需要重新获取
+                result = await fetch_func()
+                self.cache[key] = result
+                self.cache_expiry[key] = now + timedelta(hours=cache_duration_hours)
+        else:
+            # 没有缓存，需要获取
+            result = await fetch_func()
+            self.cache[key] = result
+            self.cache_expiry[key] = now + timedelta(hours=cache_duration_hours)
+            
+        # 添加缓存命中信息到结果中
+        if isinstance(result, dict):
+            result["cache_hit"] = cache_hit
+        
         return result
     
     def validate_email(self, email: str) -> bool:
@@ -236,57 +274,130 @@ class EuropePMCService:
             
             return await self._get_cached_or_fetch(cache_key, fetch_from_api)
     
-    def get_article_details_sync(self, pmid: str) -> Dict[str, Any]:
+    def get_article_details_sync(self, identifier: str, id_type: str = "pmid") -> Dict[str, Any]:
         """同步获取文献详情"""
-        self.logger.info(f"获取文献详情: PMID={pmid}")
+        self.logger.info(f"获取文献详情: {id_type}={identifier}")
         
-        try:
-            params = {'query': f'PMID:{pmid}', 'format': 'json', 'resultType': 'core'}
-            session = self._get_sync_session()
-            response = session.get(self.detail_url, params=params, timeout=30)
-            response.raise_for_status()
+        def fetch_from_api():
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # 根据标识符类型构建查询
+                    if id_type.lower() == "pmid":
+                        query = f'EXT_ID:{identifier}'
+                    else:
+                        query = f'{id_type.upper()}:{identifier}'
+                    
+                    params = {'query': query, 'format': 'json', 'resultType': 'core'}
+                    session = self._get_sync_session()
+                    response = session.get(self.detail_url, params=params, timeout=30)
+                    
+                    # 检查HTTP状态码
+                    if response.status_code == 429:  # 速率限制
+                        self.logger.warning(f"遇到速率限制，等待后重试 ({attempt + 1}/{max_retries})")
+                        time.sleep(2 ** attempt)  # 指数退避
+                        continue
+                    elif response.status_code == 503:  # 服务不可用
+                        self.logger.warning(f"服务暂时不可用，等待后重试 ({attempt + 1}/{max_retries})")
+                        time.sleep(2 ** attempt)  # 指数退避
+                        continue
+                    elif response.status_code != 200:
+                        return {"error": f"API 请求失败: HTTP {response.status_code}", "article": None}
+                    
+                    response.raise_for_status()
+                    
+                    data = response.json()
+                    results = data.get('resultList', {}).get('result', [])
+                    
+                    if not results:
+                        return {"error": f"未找到 {id_type.upper()} 为 {identifier} 的文献", "article": None}
+                    
+                    article_info = self.process_europe_pmc_article(results[0])
+                    return {"article": article_info, "error": None} if article_info else {"error": "处理文献信息失败", "article": None}
+                    
+                except requests.exceptions.Timeout:
+                    self.logger.warning(f"请求超时，重试 ({attempt + 1}/{max_retries})")
+                    if attempt < max_retries - 1:
+                        time.sleep(2 ** attempt)  # 指数退避
+                        continue
+                    else:
+                        return {"error": f"获取文献详情超时: {id_type}={identifier}", "article": None}
+                except requests.exceptions.ConnectionError:
+                    self.logger.warning(f"连接错误，重试 ({attempt + 1}/{max_retries})")
+                    if attempt < max_retries - 1:
+                        time.sleep(2 ** attempt)  # 指数退避
+                        continue
+                    else:
+                        return {"error": f"连接到API失败: {id_type}={identifier}", "article": None}
+                except Exception as e:
+                    self.logger.error(f"获取文献详情时发生未预期错误: {str(e)}")
+                    return {"error": f"获取文献详情失败: {str(e)}", "article": None}
             
-            data = response.json()
-            results = data.get('resultList', {}).get('result', [])
-            
-            if not results:
-                return {"error": f"未找到 PMID 为 {pmid} 的文献", "article": None}
-            
-            article_info = self.process_europe_pmc_article(results[0])
-            return {"article": article_info, "error": None} if article_info else {"error": "处理文献信息失败", "article": None}
-            
-        except Exception as e:
-            return {"error": f"获取文献详情失败: {str(e)}", "article": None}
+            return {"error": f"经过 {max_retries} 次重试后仍失败", "article": None}
+        
+        cache_key = f"article_{id_type}_{identifier}"
+        return self._get_cached_or_fetch_sync(cache_key, fetch_from_api)
     
-    async def get_article_details_async(self, pmid: str) -> Dict[str, Any]:
+    async def get_article_details_async(self, identifier: str, id_type: str = "pmid") -> Dict[str, Any]:
         """异步获取文献详情"""
         async with self.search_semaphore:
-            cache_key = f"article_{pmid}"
+            cache_key = f"article_{id_type}_{identifier}"
             
             async def fetch_from_api():
-                self.logger.info(f"异步获取文献详情: PMID={pmid}")
+                self.logger.info(f"异步获取文献详情: {id_type}={identifier}")
                 
-                try:
-                    params = {'query': f'PMID:{pmid}', 'format': 'json', 'resultType': 'core'}
-                    
-                    async with aiohttp.ClientSession(timeout=self.timeout) as session:
-                        async with session.get(self.detail_url, params=params, headers=self.headers) as response:
-                            if response.status != 200:
-                                return {"error": f"API 请求失败: {response.status}", "article": None}
-                            
-                            data = await response.json()
-                            results = data.get('resultList', {}).get('result', [])
-                            
-                            if not results:
-                                return {"error": f"未找到 PMID 为 {pmid} 的文献", "article": None}
-                            
-                            article_info = self.process_europe_pmc_article(results[0])
-                            await asyncio.sleep(self.rate_limit_delay)
-                            
-                            return {"article": article_info, "error": None} if article_info else {"error": "处理文献信息失败", "article": None}
-                            
-                except Exception as e:
-                    return {"error": f"获取文献详情失败: {str(e)}", "article": None}
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        # 根据标识符类型构建查询
+                        if id_type.lower() == "pmid":
+                            query = f'EXT_ID:{identifier}'
+                        else:
+                            query = f'{id_type.upper()}:{identifier}'
+                        
+                        params = {'query': query, 'format': 'json', 'resultType': 'core'}
+                        
+                        async with aiohttp.ClientSession(timeout=self.timeout) as session:
+                            async with session.get(self.detail_url, params=params, headers=self.headers) as response:
+                                # 检查HTTP状态码
+                                if response.status == 429:  # 速率限制
+                                    self.logger.warning(f"遇到速率限制，等待后重试 ({attempt + 1}/{max_retries})")
+                                    await asyncio.sleep(2 ** attempt)  # 指数退避
+                                    continue
+                                elif response.status == 503:  # 服务不可用
+                                    self.logger.warning(f"服务暂时不可用，等待后重试 ({attempt + 1}/{max_retries})")
+                                    await asyncio.sleep(2 ** attempt)  # 指数退避
+                                    continue
+                                elif response.status != 200:
+                                    return {"error": f"API 请求失败: HTTP {response.status}", "article": None}
+                                
+                                data = await response.json()
+                                results = data.get('resultList', {}).get('result', [])
+                                
+                                if not results:
+                                    return {"error": f"未找到 {id_type.upper()} 为 {identifier} 的文献", "article": None}
+                                
+                                article_info = self.process_europe_pmc_article(results[0])
+                                await asyncio.sleep(self.rate_limit_delay)
+                                
+                                return {"article": article_info, "error": None} if article_info else {"error": "处理文献信息失败", "article": None}
+                                
+                    except asyncio.TimeoutError:
+                        self.logger.warning(f"异步请求超时，重试 ({attempt + 1}/{max_retries})")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(2 ** attempt)  # 指数退避
+                            continue
+                        else:
+                            return {"error": f"异步获取文献详情超时: {id_type}={identifier}", "article": None}
+                    except Exception as e:
+                        self.logger.error(f"异步获取文献详情时发生未预期错误: {str(e)}")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(2 ** attempt)  # 指数退避
+                            continue
+                        else:
+                            return {"error": f"异步获取文献详情失败: {str(e)}", "article": None}
+                
+                return {"error": f"经过 {max_retries} 次重试后仍失败", "article": None}
             
             return await self._get_cached_or_fetch(cache_key, fetch_from_api)
     
@@ -345,12 +456,22 @@ class EuropePMCService:
         else:
             return self.search_sync(query, email, start_date, end_date, max_results)
 
-    def fetch(self, pmid: str, mode: str = "sync") -> Dict[str, Any]:
+    def fetch(self, identifier: str, id_type: str = "pmid", mode: str = "sync") -> Dict[str, Any]:
         """统一获取详情接口"""
+        import time
+        start_time = time.time()
+        
         if mode == "async":
-            return asyncio.run(self.get_article_details_async(pmid))
+            result = asyncio.run(self.get_article_details_async(identifier, id_type))
         else:
-            return self.get_article_details_sync(pmid)
+            result = self.get_article_details_sync(identifier, id_type)
+        
+        # 添加性能统计信息
+        processing_time = time.time() - start_time
+        if isinstance(result, dict):
+            result["processing_time"] = round(processing_time, 3)
+        
+        return result
 
 
 def create_europe_pmc_service(logger: Optional[logging.Logger] = None) -> EuropePMCService:

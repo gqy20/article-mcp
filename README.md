@@ -101,7 +101,7 @@ python main.py server
 | 工具名称 | 功能描述 | 主要参数 |
 |---------|---------|----------|
 | `search_europe_pmc` | 搜索 Europe PMC 文献数据库 | `keyword`, `start_date`, `end_date`, `max_results` |
-| `get_article_details` | 获取特定文献详细信息 | `pmid` |
+| `get_article_details` | 获取特定文献详细信息（支持PMID、DOI、PMCID） | `identifier`, `id_type`, `mode` |
 | `search_arxiv_papers` | 搜索 arXiv 预印本文献 | `keyword`, `start_date`, `end_date`, `max_results` |
 
 ### 参考文献工具
@@ -162,38 +162,42 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 
 ---
 
-## 📖 使用示例
+### 使用示例
 
-### 搜索文献
+#### 获取文献详情（通过PMID）
 
 ```json
 {
-  "keyword": "machine learning cancer detection",
-  "start_date": "2020-01-01",
-  "end_date": "2024-12-31",
-  "max_results": 20
+  "identifier": "12345678",
+  "id_type": "pmid"
 }
 ```
 
-### 批量获取参考文献
+#### 获取文献详情（通过DOI）
 
 ```json
 {
-  "dois": [
-    "10.1126/science.adf6218",
-    "10.1038/s41586-020-2649-2",
-    "10.1056/NEJMoa2034577"
-  ],
-  "email": "your.email@example.com"
+  "identifier": "10.1000/xyz123",
+  "id_type": "doi"
 }
 ```
 
-### 期刊质量评估
+#### 获取文献详情（通过PMCID）
 
 ```json
 {
-  "journal_name": "Nature",
-  "secret_key": "your_easyscholar_key"
+  "identifier": "PMC1234567",
+  "id_type": "pmcid"
+}
+```
+
+#### 获取文献详情（异步模式）
+
+```json
+{
+  "identifier": "12345678",
+  "id_type": "pmid",
+  "mode": "async"
 }
 ```
 
