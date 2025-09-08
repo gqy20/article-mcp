@@ -1,25 +1,14 @@
 [project]
 name = "article-mcp"
-version = "0.2.0"
+version = "0.1.0"
 description = "Article MCP文献搜索服务器 - 基于Europe PMC、arXiv等多个数据源的学术文献搜索工具"
 authors = [
     {name = "gqy20", email = "developer@example.com"}
 ]
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 keywords = ["mcp", "literature", "search", "europe-pmc", "arxiv", "academic"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Information Analysis",
-    "Topic :: Text Processing :: Indexing",
-]
 dependencies = [
     "fastmcp>=2.0.0",
     "requests>=2.25.0",
@@ -35,7 +24,7 @@ Repository = "https://github.com/gqy20/article-mcp"
 Issues = "https://github.com/gqy20/article-mcp/issues"
 
 [project.scripts]
-article-mcp = "main:main"
+article-mcp = "article_mcp.__main__:main"
 
 [project.optional-dependencies]
 dev = [
@@ -56,3 +45,7 @@ target-version = ['py310']
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "tool_modules*", "*"]

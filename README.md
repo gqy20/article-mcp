@@ -331,12 +331,15 @@ mcp1/
 项目已发布到 PyPI，支持通过 `uvx` 命令直接运行：
 
 ```bash
-# 使用uvx直接运行（推荐）
-uvx --from git+https://github.com/gqy20/article-mcp.git article-mcp server
+# 从PyPI安装后直接运行（推荐）
+uvx article-mcp server
 
-# 或从PyPI安装
+# 或先安装后运行
 pip install article-mcp
 article-mcp server
+
+# 本地开发测试
+uvx --from . article-mcp server
 ```
 
 ### NPM 包装器

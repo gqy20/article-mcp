@@ -20,7 +20,9 @@ jobs:
       run: pip install uv
     
     - name: Build package
-      run: uv build
+      run: |
+        uv build
+        uvx --from . article-mcp info
     
     - name: Publish to PyPI
       env:
