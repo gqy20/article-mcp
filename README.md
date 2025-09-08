@@ -110,8 +110,9 @@ python main.py server
 |---------|---------|----------|
 | `get_references_by_doi` | 通过DOI获取参考文献列表 | `doi` |
 | `batch_enrich_references_by_dois` | 批量补全多个DOI参考文献 | `dois[]` (最多20个) |
-| `get_similar_articles` | 获取相似文章推荐 | `doi`, `max_results` |
-| `get_citing_articles` | 获取引用该文献的文章 | `pmid`, `max_results` |
+| `get_similar_articles` | 获取相似文章推荐 | `identifier`, `id_type`, `max_results` |
+| `get_citing_articles` | 获取引用该文献的文章 | `identifier`, `id_type`, `max_results` |
+| `get_literature_relations` | 获取文献的所有关联信息 | `identifier`, `id_type`, `max_results` |
 
 ### 质量评估工具
 
@@ -162,42 +163,13 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 
 ---
 
-### 使用示例
-
-#### 获取文献详情（通过PMID）
-
-```json
-{
-  "identifier": "12345678",
-  "id_type": "pmid"
-}
-```
-
-#### 获取文献详情（通过DOI）
+#### 获取文献的所有关联信息
 
 ```json
 {
   "identifier": "10.1000/xyz123",
-  "id_type": "doi"
-}
-```
-
-#### 获取文献详情（通过PMCID）
-
-```json
-{
-  "identifier": "PMC1234567",
-  "id_type": "pmcid"
-}
-```
-
-#### 获取文献详情（异步模式）
-
-```json
-{
-  "identifier": "12345678",
-  "id_type": "pmid",
-  "mode": "async"
+  "id_type": "doi",
+  "max_results": 10
 }
 ```
 
@@ -470,3 +442,54 @@ npx @gqy20/article-mcp-wrapper@latest server
 - 📧 提交 Issue：[GitHub Issues](https://github.com/your-repo/issues)
 - 📚 文档：[项目Wiki](https://github.com/your-repo/wiki)
 - 💬 讨论：[GitHub Discussions](https://github.com/your-repo/discussions)
+
+---
+
+## 📖 使用示例
+
+### 获取文献详情（通过PMID）
+
+```json
+{
+  "identifier": "12345678",
+  "id_type": "pmid"
+}
+```
+
+### 获取文献详情（通过DOI）
+
+```json
+{
+  "identifier": "10.1000/xyz123",
+  "id_type": "doi"
+}
+```
+
+### 获取文献详情（通过PMCID）
+
+```json
+{
+  "identifier": "PMC1234567",
+  "id_type": "pmcid"
+}
+```
+
+### 获取文献详情（异步模式）
+
+```json
+{
+  "identifier": "12345678",
+  "id_type": "pmid",
+  "mode": "async"
+}
+```
+
+### 获取文献的所有关联信息
+
+```json
+{
+  "identifier": "10.1000/xyz123",
+  "id_type": "doi",
+  "max_results": 10
+}
+```

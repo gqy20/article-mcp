@@ -19,6 +19,7 @@ def create_mcp_server():
     from src.europe_pmc import create_europe_pmc_service
     from src.reference_service import create_reference_service, get_references_by_doi_sync
     from src.pubmed_search import create_pubmed_service
+    from src.literature_relation_service import create_literature_relation_service
 
     # 创建 MCP 服务器实例
     mcp = FastMCP("Article MCP Server", version="1.0.0")
@@ -30,6 +31,7 @@ def create_mcp_server():
     europe_pmc_service = create_europe_pmc_service(logger)
     reference_service = create_reference_service(logger)
     pubmed_service = create_pubmed_service(logger)
+    literature_relation_service = create_literature_relation_service(logger)
 
 
 
@@ -199,13 +201,13 @@ def create_mcp_server():
                     "total_count": 0
                 }
             
-            # 使用新的批量优化版本
-            result = reference_service.get_references_batch_optimized(doi.strip())
+            # 使用统一文献关联服务
+            result = literature_relation_service.get_references(doi.strip(), id_type="doi")
             
             return result
             
         except Exception as e:
-            logger.error(f"批量优化获取参考文献过程中发生异常: {e}")
+            logger.error(f"获取参考文献过程中发生异常: {e}")
             return {
                 "references": [],
                 "message": "获取参考文献失败",
@@ -319,20 +321,23 @@ def create_mcp_server():
     
     @mcp.tool()
     def get_similar_articles(
-        doi: str,
+        identifier: str,
+        id_type: str = "doi",
         email: Optional[str] = None,
         max_results: int = 20
     ) -> Dict[str, Any]:
-        """根据DOI获取相似文章（基于PubMed相关文章算法）
+        """根据文献标识符获取相似文章（基于PubMed相关文章算法）
         
         功能说明：
-        - 基于PubMed的相关文章算法查找与给定DOI相似的文献
+        - 基于PubMed的相关文章算法查找与给定文献相似的文献
         - 使用NCBI eLink服务查找相关文章
         - 自动过滤最近5年内的文献
         - 批量获取相关文章的详细信息
+        - 支持多种文献标识符类型（DOI、PMID、PMCID）
         
         参数说明：
-        - doi: 必需，数字对象标识符（如："10.1126/science.adf6218"）
+        - identifier: 必需，文献标识符（如："10.1126/science.adf6218"）
+        - id_type: 可选，标识符类型，"doi"（默认）、"pmid" 或 "pmcid"
         - email: 可选，联系邮箱，用于获得更高的API访问限制
         - max_results: 可选，返回的最大相似文章数量，默认20篇
         
@@ -362,23 +367,22 @@ def create_mcp_server():
         - 自动日期过滤（最近5年）
         - 批量获取详细信息
         - 完整的错误处理
+        - 支持多种标识符类型
         """
         try:
-            if not doi or not doi.strip():
+            if not identifier or not identifier.strip():
                 return {
                     "original_article": None,
                     "similar_articles": [],
                     "total_similar_count": 0,
                     "retrieved_count": 0,
-                    "error": "DOI不能为空"
+                    "error": "文献标识符不能为空"
                 }
             
-            # 导入并调用相似文章获取函数
-            from src.similar_articles import get_similar_articles_by_doi
-            
-            result = get_similar_articles_by_doi(
-                doi=doi.strip(),
-                email=email,
+            # 使用统一文献关联服务
+            result = literature_relation_service.get_similar_articles(
+                identifier.strip(), 
+                id_type=id_type.lower(), 
                 max_results=max_results
             )
             
@@ -480,45 +484,141 @@ def create_mcp_server():
 
     @mcp.tool()
     def get_citing_articles(
-        pmid: str,
+        identifier: str,
+        id_type: str = "pmid",
         max_results: int = 20,
         email: Optional[str] = None
     ) -> Dict[str, Any]:
         """获取引用该文献的文献信息
-
-        处理流程：
-        1. 使用 PubMed `elink`+`efetch` 获取引用 PMID 列表及详情。
-        2. 如 PubMed 未返回结果，则回退到 Europe PMC `/citations` 接口。
-        3. 返回统一结构：citing_articles、total_count、message、error。
+        
+        功能说明：
+        - 获取引用指定文献的其他文献信息
+        - 支持多种文献标识符类型（DOI、PMID、PMCID）
+        - 先通过 PubMed `elink`+`efetch` 获取引用 PMID 列表及详情
+        - 如 PubMed 未返回结果，则回退到 Europe PMC `/citations` 接口
+        - 返回统一结构：citing_articles、total_count、message、error
+        
+        参数说明：
+        - identifier: 必需，文献标识符
+        - id_type: 可选，标识符类型，"pmid"（默认）、"doi" 或 "pmcid"
+        - max_results: 可选，返回的最大引用文章数量，默认20篇
+        - email: 可选，联系邮箱，用于获得更高的API访问限制
+        
+        返回值说明：
+        - citing_articles: 引用文献列表
+        - total_count: 总引用文献数量
+        - message: 处理信息
+        - error: 错误信息（如果有）
+        - processing_time: 处理耗时（秒）
+        
+        使用场景：
+        - 文献引用分析
+        - 学术研究
+        - 文献数据库构建
+        - 影响力评估
+        
+        技术特点：
+        - 支持多种标识符类型
+        - 双重数据源保障（PubMed + Europe PMC）
+        - 自动重试机制
+        - 完整的错误处理
         """
-        # 先通过 PubMed
-        result = pubmed_service.get_citing_articles(pmid=pmid.strip(), email=email, max_results=max_results)
-        if result.get("citing_articles"):
-            return result
-
-        # 回退 Europe PMC
         try:
-            import requests, json
-            url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/MED/{pmid.strip()}/citations.json"
-            resp = requests.get(url, timeout=20)
-            if resp.status_code != 200:
-                return result  # 返回原始 PubMed 结果（为空）
-            data = resp.json()
-            articles_json = data.get("resultList", {}).get("result", [])
-            citing_articles = []
-            for art in articles_json[:max_results]:
-                info = europe_pmc_service.process_europe_pmc_article(art)
-                if info:
-                    citing_articles.append(info)
-            return {
-                "citing_articles": citing_articles,
-                "total_count": data.get("hitCount", len(citing_articles)),
-                "message": "来自 Europe PMC 的引用文献" if citing_articles else "未找到引用文献",
-                "error": None
-            }
-        except Exception as e:
-            result["error"] = f"Europe PMC 获取引用失败: {e}"
+            if not identifier or not identifier.strip():
+                return {
+                    "citing_articles": [],
+                    "total_count": 0,
+                    "error": "文献标识符不能为空"
+                }
+            
+            # 使用统一文献关联服务
+            result = literature_relation_service.get_citing_articles(
+                identifier.strip(),
+                id_type=id_type.lower(),
+                max_results=max_results
+            )
+            
             return result
+            
+        except Exception as e:
+            logger.error(f"获取引用文献过程中发生异常: {e}")
+            return {
+                "citing_articles": [],
+                "total_count": 0,
+                "error": str(e)
+            }
+
+    @mcp.tool()
+    def get_literature_relations(
+        identifier: str,
+        id_type: str = "doi",
+        max_results: int = 20
+    ) -> Dict[str, Any]:
+        """获取文献的所有关联信息（参考文献、相似文献、引用文献）
+        
+        功能说明：
+        - 一次性获取文献的所有关联信息
+        - 包括参考文献、相似文献和引用文献
+        - 支持多种文献标识符类型（DOI、PMID、PMCID）
+        - 统一的错误处理和返回格式
+        
+        参数说明：
+        - identifier: 必需，文献标识符
+        - id_type: 可选，标识符类型，"doi"（默认）、"pmid" 或 "pmcid"
+        - max_results: 可选，每种关联文献的最大返回数量，默认20篇
+        
+        返回值说明：
+        - references: 参考文献信息
+        - similar_articles: 相似文献信息
+        - citing_articles: 引用文献信息
+        - processing_time: 总处理耗时（秒）
+        - error: 错误信息（如果有）
+        
+        使用场景：
+        - 全面的文献分析
+        - 学术研究综述
+        - 文献数据库构建
+        - 知识图谱构建
+        
+        技术特点：
+        - 一站式获取所有关联信息
+        - 支持多种标识符类型
+        - 统一的错误处理机制
+        - 详细的性能统计
+        """
+        import time
+        start_time = time.time()
+        
+        try:
+            if not identifier or not identifier.strip():
+                return {
+                    "references": {},
+                    "similar_articles": {},
+                    "citing_articles": {},
+                    "error": "文献标识符不能为空"
+                }
+            
+            # 使用统一文献关联服务获取所有关联信息
+            result = literature_relation_service.get_all_relations(
+                identifier.strip(),
+                id_type=id_type.lower(),
+                max_results=max_results
+            )
+            
+            # 添加处理时间
+            result["processing_time"] = round(time.time() - start_time, 2)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"获取文献关联信息过程中发生异常: {e}")
+            return {
+                "references": {},
+                "similar_articles": {},
+                "citing_articles": {},
+                "error": str(e),
+                "processing_time": round(time.time() - start_time, 2)
+            }
 
     @mcp.tool()
     def get_journal_quality(
