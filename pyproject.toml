@@ -24,7 +24,7 @@ Repository = "https://github.com/gqy20/article-mcp"
 Issues = "https://github.com/gqy20/article-mcp/issues"
 
 [project.scripts]
-article-mcp = "article_mcp.__main__:main"
+article-mcp = "main:main"
 
 [project.optional-dependencies]
 dev = [
