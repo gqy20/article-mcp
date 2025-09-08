@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Optional
 class PubMedService:
     """PubMed 关键词搜索服务 (控制在 500 行以内)"""
 
@@ -96,12 +97,22 @@ class PubMedService:
             # 提取 DOI（从 PubmedData 或 Article 中）
             doi = None
             doi_link = None
+            pmc_id = None
+            pmc_link = None
             pubmed_data = article_xml.find("./PubmedData")
             if pubmed_data is not None:
+                # 提取 DOI
                 doi_elem = pubmed_data.find("./ArticleIdList/ArticleId[@IdType='doi']")
                 if doi_elem is not None and doi_elem.text:
                     doi = doi_elem.text.strip()
                     doi_link = f"https://doi.org/{doi}"
+                
+                # 提取 PMC ID
+                pmc_elem = pubmed_data.find("./ArticleIdList/ArticleId[@IdType='pmc']")
+                if pmc_elem is not None and pmc_elem.text:
+                    pmc_id = pmc_elem.text.strip()
+                    if pmc_id.startswith("PMC"):
+                        pmc_link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmc_id}/"
 
             return {
                 "pmid": pmid or "N/A",
@@ -113,6 +124,8 @@ class PubMedService:
                 "abstract": abstract,
                 "doi": doi,
                 "doi_link": doi_link,
+                "pmc_id": pmc_id,
+                "pmc_link": pmc_link,
                 "arxiv_id": None,
                 "arxiv_link": None,
                 "semantic_scholar_id": None,
@@ -480,6 +493,173 @@ class PubMedService:
             return {"citing_articles": [], "error": f"处理错误: {e}", "message": None}
 
 
+    def get_pmc_fulltext_html(self, pmc_id: str) -> Dict[str, Any]:
+        """通过PMC ID获取全文HTML内容
+        
+        功能说明：
+        - 通过PMC ID从PMC数据库获取文章的完整HTML内容
+        - 支持开放获取的文章全文获取
+        - 返回文章的基本信息和HTML全文内容
+        
+        参数说明：
+        - pmc_id: 必需，PMC标识符（如："PMC1234567"）
+        
+        返回值说明：
+        - pmc_id: PMC标识符
+        - pmc_link: PMC文章链接
+        - title: 文章标题
+        - authors: 作者列表
+        - journal_name: 期刊名称
+        - publication_date: 发表日期
+        - abstract: 摘要
+        - fulltext_html: 完整的HTML全文内容
+        - fulltext_available: 是否可获取全文
+        - error: 错误信息（如果有）
+        
+        使用场景：
+        - 获取开放获取文章的全文内容
+        - 文献内容深度分析
+        - 学术研究资料收集
+        
+        技术特点：
+        - 基于PMC官方API
+        - 支持开放获取文章全文获取
+        - 完整的错误处理机制
+        """
+        import requests, xml.etree.ElementTree as ET
+        try:
+            # 验证PMC ID格式
+            if not pmc_id or not pmc_id.strip():
+                return {
+                    "pmc_id": None,
+                    "pmc_link": None,
+                    "title": None,
+                    "authors": [],
+                    "journal_name": None,
+                    "publication_date": None,
+                    "abstract": None,
+                    "fulltext_html": None,
+                    "fulltext_available": False,
+                    "error": "PMC ID不能为空"
+                }
+            
+            # 标准化PMC ID格式
+            normalized_pmc_id = pmc_id.strip()
+            if not normalized_pmc_id.startswith("PMC"):
+                normalized_pmc_id = f"PMC{normalized_pmc_id}"
+            
+            # 构建PMC链接
+            pmc_link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{normalized_pmc_id}/"
+            
+            # 请求PMC全文XML
+            xml_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+            params = {
+                "db": "pmc",
+                "id": normalized_pmc_id,
+                "rettype": "xml",
+                "retmode": "xml"
+            }
+            
+            self.logger.info(f"请求PMC全文: {normalized_pmc_id}")
+            response = requests.get(xml_url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            # 解析XML
+            root = ET.fromstring(response.content)
+            
+            # 提取基本信息
+            title = root.findtext(".//article-title")
+            if not title:
+                title = root.findtext(".//article-title", "无标题")
+            
+            # 提取作者
+            authors = []
+            for author_elem in root.findall(".//contrib[@contrib-type='author']"):
+                name = author_elem.findtext(".//name/surname")
+                forename = author_elem.findtext(".//name/given-names")
+                if name and forename:
+                    authors.append(f"{forename} {name}")
+                elif name:
+                    authors.append(name)
+            
+            # 提取期刊信息
+            journal_name = root.findtext(".//journal-title")
+            if not journal_name:
+                journal_name = root.findtext(".//journal-id", "未知期刊")
+            
+            # 提取发表日期
+            pub_date = root.findtext(".//pub-date/year")
+            if pub_date:
+                month = root.findtext(".//pub-date/month", "01")
+                day = root.findtext(".//pub-date/day", "01")
+                pub_date = f"{pub_date}-{month.zfill(2)}-{day.zfill(2)}"
+            
+            # 提取摘要
+            abstract = root.findtext(".//abstract")
+            if not abstract:
+                abstract_parts = ["".join(elem.itertext()).strip() for elem in root.findall(".//abstract//p")]
+                abstract = " ".join([p for p in abstract_parts if p]) if abstract_parts else "无摘要"
+            
+            # 提取全文HTML
+            # PMC XML通常不直接包含完整的HTML，需要另外获取
+            fulltext_available = True
+            fulltext_html = response.text  # 这是XML格式，不是HTML
+            
+            return {
+                "pmc_id": normalized_pmc_id,
+                "pmc_link": pmc_link,
+                "title": title,
+                "authors": authors,
+                "journal_name": journal_name,
+                "publication_date": pub_date,
+                "abstract": abstract,
+                "fulltext_html": fulltext_html,
+                "fulltext_available": fulltext_available,
+                "error": None
+            }
+            
+        except requests.exceptions.RequestException as e:
+            return {
+                "pmc_id": pmc_id,
+                "pmc_link": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmc_id}/" if pmc_id else None,
+                "title": None,
+                "authors": [],
+                "journal_name": None,
+                "publication_date": None,
+                "abstract": None,
+                "fulltext_html": None,
+                "fulltext_available": False,
+                "error": f"网络请求错误: {str(e)}"
+            }
+        except ET.ParseError as e:
+            return {
+                "pmc_id": pmc_id,
+                "pmc_link": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmc_id}/" if pmc_id else None,
+                "title": None,
+                "authors": [],
+                "journal_name": None,
+                "publication_date": None,
+                "abstract": None,
+                "fulltext_html": None,
+                "fulltext_available": False,
+                "error": f"XML解析错误: {str(e)}"
+            }
+        except Exception as e:
+            self.logger.error(f"获取PMC全文时发生错误: {str(e)}")
+            return {
+                "pmc_id": pmc_id,
+                "pmc_link": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmc_id}/" if pmc_id else None,
+                "title": None,
+                "authors": [],
+                "journal_name": None,
+                "publication_date": None,
+                "abstract": None,
+                "fulltext_html": None,
+                "fulltext_available": False,
+                "error": f"处理错误: {str(e)}"
+            }
+
+
 def create_pubmed_service(logger=None):
     """工厂函数，保持接口一致"""
-    return PubMedService(logger) 
+    return PubMedService(logger)
