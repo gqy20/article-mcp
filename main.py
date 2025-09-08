@@ -35,9 +35,9 @@ def create_mcp_server():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     
-    europe_pmc_service = create_europe_pmc_service(logger)
-    reference_service = create_reference_service(logger)
     pubmed_service = create_pubmed_service(logger)
+    europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)  # 注入PubMed服务依赖
+    reference_service = create_reference_service(logger)
     literature_relation_service = create_literature_relation_service(logger)
     
     # 注册工具函数

@@ -7,6 +7,7 @@ import asyncio
 import aiohttp
 import requests
 import re
+import time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from typing import List, Optional, Dict, Any
@@ -16,8 +17,9 @@ import logging
 class EuropePMCService:
     """Europe PMC 服务类"""
     
-    def __init__(self, logger: Optional[logging.Logger] = None):
+    def __init__(self, logger: Optional[logging.Logger] = None, pubmed_service=None):
         self.logger = logger or logging.getLogger(__name__)
+        self.pubmed_service = pubmed_service  # 注入PubMed服务用于PMC全文获取
         
         # API 配置
         self.base_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
@@ -274,7 +276,7 @@ class EuropePMCService:
             
             return await self._get_cached_or_fetch(cache_key, fetch_from_api)
     
-    def get_article_details_sync(self, identifier: str, id_type: str = "pmid") -> Dict[str, Any]:
+    def get_article_details_sync(self, identifier: str, id_type: str = "pmid", include_fulltext: bool = False) -> Dict[str, Any]:
         """同步获取文献详情"""
         self.logger.info(f"获取文献详情: {id_type}={identifier}")
         
@@ -285,6 +287,12 @@ class EuropePMCService:
                     # 根据标识符类型构建查询
                     if id_type.lower() == "pmid":
                         query = f'EXT_ID:{identifier}'
+                    elif id_type.lower() == "pmcid":
+                        # 对于PMCID，使用特殊的查询语法
+                        if identifier.startswith("PMC"):
+                            query = f'PMCID:{identifier}'
+                        else:
+                            query = f'PMCID:PMC{identifier}'
                     else:
                         query = f'{id_type.upper()}:{identifier}'
                     
@@ -313,6 +321,26 @@ class EuropePMCService:
                         return {"error": f"未找到 {id_type.upper()} 为 {identifier} 的文献", "article": None}
                     
                     article_info = self.process_europe_pmc_article(results[0])
+                    
+                    # 如果需要全文且结果中有PMC ID，则获取全文
+                    if include_fulltext and article_info and article_info.get("pmc_id") and self.pubmed_service:
+                        try:
+                            pmc_id = article_info["pmc_id"]
+                            self.logger.info(f"获取PMC全文: {pmc_id}")
+                            fulltext_result = self.pubmed_service.get_pmc_fulltext_html(pmc_id)
+                            if not fulltext_result.get("error"):
+                                article_info["fulltext"] = {
+                                    "html": fulltext_result.get("fulltext_html"),
+                                    "available": fulltext_result.get("fulltext_available", False),
+                                    "title": fulltext_result.get("title"),
+                                    "authors": fulltext_result.get("authors"),
+                                    "abstract": fulltext_result.get("abstract")
+                                }
+                            else:
+                                self.logger.warning(f"获取PMC全文失败: {fulltext_result.get('error')}")
+                        except Exception as e:
+                            self.logger.error(f"获取PMC全文时发生错误: {str(e)}")
+                    
                     return {"article": article_info, "error": None} if article_info else {"error": "处理文献信息失败", "article": None}
                     
                 except requests.exceptions.Timeout:
@@ -338,7 +366,7 @@ class EuropePMCService:
         cache_key = f"article_{id_type}_{identifier}"
         return self._get_cached_or_fetch_sync(cache_key, fetch_from_api)
     
-    async def get_article_details_async(self, identifier: str, id_type: str = "pmid") -> Dict[str, Any]:
+    async def get_article_details_async(self, identifier: str, id_type: str = "pmid", include_fulltext: bool = False) -> Dict[str, Any]:
         """异步获取文献详情"""
         async with self.search_semaphore:
             cache_key = f"article_{id_type}_{identifier}"
@@ -352,6 +380,12 @@ class EuropePMCService:
                         # 根据标识符类型构建查询
                         if id_type.lower() == "pmid":
                             query = f'EXT_ID:{identifier}'
+                        elif id_type.lower() == "pmcid":
+                            # 对于PMCID，使用特殊的查询语法
+                            if identifier.startswith("PMC"):
+                                query = f'PMCID:{identifier}'
+                            else:
+                                query = f'PMCID:PMC{identifier}'
                         else:
                             query = f'{id_type.upper()}:{identifier}'
                         
@@ -378,6 +412,26 @@ class EuropePMCService:
                                     return {"error": f"未找到 {id_type.upper()} 为 {identifier} 的文献", "article": None}
                                 
                                 article_info = self.process_europe_pmc_article(results[0])
+                                
+                                # 如果需要全文且结果中有PMC ID，则获取全文
+                                if include_fulltext and article_info and article_info.get("pmc_id") and self.pubmed_service:
+                                    try:
+                                        pmc_id = article_info["pmc_id"]
+                                        self.logger.info(f"异步获取PMC全文: {pmc_id}")
+                                        fulltext_result = self.pubmed_service.get_pmc_fulltext_html(pmc_id)
+                                        if not fulltext_result.get("error"):
+                                            article_info["fulltext"] = {
+                                                "html": fulltext_result.get("fulltext_html"),
+                                                "available": fulltext_result.get("fulltext_available", False),
+                                                "title": fulltext_result.get("title"),
+                                                "authors": fulltext_result.get("authors"),
+                                                "abstract": fulltext_result.get("abstract")
+                                            }
+                                        else:
+                                            self.logger.warning(f"获取PMC全文失败: {fulltext_result.get('error')}")
+                                    except Exception as e:
+                                        self.logger.error(f"获取PMC全文时发生错误: {str(e)}")
+                                
                                 await asyncio.sleep(self.rate_limit_delay)
                                 
                                 return {"article": article_info, "error": None} if article_info else {"error": "处理文献信息失败", "article": None}
@@ -456,15 +510,15 @@ class EuropePMCService:
         else:
             return self.search_sync(query, email, start_date, end_date, max_results)
 
-    def fetch(self, identifier: str, id_type: str = "pmid", mode: str = "sync") -> Dict[str, Any]:
+    def fetch(self, identifier: str, id_type: str = "pmid", mode: str = "sync", include_fulltext: bool = False) -> Dict[str, Any]:
         """统一获取详情接口"""
         import time
         start_time = time.time()
         
         if mode == "async":
-            result = asyncio.run(self.get_article_details_async(identifier, id_type))
+            result = asyncio.run(self.get_article_details_async(identifier, id_type, include_fulltext))
         else:
-            result = self.get_article_details_sync(identifier, id_type)
+            result = self.get_article_details_sync(identifier, id_type, include_fulltext)
         
         # 添加性能统计信息
         processing_time = time.time() - start_time
@@ -474,6 +528,6 @@ class EuropePMCService:
         return result
 
 
-def create_europe_pmc_service(logger: Optional[logging.Logger] = None) -> EuropePMCService:
+def create_europe_pmc_service(logger: Optional[logging.Logger] = None, pubmed_service=None) -> EuropePMCService:
     """创建 Europe PMC 服务实例"""
-    return EuropePMCService(logger) 
+    return EuropePMCService(logger, pubmed_service) 
