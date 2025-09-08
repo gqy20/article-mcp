@@ -323,9 +323,9 @@ class EuropePMCService:
                     article_info = self.process_europe_pmc_article(results[0])
                     
                     # 如果需要全文且结果中有PMC ID，则获取全文
-                    if include_fulltext and article_info and article_info.get("pmc_id") and self.pubmed_service:
+                    if include_fulltext and article_info and article_info.get("pmcid") and self.pubmed_service:
                         try:
-                            pmc_id = article_info["pmc_id"]
+                            pmc_id = article_info["pmcid"]
                             self.logger.info(f"获取PMC全文: {pmc_id}")
                             fulltext_result = self.pubmed_service.get_pmc_fulltext_html(pmc_id)
                             if not fulltext_result.get("error"):
