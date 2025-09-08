@@ -4,26 +4,46 @@
 
 ## 🚀 快速开始
 
-### 0️⃣ 克隆项目
+### 0️⃣ 安装 uv 工具
+
+```bash
+# 安装 uv（如果尚未安装）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 1️⃣ 安装依赖
+
+#### 方式一：直接使用 PyPI 包（推荐）
+
+```bash
+# 直接运行，无需安装依赖
+uvx article-mcp server
+```
+
+#### 方式二：本地开发环境
 
 ```bash
 # 克隆项目到本地
 git clone https://github.com/gqy20/article-mcp.git
 cd article-mcp
-```
 
-### 1️⃣ 安装依赖
+# 安装项目依赖
+uv sync
 
-```bash
-# 方法一：使用 uv (推荐)
-curl -LsSf https://astral.sh/uv/install.sh | sh  # 安装 uv
-uv sync  # 安装项目依赖
-
-# 方法二：使用 pip
+# 或使用 pip 安装依赖
 pip install fastmcp requests python-dateutil aiohttp markdownify
 ```
 
 ### 2️⃣ 启动服务器
+
+#### 使用 PyPI 包（推荐）
+
+```bash
+# 直接运行 PyPI 包
+uvx article-mcp server
+```
+
+#### 本地开发
 
 ```bash
 # 启动 MCP 服务器
@@ -38,6 +58,27 @@ python main.py server
 #### Claude Desktop 配置
 
 编辑 Claude Desktop 配置文件，添加：
+
+##### 方式一：使用 PyPI 包（推荐）
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uvx",
+      "args": [
+        "article-mcp",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+##### 方式二：本地开发
 
 ```json
 {
@@ -65,13 +106,12 @@ python main.py server
 {
   "mcpServers": {
     "article-mcp": {
-      "command": "uv",
+      "command": "uvx",
       "args": [
-        "run",
-        "--directory",
-        "/path/to/your/article-mcp",
-        "main.py",
-        "server"
+        "article-mcp",
+        "server",
+        "--transport",
+        "stdio"
       ],
       "env": {
         "PYTHONUNBUFFERED": "1"
@@ -249,6 +289,76 @@ article-mcp server
 
 # 本地开发测试
 uvx --from . article-mcp server
+```
+
+### 配置说明
+
+有三种推荐的配置方式：
+
+#### 🥇 方案1：使用 PyPI 包（推荐）
+
+这是最简单和推荐的方式，直接使用已发布的 PyPI 包：
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uvx",
+      "args": [
+        "article-mcp",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+#### 🥈 方案2：本地开发
+
+如果您想运行本地代码或进行开发：
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "main.py",
+        "server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+#### 🥉 方案3：Cherry Studio 配置
+
+针对 Cherry Studio 的特定配置：
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uvx",
+      "args": [
+        "article-mcp",
+        "server",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
 ```
 
 ### 发布说明
