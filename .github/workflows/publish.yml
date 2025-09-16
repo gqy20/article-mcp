@@ -23,6 +23,7 @@ jobs:
       run: |
         uv build
         uvx --from . article-mcp info
+        echo "Package version: $(uvx --from . article-mcp info | grep -i version || echo 'v0.1.1')"
     
     - name: Publish to PyPI
       env:

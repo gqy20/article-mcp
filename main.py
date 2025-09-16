@@ -94,7 +94,7 @@ def start_server(transport: str = "stdio", host: str = "localhost", port: int = 
     print("10. evaluate_articles_quality")
     print("    - 批量评估文献的期刊质量")
     print("    - 适用于：文献质量筛选、学术研究质量评估")
-    print("    - 特点：批量处理，智能缓存，完整质量指标")
+    print("    - 特点：批量处理，智能缓存，完整质量指标，支持MCP配置密钥")
     
     mcp = create_mcp_server()
     

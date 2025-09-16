@@ -9,6 +9,7 @@
 from typing import Optional, Dict, Any, List
 import logging
 import os
+from src.mcp_config import get_easyscholar_key
 
 # 在注册时会注入这些依赖
 quality_tools_deps = {
@@ -55,9 +56,8 @@ def register_quality_tools(mcp, pubmed_service, logger):
         - 选择投稿期刊
         - 文献质量评估
         """
-        # 如果没有提供密钥，尝试从环境变量获取
-        if not secret_key:
-            secret_key = os.getenv('EASYSCHOLAR_SECRET_KEY')
+        # 按优先级获取EasyScholar密钥：MCP配置 > 参数 > 环境变量
+        secret_key = get_easyscholar_key(secret_key, quality_tools_deps['logger'])
         
         pubmed_service = quality_tools_deps['pubmed_service']
         return pubmed_service.get_journal_quality(journal_name, secret_key)
@@ -90,9 +90,8 @@ def register_quality_tools(mcp, pubmed_service, logger):
         - 学术研究质量评估
         """
         try:
-            # 如果没有提供密钥，尝试从环境变量获取
-            if not secret_key:
-                secret_key = os.getenv('EASYSCHOLAR_SECRET_KEY')
+            # 按优先级获取EasyScholar密钥：MCP配置 > 参数 > 环境变量
+            secret_key = get_easyscholar_key(secret_key, quality_tools_deps['logger'])
             
             if not articles:
                 return {

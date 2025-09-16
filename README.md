@@ -186,6 +186,42 @@ export UV_LINK_MODE=copy      # uv链接模式(可选)
 export EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API密钥(可选)
 ```
 
+### MCP 配置集成 (v0.1.1 新功能)
+
+现在支持从 MCP 客户端配置文件中读取 EasyScholar API 密钥，无需通过环境变量传递。
+
+#### Claude Desktop 配置
+
+编辑 `~/.config/claude-desktop/config.json` 文件：
+
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uvx",
+      "args": ["article-mcp", "server"],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "EASYSCHOLAR_SECRET_KEY": "your_easyscholar_api_key_here"
+      }
+    }
+  }
+}
+```
+
+#### 密钥优先级
+
+1. **MCP配置文件**中的密钥（最高优先级）
+2. **函数参数**中的密钥
+3. **环境变量**中的密钥
+
+#### 支持的工具
+
+- `get_journal_quality` - 获取期刊质量评估信息
+- `evaluate_articles_quality` - 批量评估文献的期刊质量
+
+配置完成后重启 MCP 客户端即可生效。
+
 ### 传输模式
 
 ```bash
@@ -217,6 +253,9 @@ uv run main.py test
 
 # 查看项目信息
 uv run main.py info
+
+# 或使用 PyPI 包
+uvx article-mcp info
 ```
 
 ### 故障排除
