@@ -1,15 +1,16 @@
 """
 批量处理工具 - 核心工具6扩展
 """
-from typing import Dict, Any, List, Optional
-import logging
+
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
 from pathlib import Path
+from typing import Any
 
 # 全局服务实例
 _batch_services = None
+
 
 def register_batch_tools(mcp, services, logger):
     """注册批量处理工具"""
@@ -18,12 +19,12 @@ def register_batch_tools(mcp, services, logger):
 
     @mcp.tool()
     def batch_search_literature(
-        queries: List[str],
-        sources: List[str] = ["europe_pmc", "pubmed"],
+        queries: list[str],
+        sources: list[str] = ["europe_pmc", "pubmed"],
         max_results_per_query: int = 10,
         parallel: bool = True,
-        max_concurrent: int = 3
-    ) -> Dict[str, Any]:
+        max_concurrent: int = 3,
+    ) -> dict[str, Any]:
         """批量文献搜索工具
 
         功能说明：
@@ -57,7 +58,7 @@ def register_batch_tools(mcp, services, logger):
                     "successful_queries": 0,
                     "results_by_query": {},
                     "merged_results": [],
-                    "processing_time": 0
+                    "processing_time": 0,
                 }
 
             start_time = time.time()
@@ -75,7 +76,7 @@ def register_batch_tools(mcp, services, logger):
                             query.strip(),
                             sources,
                             max_results_per_query,
-                            logger
+                            logger,
                         )
                         future_to_query[future] = query
 
@@ -91,17 +92,14 @@ def register_batch_tools(mcp, services, logger):
                             results_by_query[query] = {
                                 "success": False,
                                 "error": str(e),
-                                "merged_results": []
+                                "merged_results": [],
                             }
             else:
                 # 串行处理
                 for query in queries:
                     try:
                         result = _search_single_query(
-                            query.strip(),
-                            sources,
-                            max_results_per_query,
-                            logger
+                            query.strip(), sources, max_results_per_query, logger
                         )
                         results_by_query[query] = result
                         if result.get("success", False):
@@ -111,7 +109,7 @@ def register_batch_tools(mcp, services, logger):
                         results_by_query[query] = {
                             "success": False,
                             "error": str(e),
-                            "merged_results": []
+                            "merged_results": [],
                         }
 
             # 合并所有查询结果
@@ -127,6 +125,7 @@ def register_batch_tools(mcp, services, logger):
             # 去重和排序
             if all_results:
                 from src.merged_results import deduplicate_articles, simple_rank_articles
+
                 unique_results = deduplicate_articles(all_results)
                 merged_results = simple_rank_articles(unique_results)
             else:
@@ -143,7 +142,7 @@ def register_batch_tools(mcp, services, logger):
                 "total_unique_results": len(merged_results),
                 "processing_time": processing_time,
                 "parallel": parallel,
-                "max_concurrent": max_concurrent
+                "max_concurrent": max_concurrent,
             }
 
         except Exception as e:
@@ -155,17 +154,17 @@ def register_batch_tools(mcp, services, logger):
                 "successful_queries": 0,
                 "results_by_query": {},
                 "merged_results": [],
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     @mcp.tool()
     def batch_get_article_details(
-        identifiers: List[str],
+        identifiers: list[str],
         id_type: str = "auto",
-        sources: List[str] = ["europe_pmc", "crossref"],
+        sources: list[str] = ["europe_pmc", "crossref"],
         parallel: bool = True,
-        max_concurrent: int = 10
-    ) -> Dict[str, Any]:
+        max_concurrent: int = 10,
+    ) -> dict[str, Any]:
         """批量获取文献详情工具
 
         功能说明：
@@ -199,7 +198,7 @@ def register_batch_tools(mcp, services, logger):
                     "successful_retrievals": 0,
                     "details_by_identifier": {},
                     "failed_identifiers": [],
-                    "processing_time": 0
+                    "processing_time": 0,
                 }
 
             start_time = time.time()
@@ -218,7 +217,7 @@ def register_batch_tools(mcp, services, logger):
                             identifier.strip(),
                             id_type,
                             sources,
-                            logger
+                            logger,
                         )
                         future_to_identifier[future] = identifier
 
@@ -233,20 +232,14 @@ def register_batch_tools(mcp, services, logger):
                                 failed_identifiers.append(identifier)
                         except Exception as e:
                             logger.error(f"获取文献详情 '{identifier}' 失败: {e}")
-                            details_by_identifier[identifier] = {
-                                "success": False,
-                                "error": str(e)
-                            }
+                            details_by_identifier[identifier] = {"success": False, "error": str(e)}
                             failed_identifiers.append(identifier)
             else:
                 # 串行处理
                 for identifier in identifiers:
                     try:
                         result = _get_single_article_details(
-                            identifier.strip(),
-                            id_type,
-                            sources,
-                            logger
+                            identifier.strip(), id_type, sources, logger
                         )
                         details_by_identifier[identifier] = result
                         if result.get("success", False):
@@ -255,10 +248,7 @@ def register_batch_tools(mcp, services, logger):
                             failed_identifiers.append(identifier)
                     except Exception as e:
                         logger.error(f"获取文献详情 '{identifier}' 失败: {e}")
-                        details_by_identifier[identifier] = {
-                            "success": False,
-                            "error": str(e)
-                        }
+                        details_by_identifier[identifier] = {"success": False, "error": str(e)}
                         failed_identifiers.append(identifier)
 
             processing_time = round(time.time() - start_time, 2)
@@ -272,7 +262,7 @@ def register_batch_tools(mcp, services, logger):
                 "success_rate": successful_retrievals / len(identifiers) if identifiers else 0,
                 "processing_time": processing_time,
                 "parallel": parallel,
-                "max_concurrent": max_concurrent
+                "max_concurrent": max_concurrent,
             }
 
         except Exception as e:
@@ -284,16 +274,16 @@ def register_batch_tools(mcp, services, logger):
                 "successful_retrievals": 0,
                 "details_by_identifier": {},
                 "failed_identifiers": identifiers if identifiers else [],
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     @mcp.tool()
     def export_batch_results(
-        results: Dict[str, Any],
+        results: dict[str, Any],
         format_type: str = "json",
-        output_path: Optional[str] = None,
-        include_metadata: bool = True
-    ) -> Dict[str, Any]:
+        output_path: str | None = None,
+        include_metadata: bool = True,
+    ) -> dict[str, Any]:
         """导出批量结果工具
 
         功能说明：
@@ -324,7 +314,7 @@ def register_batch_tools(mcp, services, logger):
                     "export_path": None,
                     "format_type": format_type,
                     "records_exported": 0,
-                    "file_size": None
+                    "file_size": None,
                 }
 
             start_time = time.time()
@@ -354,7 +344,7 @@ def register_batch_tools(mcp, services, logger):
                     "export_path": None,
                     "format_type": format_type,
                     "records_exported": 0,
-                    "file_size": None
+                    "file_size": None,
                 }
 
             # 获取文件大小
@@ -376,7 +366,7 @@ def register_batch_tools(mcp, services, logger):
                 "format_type": format_type.lower(),
                 "records_exported": records_exported,
                 "file_size": file_size,
-                "processing_time": processing_time
+                "processing_time": processing_time,
             }
 
         except Exception as e:
@@ -387,18 +377,15 @@ def register_batch_tools(mcp, services, logger):
                 "export_path": output_path,
                 "format_type": format_type,
                 "records_exported": 0,
-                "file_size": None
+                "file_size": None,
             }
 
     return [batch_search_literature, batch_get_article_details, export_batch_results]
 
 
 def _search_single_query(
-    query: str,
-    sources: List[str],
-    max_results: int,
-    logger
-) -> Dict[str, Any]:
+    query: str, sources: list[str], max_results: int, logger
+) -> dict[str, Any]:
     """搜索单个查询"""
     try:
         # 调用核心搜索工具
@@ -409,7 +396,7 @@ def _search_single_query(
                 "success": False,
                 "error": "搜索服务未初始化",
                 "keyword": query,
-                "merged_results": []
+                "merged_results": [],
             }
 
         results_by_source = {}
@@ -434,8 +421,8 @@ def _search_single_query(
                 else:
                     continue
 
-                if result.get('success', False):
-                    results_by_source[source] = result.get('articles', [])
+                if result.get("success", False):
+                    results_by_source[source] = result.get("articles", [])
                     sources_used.append(source)
 
             except Exception as e:
@@ -444,6 +431,7 @@ def _search_single_query(
 
         # 合并结果
         from src.merged_results import merge_articles_by_doi, simple_rank_articles
+
         merged_results = merge_articles_by_doi(results_by_source)
         merged_results = simple_rank_articles(merged_results)
 
@@ -453,38 +441,26 @@ def _search_single_query(
             "sources_used": sources_used,
             "results_by_source": results_by_source,
             "merged_results": merged_results[:max_results],
-            "total_count": sum(len(results) for results in results_by_source.values())
+            "total_count": sum(len(results) for results in results_by_source.values()),
         }
 
     except Exception as e:
         logger.error(f"搜索单个查询异常: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "keyword": query,
-            "merged_results": []
-        }
+        return {"success": False, "error": str(e), "keyword": query, "merged_results": []}
 
 
 def _get_single_article_details(
-    identifier: str,
-    id_type: str,
-    sources: List[str],
-    logger
-) -> Dict[str, Any]:
+    identifier: str, id_type: str, sources: list[str], logger
+) -> dict[str, Any]:
     """获取单篇文献详情"""
     try:
         # 调用核心文章详情工具
         from tool_modules.core.article_tools import _article_services
 
         if not _article_services:
-            return {
-                "success": False,
-                "error": "文章详情服务未初始化",
-                "identifier": identifier
-            }
+            return {"success": False, "error": "文章详情服务未初始化", "identifier": identifier}
 
-        from src.merged_results import merge_same_doi_articles, extract_identifier_type
+        from src.merged_results import extract_identifier_type, merge_same_doi_articles
 
         # 自动识别标识符类型
         if id_type == "auto":
@@ -514,8 +490,8 @@ def _get_single_article_details(
                 else:
                     continue
 
-                if result.get('success', False) and result.get('article'):
-                    details_by_source[source] = result['article']
+                if result.get("success", False) and result.get("article"):
+                    details_by_source[source] = result["article"]
                     sources_found.append(source)
 
             except Exception as e:
@@ -534,23 +510,16 @@ def _get_single_article_details(
             "id_type": id_type,
             "sources_found": sources_found,
             "details_by_source": details_by_source,
-            "merged_detail": merged_detail
+            "merged_detail": merged_detail,
         }
 
     except Exception as e:
         logger.error(f"获取单篇文献详情异常: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "identifier": identifier
-        }
+        return {"success": False, "error": str(e), "identifier": identifier}
 
 
 def _export_to_json(
-    results: Dict[str, Any],
-    output_path: Path,
-    include_metadata: bool,
-    logger
+    results: dict[str, Any], output_path: Path, include_metadata: bool, logger
 ) -> int:
     """导出为JSON格式"""
     try:
@@ -561,14 +530,14 @@ def _export_to_json(
                 "export_metadata": {
                     "export_time": time.strftime("%Y-%m-%d %H:%M:%S"),
                     "total_records": len(results.get("merged_results", [])),
-                    "format": "json"
+                    "format": "json",
                 },
-                "results": results
+                "results": results,
             }
         else:
             export_data = results
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
 
         records_count = len(results.get("merged_results", []))
@@ -581,10 +550,7 @@ def _export_to_json(
 
 
 def _export_to_csv(
-    results: Dict[str, Any],
-    output_path: Path,
-    include_metadata: bool,
-    logger
+    results: dict[str, Any], output_path: Path, include_metadata: bool, logger
 ) -> int:
     """导出为CSV格式"""
     try:
@@ -596,25 +562,34 @@ def _export_to_csv(
 
         # CSV字段
         fieldnames = [
-            "title", "authors", "journal", "publication_date", "doi",
-            "pmid", "abstract", "source", "source_query"
+            "title",
+            "authors",
+            "journal",
+            "publication_date",
+            "doi",
+            "pmid",
+            "abstract",
+            "source",
+            "source_query",
         ]
 
-        with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
+        with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
             for article in articles:
                 row = {
                     "title": article.get("title", ""),
-                    "authors": "; ".join([author.get("name", "") for author in article.get("authors", [])]),
+                    "authors": "; ".join(
+                        [author.get("name", "") for author in article.get("authors", [])]
+                    ),
                     "journal": article.get("journal", ""),
                     "publication_date": article.get("publication_date", ""),
                     "doi": article.get("doi", ""),
                     "pmid": article.get("pmid", ""),
                     "abstract": article.get("abstract", ""),
                     "source": article.get("source", ""),
-                    "source_query": article.get("source_query", "")
+                    "source_query": article.get("source_query", ""),
                 }
                 writer.writerow(row)
 
@@ -627,10 +602,7 @@ def _export_to_csv(
 
 
 def _export_to_excel(
-    results: Dict[str, Any],
-    output_path: Path,
-    include_metadata: bool,
-    logger
+    results: dict[str, Any], output_path: Path, include_metadata: bool, logger
 ) -> int:
     """导出为Excel格式"""
     try:
@@ -639,7 +611,7 @@ def _export_to_excel(
         logger.warning("Excel导出功能需要安装pandas或openpyxl库，当前使用CSV格式替代")
 
         # 改为CSV导出
-        csv_path = output_path.with_suffix('.csv')
+        csv_path = output_path.with_suffix(".csv")
         records_count = _export_to_csv(results, csv_path, include_metadata, logger)
 
         # 重命名为Excel文件名（实际内容为CSV）

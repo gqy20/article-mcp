@@ -1,13 +1,14 @@
 """
 统一参考文献工具 - 核心工具3
 """
-from typing import Dict, Any, List, Optional
-import logging
+
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 # 全局服务实例
 _reference_services = None
+
 
 def register_reference_tools(mcp, services, logger):
     """注册参考文献工具"""
@@ -18,10 +19,10 @@ def register_reference_tools(mcp, services, logger):
     def get_references(
         identifier: str,
         id_type: str = "doi",
-        sources: List[str] = ["europe_pmc", "crossref"],
+        sources: list[str] = ["europe_pmc", "crossref"],
         max_results: int = 20,
-        include_metadata: bool = True
-    ) -> Dict[str, Any]:
+        include_metadata: bool = True,
+    ) -> dict[str, Any]:
         """获取参考文献工具
 
         🎯 功能说明：
@@ -69,7 +70,7 @@ def register_reference_tools(mcp, services, logger):
                     "sources_used": [],
                     "references_by_source": {},
                     "merged_references": [],
-                    "total_count": 0
+                    "total_count": 0,
                 }
 
             from src.merged_results import merge_reference_results
@@ -90,14 +91,14 @@ def register_reference_tools(mcp, services, logger):
                         if source == "europe_pmc":
                             # Europe PMC需要从文献详情中获取参考文献
                             detail_result = service.fetch(identifier.strip(), id_type=id_type)
-                            if detail_result.get('success', False):
-                                article = detail_result.get('article', {})
-                                references = article.get('references', [])
+                            if detail_result.get("success", False):
+                                article = detail_result.get("article", {})
+                                references = article.get("references", [])
                                 reference_results[source] = {
-                                    'success': True,
-                                    'references': references,
-                                    'total_count': len(references),
-                                    'source': source
+                                    "success": True,
+                                    "references": references,
+                                    "total_count": len(references),
+                                    "source": source,
                                 }
                         elif source == "crossref":
                             ref_result = service.get_references(identifier.strip(), max_results)
@@ -105,21 +106,21 @@ def register_reference_tools(mcp, services, logger):
                         elif source == "openalex":
                             # OpenAlex暂时没有直接的参考文献API
                             reference_results[source] = {
-                                'success': False,
-                                'references': [],
-                                'total_count': 0,
-                                'source': source,
-                                'error': 'OpenAlex暂不支持参考文献查询'
+                                "success": False,
+                                "references": [],
+                                "total_count": 0,
+                                "source": source,
+                                "error": "OpenAlex暂不支持参考文献查询",
                             }
 
                     except Exception as e:
                         logger.error(f"{source} 获取参考文献异常: {e}")
                         reference_results[source] = {
-                            'success': False,
-                            'references': [],
-                            'total_count': 0,
-                            'source': source,
-                            'error': str(e)
+                            "success": False,
+                            "references": [],
+                            "total_count": 0,
+                            "source": source,
+                            "error": str(e),
                         }
 
             # 合并参考文献
@@ -131,7 +132,7 @@ def register_reference_tools(mcp, services, logger):
                 "identifier": identifier.strip(),
                 "id_type": id_type,
                 "processing_time": processing_time,
-                "include_metadata": include_metadata
+                "include_metadata": include_metadata,
             }
 
         except Exception as e:
@@ -144,16 +145,16 @@ def register_reference_tools(mcp, services, logger):
                 "references_by_source": {},
                 "merged_references": [],
                 "total_count": 0,
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     @mcp.tool()
     def batch_process_articles(
-        identifiers: List[str],
-        operations: List[str] = ["details", "quality"],
+        identifiers: list[str],
+        operations: list[str] = ["details", "quality"],
         parallel: bool = True,
-        max_concurrent: int = 10
-    ) -> Dict[str, Any]:
+        max_concurrent: int = 10,
+    ) -> dict[str, Any]:
         """批量处理文献工具
 
         功能说明：
@@ -184,11 +185,11 @@ def register_reference_tools(mcp, services, logger):
                     "processed_count": 0,
                     "total_count": 0,
                     "results": {},
-                    "processing_time": 0
+                    "processing_time": 0,
                 }
 
-            from tool_modules.core.search_tools import _search_services
             from tool_modules.core.article_tools import _article_services
+            from tool_modules.core.search_tools import _search_services
 
             start_time = time.time()
             results = {}
@@ -206,7 +207,7 @@ def register_reference_tools(mcp, services, logger):
                                 operation,
                                 _search_services,
                                 _article_services,
-                                logger
+                                logger,
                             )
                             future_to_identifier[future] = (identifier, operation)
 
@@ -221,10 +222,7 @@ def register_reference_tools(mcp, services, logger):
                             logger.error(f"处理 {identifier} 的 {operation} 操作失败: {e}")
                             if identifier not in results:
                                 results[identifier] = {}
-                            results[identifier][operation] = {
-                                'success': False,
-                                'error': str(e)
-                            }
+                            results[identifier][operation] = {"success": False, "error": str(e)}
             else:
                 # 串行处理
                 for identifier in identifiers:
@@ -236,20 +234,19 @@ def register_reference_tools(mcp, services, logger):
                                 operation,
                                 _search_services,
                                 _article_services,
-                                logger
+                                logger,
                             )
                             identifier_results[operation] = result
                         except Exception as e:
                             logger.error(f"处理 {identifier} 的 {operation} 操作失败: {e}")
-                            identifier_results[operation] = {
-                                'success': False,
-                                'error': str(e)
-                            }
+                            identifier_results[operation] = {"success": False, "error": str(e)}
                     results[identifier] = identifier_results
 
             processing_time = round(time.time() - start_time, 2)
             processed_count = len(results)
-            successful_count = sum(1 for r in results.values() if any(op.get('success', False) for op in r.values()))
+            successful_count = sum(
+                1 for r in results.values() if any(op.get("success", False) for op in r.values())
+            )
 
             return {
                 "success": successful_count > 0,
@@ -259,37 +256,40 @@ def register_reference_tools(mcp, services, logger):
                 "results": results,
                 "processing_time": processing_time,
                 "operations": operations,
-                "parallel": parallel
+                "parallel": parallel,
             }
 
         except Exception as e:
             from src.error_utils import format_error
+
             logger.error(f"批量处理文献异常: {e}")
-            return format_error("batch_process_articles", e, {
-                "processed_count": 0,
-                "total_count": len(identifiers) if identifiers else 0,
-                "successful_count": 0,
-                "results": {},
-                "processing_time": 0
-            })
+            return format_error(
+                "batch_process_articles",
+                e,
+                {
+                    "processed_count": 0,
+                    "total_count": len(identifiers) if identifiers else 0,
+                    "successful_count": 0,
+                    "results": {},
+                    "processing_time": 0,
+                },
+            )
 
     return [get_references, batch_process_articles]
 
 
 def _process_single_article(
-    identifier: str,
-    operation: str,
-    search_services,
-    article_services,
-    logger
-) -> Dict[str, Any]:
+    identifier: str, operation: str, search_services, article_services, logger
+) -> dict[str, Any]:
     """处理单个文献的操作"""
     try:
         if operation == "details":
             # 使用article_services获取详情
             if article_services:
                 sources = ["europe_pmc", "crossref", "openalex"]
-                details_result = _get_article_details_internal(identifier, "auto", sources, article_services, logger)
+                details_result = _get_article_details_internal(
+                    identifier, "auto", sources, article_services, logger
+                )
                 return details_result
         elif operation == "quality":
             # 获取质量指标
@@ -297,7 +297,7 @@ def _process_single_article(
                 "success": True,
                 "identifier": identifier,
                 "operation": operation,
-                "message": "质量评估功能待实现"
+                "message": "质量评估功能待实现",
             }
         elif operation == "relations":
             # 获取文献关联信息
@@ -305,7 +305,7 @@ def _process_single_article(
                 "success": True,
                 "identifier": identifier,
                 "operation": operation,
-                "message": "关系分析功能待实现"
+                "message": "关系分析功能待实现",
             }
         elif operation == "references":
             # 获取参考文献
@@ -316,32 +316,29 @@ def _process_single_article(
                 "identifier": identifier,
                 "operation": operation,
                 "message": "参考文献获取功能已集成到get_references工具中",
-                "references": []
+                "references": [],
             }
         else:
             return {
                 "success": False,
                 "error": f"不支持的操作类型: {operation}",
                 "identifier": identifier,
-                "operation": operation
+                "operation": operation,
             }
 
     except Exception as e:
         logger.error(f"处理文献 {identifier} 的 {operation} 操作异常: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "identifier": identifier,
-            "operation": operation
-        }
+        return {"success": False, "error": str(e), "identifier": identifier, "operation": operation}
 
 
-def _get_article_details_internal(identifier: str, id_type: str, sources: List[str], article_services, logger) -> Dict[str, Any]:
+def _get_article_details_internal(
+    identifier: str, id_type: str, sources: list[str], article_services, logger
+) -> dict[str, Any]:
     """内部文章详情获取函数"""
     if not article_services:
         return {"success": False, "error": "服务未初始化"}
 
-    from src.merged_results import merge_same_doi_articles, extract_identifier_type
+    from src.merged_results import extract_identifier_type, merge_same_doi_articles
 
     details_by_source = {}
     sources_found = []
@@ -371,8 +368,8 @@ def _get_article_details_internal(identifier: str, id_type: str, sources: List[s
             else:
                 continue
 
-            if result.get('success', False) and result.get('article'):
-                details_by_source[source] = result['article']
+            if result.get("success", False) and result.get("article"):
+                details_by_source[source] = result["article"]
                 sources_found.append(source)
 
         except Exception as e:
@@ -390,5 +387,5 @@ def _get_article_details_internal(identifier: str, id_type: str, sources: List[s
         "id_type": id_type,
         "sources_found": sources_found,
         "details_by_source": details_by_source,
-        "merged_detail": merged_detail
+        "merged_detail": merged_detail,
     }

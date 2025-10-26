@@ -1,13 +1,14 @@
 """
 文献关系分析工具 - 核心工具4
 """
-from typing import Dict, Any, List, Optional
+
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 # 全局服务实例
 _relation_services = None
+
 
 def register_relation_tools(mcp, services, logger):
     """注册文献关系分析工具"""
@@ -18,10 +19,10 @@ def register_relation_tools(mcp, services, logger):
     def get_literature_relations(
         identifier: str,
         id_type: str = "auto",
-        relation_types: List[str] = ["references", "similar", "citing"],
+        relation_types: list[str] = ["references", "similar", "citing"],
         max_results: int = 20,
-        sources: List[str] = ["europe_pmc", "pubmed"]
-    ) -> Dict[str, Any]:
+        sources: list[str] = ["europe_pmc", "pubmed"],
+    ) -> dict[str, Any]:
         """获取文献关联信息工具
 
         功能说明：
@@ -57,7 +58,7 @@ def register_relation_tools(mcp, services, logger):
                     "identifier": identifier,
                     "relations": {},
                     "statistics": {},
-                    "processing_time": 0
+                    "processing_time": 0,
                 }
 
             start_time = time.time()
@@ -67,23 +68,30 @@ def register_relation_tools(mcp, services, logger):
             # 自动识别标识符类型
             if id_type == "auto":
                 from src.merged_results import extract_identifier_type
+
                 id_type = extract_identifier_type(identifier.strip())
 
             # 处理每种关系类型
             for relation_type in relation_types:
                 try:
                     if relation_type == "references":
-                        result = _get_references(identifier.strip(), id_type, max_results, sources, logger)
+                        result = _get_references(
+                            identifier.strip(), id_type, max_results, sources, logger
+                        )
                         relations["references"] = result.get("references", [])
                         statistics["references_count"] = len(relations["references"])
 
                     elif relation_type == "similar":
-                        result = _get_similar_articles(identifier.strip(), id_type, max_results, sources, logger)
+                        result = _get_similar_articles(
+                            identifier.strip(), id_type, max_results, sources, logger
+                        )
                         relations["similar"] = result.get("similar_articles", [])
                         statistics["similar_count"] = len(relations["similar"])
 
                     elif relation_type == "citing":
-                        result = _get_citing_articles(identifier.strip(), id_type, max_results, sources, logger)
+                        result = _get_citing_articles(
+                            identifier.strip(), id_type, max_results, sources, logger
+                        )
                         relations["citing"] = result.get("citing_articles", [])
                         statistics["citing_count"] = len(relations["citing"])
 
@@ -109,11 +117,11 @@ def register_relation_tools(mcp, services, logger):
                 "statistics": {
                     **statistics,
                     "total_relations": total_relations,
-                    "found_relation_types": found_relations
+                    "found_relation_types": found_relations,
                 },
                 "processing_time": processing_time,
                 "relation_types_requested": relation_types,
-                "sources_used": sources
+                "sources_used": sources,
             }
 
         except Exception as e:
@@ -124,16 +132,16 @@ def register_relation_tools(mcp, services, logger):
                 "identifier": identifier,
                 "relations": {},
                 "statistics": {},
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     @mcp.tool()
     def analyze_literature_network(
-        identifiers: List[str],
+        identifiers: list[str],
         analysis_type: str = "comprehensive",
         max_depth: int = 1,
-        max_results: int = 50
-    ) -> Dict[str, Any]:
+        max_results: int = 50,
+    ) -> dict[str, Any]:
         """文献网络分析工具
 
         功能说明：
@@ -166,7 +174,7 @@ def register_relation_tools(mcp, services, logger):
                     "error": "文献标识符列表不能为空",
                     "network_data": {"nodes": [], "edges": [], "clusters": {}},
                     "analysis_metrics": {},
-                    "processing_time": 0
+                    "processing_time": 0,
                 }
 
             start_time = time.time()
@@ -176,11 +184,7 @@ def register_relation_tools(mcp, services, logger):
                 identifiers = identifiers[:10]
                 logger.warning("文献数量过多，限制为10篇进行分析")
 
-            network_data = {
-                "nodes": [],
-                "edges": [],
-                "clusters": {}
-            }
+            network_data = {"nodes": [], "edges": [], "clusters": {}}
 
             # 创建节点（文献）
             for i, identifier in enumerate(identifiers):
@@ -188,7 +192,7 @@ def register_relation_tools(mcp, services, logger):
                     "id": identifier.strip(),
                     "label": f"Paper {i+1}",
                     "type": "seed",
-                    "metadata": {"identifier": identifier.strip()}
+                    "metadata": {"identifier": identifier.strip()},
                 }
                 network_data["nodes"].append(node)
 
@@ -220,10 +224,14 @@ def register_relation_tools(mcp, services, logger):
             analysis_metrics = {
                 "total_nodes": len(network_data["nodes"]),
                 "total_edges": len(network_data["edges"]),
-                "network_density": len(edges) / (len(identifiers) * (len(identifiers) - 1)) if len(identifiers) > 1 else 0,
+                "network_density": (
+                    len(edges) / (len(identifiers) * (len(identifiers) - 1))
+                    if len(identifiers) > 1
+                    else 0
+                ),
                 "clusters_found": len(network_data["clusters"]),
                 "analysis_depth": max_depth,
-                "papers_analyzed": len(identifiers)
+                "papers_analyzed": len(identifiers),
             }
 
             return {
@@ -231,7 +239,7 @@ def register_relation_tools(mcp, services, logger):
                 "network_data": network_data,
                 "analysis_metrics": analysis_metrics,
                 "processing_time": processing_time,
-                "analysis_type": analysis_type
+                "analysis_type": analysis_type,
             }
 
         except Exception as e:
@@ -241,19 +249,15 @@ def register_relation_tools(mcp, services, logger):
                 "error": str(e),
                 "network_data": {"nodes": [], "edges": [], "clusters": {}},
                 "analysis_metrics": {},
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     return [get_literature_relations, analyze_literature_network]
 
 
 def _get_references(
-    identifier: str,
-    id_type: str,
-    max_results: int,
-    sources: List[str],
-    logger
-) -> Dict[str, Any]:
+    identifier: str, id_type: str, max_results: int, sources: list[str], logger
+) -> dict[str, Any]:
     """获取参考文献"""
     try:
         if not _relation_services:
@@ -264,9 +268,9 @@ def _get_references(
             service = _relation_services["europe_pmc"]
             result = service.fetch(identifier, id_type=id_type)
 
-            if result.get('success', False):
-                article = result.get('article', {})
-                references = article.get('references', [])
+            if result.get("success", False):
+                article = result.get("article", {})
+                references = article.get("references", [])
 
                 # 限制结果数量
                 if len(references) > max_results:
@@ -282,12 +286,8 @@ def _get_references(
 
 
 def _get_similar_articles(
-    identifier: str,
-    id_type: str,
-    max_results: int,
-    sources: List[str],
-    logger
-) -> Dict[str, Any]:
+    identifier: str, id_type: str, max_results: int, sources: list[str], logger
+) -> dict[str, Any]:
     """获取相似文献 - 基于标题关键词相似度匹配"""
     try:
         if not _relation_services:
@@ -299,25 +299,26 @@ def _get_similar_articles(
             return {"similar_articles": []}
 
         # 提取关键词
-        keywords = _extract_keywords(target_article.get('title', ''))
+        keywords = _extract_keywords(target_article.get("title", ""))
         if not keywords:
             return {"similar_articles": []}
 
         # 使用关键词搜索相似文献
         similar_articles = []
-        search_query = ' '.join(keywords[:3])  # 使用前3个关键词
+        search_query = " ".join(keywords[:3])  # 使用前3个关键词
 
         if "europe_pmc" in _relation_services:
             service = _relation_services["europe_pmc"]
             result = service.search(search_query, max_results=max_results * 2)
 
-            if result.get('success', False):
-                articles = result.get('articles', [])
+            if result.get("success", False):
+                articles = result.get("articles", [])
                 # 排除目标文献本身
                 similar_articles = [
-                    article for article in articles
-                    if article.get('doi', '') != target_article.get('doi', '')
-                    and article.get('pmid', '') != target_article.get('pmid', '')
+                    article
+                    for article in articles
+                    if article.get("doi", "") != target_article.get("doi", "")
+                    and article.get("pmid", "") != target_article.get("pmid", "")
                 ][:max_results]
 
         return {"similar_articles": similar_articles}
@@ -327,53 +328,84 @@ def _get_similar_articles(
         return {"similar_articles": []}
 
 
-def _get_target_article_details(identifier: str, id_type: str, logger) -> Optional[Dict]:
+def _get_target_article_details(identifier: str, id_type: str, logger) -> dict | None:
     """获取目标文献详情"""
     try:
         if "europe_pmc" in _relation_services:
             service = _relation_services["europe_pmc"]
             result = service.fetch(identifier, id_type=id_type)
 
-            if result.get('success', False):
-                return result.get('article')
+            if result.get("success", False):
+                return result.get("article")
         return None
     except Exception as e:
         logger.error(f"获取目标文献详情异常: {e}")
         return None
 
 
-def _extract_keywords(title: str) -> List[str]:
+def _extract_keywords(title: str) -> list[str]:
     """从标题中提取关键词 - 简单的关键词提取"""
     import re
 
     # 移除常见的停用词
     stop_words = {
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-        'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have',
-        'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-        'may', 'might', 'can', 'study', 'studies', 'analysis', 'research',
-        'investigation', 'investigations', 'paper', 'papers', 'article', 'articles'
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "can",
+        "study",
+        "studies",
+        "analysis",
+        "research",
+        "investigation",
+        "investigations",
+        "paper",
+        "papers",
+        "article",
+        "articles",
     }
 
     # 提取单词（包含连字符的词）
-    words = re.findall(r'\b[a-zA-Z][a-zA-Z\-]*\b', title.lower())
+    words = re.findall(r"\b[a-zA-Z][a-zA-Z\-]*\b", title.lower())
 
     # 过滤停用词和短词
-    keywords = [
-        word.strip('-') for word in words
-        if len(word) > 2 and word not in stop_words
-    ]
+    keywords = [word.strip("-") for word in words if len(word) > 2 and word not in stop_words]
 
     return keywords
 
 
 def _get_citing_articles(
-    identifier: str,
-    id_type: str,
-    max_results: int,
-    sources: List[str],
-    logger
-) -> Dict[str, Any]:
+    identifier: str, id_type: str, max_results: int, sources: list[str], logger
+) -> dict[str, Any]:
     """获取引用文献 - 使用CrossRef citation API"""
     try:
         if not _relation_services:
@@ -394,7 +426,7 @@ def _get_citing_articles(
         return {"citing_articles": []}
 
 
-def _get_doi_from_identifier(identifier: str, id_type: str, logger) -> Optional[str]:
+def _get_doi_from_identifier(identifier: str, id_type: str, logger) -> str | None:
     """从标识符获取DOI"""
     try:
         # 如果已经是DOI格式，直接返回
@@ -406,9 +438,9 @@ def _get_doi_from_identifier(identifier: str, id_type: str, logger) -> Optional[
             service = _relation_services["europe_pmc"]
             result = service.fetch(identifier, id_type=id_type)
 
-            if result.get('success', False):
-                article = result.get('article', {})
-                doi = article.get('doi', '')
+            if result.get("success", False):
+                article = result.get("article", {})
+                doi = article.get("doi", "")
                 if doi:
                     return doi
 
@@ -418,17 +450,14 @@ def _get_doi_from_identifier(identifier: str, id_type: str, logger) -> Optional[
         return None
 
 
-def _fetch_citing_articles_from_crossref(doi: str, max_results: int, logger) -> List[Dict]:
+def _fetch_citing_articles_from_crossref(doi: str, max_results: int, logger) -> list[dict]:
     """从CrossRef获取引用文献"""
     try:
         import requests
 
         # CrossRef citation API
         url = f"https://api.crossref.org/works/{doi}/references"
-        headers = {
-            'User-Agent': 'Article-MCP/2.0',
-            'Accept': 'application/json'
-        }
+        headers = {"User-Agent": "Article-MCP/2.0", "Accept": "application/json"}
 
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -452,16 +481,13 @@ def _fetch_citing_articles_from_crossref(doi: str, max_results: int, logger) -> 
         return []
 
 
-def _get_article_by_doi(doi: str, logger) -> Optional[Dict]:
+def _get_article_by_doi(doi: str, logger) -> dict | None:
     """通过DOI获取文章详情"""
     try:
         import requests
 
         url = f"https://api.crossref.org/works/{doi}"
-        headers = {
-            'User-Agent': 'Article-MCP/2.0',
-            'Accept': 'application/json'
-        }
+        headers = {"User-Agent": "Article-MCP/2.0", "Accept": "application/json"}
 
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -478,7 +504,7 @@ def _get_article_by_doi(doi: str, logger) -> Optional[Dict]:
             "year": item.get("published-print", {}).get("date-parts", [[""]])[0][0][:4],
             "doi": item.get("DOI", ""),
             "journal": item.get("container-title", [""])[0],
-            "source": "crossref"
+            "source": "crossref",
         }
 
     except Exception as e:
@@ -487,11 +513,8 @@ def _get_article_by_doi(doi: str, logger) -> Optional[Dict]:
 
 
 def _analyze_citation_network(
-    identifiers: List[str],
-    max_depth: int,
-    max_results: int,
-    logger
-) -> List[Dict]:
+    identifiers: list[str], max_depth: int, max_results: int, logger
+) -> list[dict]:
     """分析引用网络"""
     edges = []
 
@@ -504,21 +527,23 @@ def _analyze_citation_network(
             # 提取参考文献的标识符
             ref_identifiers = []
             for ref in references:
-                if ref.get('doi'):
-                    ref_identifiers.append(ref['doi'])
-                elif ref.get('pmid'):
+                if ref.get("doi"):
+                    ref_identifiers.append(ref["doi"])
+                elif ref.get("pmid"):
                     ref_identifiers.append(f"PMID:{ref['pmid']}")
 
             # 检查目标文献是否在参考文献中
             for j, target_id in enumerate(identifiers):
                 if i != j:  # 不和自己比较
-                    if target_id in ref_identifiers or any(target_id in ref.get('title', '') for ref in references):
+                    if target_id in ref_identifiers or any(
+                        target_id in ref.get("title", "") for ref in references
+                    ):
                         edge = {
                             "source": source_id,
                             "target": target_id,
                             "type": "citation",
                             "weight": 1,
-                            "metadata": {"citation_type": "direct"}
+                            "metadata": {"citation_type": "direct"},
                         }
                         edges.append(edge)
 
@@ -529,11 +554,7 @@ def _analyze_citation_network(
         return []
 
 
-def _analyze_collaboration_network(
-    identifiers: List[str],
-    max_results: int,
-    logger
-) -> List[Dict]:
+def _analyze_collaboration_network(identifiers: list[str], max_results: int, logger) -> list[dict]:
     """分析合作网络"""
     edges = []
 
@@ -546,10 +567,12 @@ def _analyze_collaboration_network(
                 service = _relation_services["europe_pmc"]
                 result = service.fetch(identifier, id_type="auto")
 
-                if result.get('success', False):
-                    article = result.get('article', {})
-                    authors = article.get('authors', [])
-                    author_names = [author.get('name', '') for author in authors if author.get('name')]
+                if result.get("success", False):
+                    article = result.get("article", {})
+                    authors = article.get("authors", [])
+                    author_names = [
+                        author.get("name", "") for author in authors if author.get("name")
+                    ]
                     authors_by_paper[identifier] = author_names
 
         # 分析作者合作关系
@@ -571,8 +594,8 @@ def _analyze_collaboration_network(
                             "weight": collaboration_strength,
                             "metadata": {
                                 "common_authors": list(common_authors),
-                                "collaboration_strength": collaboration_strength
-                            }
+                                "collaboration_strength": collaboration_strength,
+                            },
                         }
                         edges.append(edge)
 
@@ -583,7 +606,7 @@ def _analyze_collaboration_network(
         return []
 
 
-def _detect_communities(network_data: Dict) -> Dict:
+def _detect_communities(network_data: dict) -> dict:
     """简单的社区检测算法"""
     try:
         nodes = network_data.get("nodes", [])

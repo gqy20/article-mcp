@@ -5,6 +5,7 @@
 
 import logging
 
+
 def register_legacy_tools(mcp, services, logger):
     """注册向后兼容的工具
 

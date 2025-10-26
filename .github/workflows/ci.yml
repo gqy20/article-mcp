@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, "3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Run Black
+      run: |
+        uv run black --check src/ tool_modules/ tests/
+
+    - name: Run isort
+      run: |
+        uv run isort --check-only src/ tool_modules/ tests/
+
+    - name: Run ruff
+      run: |
+        uv run ruff check src/ tool_modules/ tests/
+
+    - name: Run mypy
+      run: |
+        uv run mypy src/ tool_modules/
+
+    - name: Run pytest
+      run: |
+        uv run pytest --cov=src --cov=tool_modules --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false

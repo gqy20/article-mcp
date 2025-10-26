@@ -1,12 +1,13 @@
 """
 统一文献详情工具 - 核心工具2
 """
-from typing import Dict, Any, List, Optional
-import logging
+
 import time
+from typing import Any
 
 # 全局服务实例
 _article_services = None
+
 
 def register_article_tools(mcp, services, logger):
     """注册文献详情工具"""
@@ -17,9 +18,9 @@ def register_article_tools(mcp, services, logger):
     def get_article_details(
         identifier: str,
         id_type: str = "auto",
-        sources: List[str] = ["europe_pmc", "crossref"],
-        include_quality_metrics: bool = False
-    ) -> Dict[str, Any]:
+        sources: list[str] = ["europe_pmc", "crossref"],
+        include_quality_metrics: bool = False,
+    ) -> dict[str, Any]:
         """获取文献详情工具
 
         🎯 功能说明：
@@ -61,13 +62,9 @@ def register_article_tools(mcp, services, logger):
         """
         try:
             if not identifier or not identifier.strip():
-                return {
-                    "success": False,
-                    "error": "文献标识符不能为空",
-                    "identifier": identifier
-                }
+                return {"success": False, "error": "文献标识符不能为空", "identifier": identifier}
 
-            from src.merged_results import merge_same_doi_articles, extract_identifier_type
+            from src.merged_results import extract_identifier_type, merge_same_doi_articles
 
             start_time = time.time()
             details_by_source = {}
@@ -104,8 +101,8 @@ def register_article_tools(mcp, services, logger):
                     else:
                         continue
 
-                    if result.get('success', False) and result.get('article'):
-                        details_by_source[source] = result['article']
+                    if result.get("success", False) and result.get("article"):
+                        details_by_source[source] = result["article"]
                         sources_found.append(source)
                         logger.info(f"{source} 获取详情成功")
                     else:
@@ -124,14 +121,17 @@ def register_article_tools(mcp, services, logger):
             # 获取质量指标
             quality_metrics = None
             if include_quality_metrics and merged_detail:
-                journal_name = merged_detail.get('journal', '')
+                journal_name = merged_detail.get("journal", "")
                 if journal_name:
                     try:
                         from src.mcp_config import get_easyscholar_key
+
                         secret_key = get_easyscholar_key(None, logger)
-                        pubmed_service = _article_services.get('pubmed')
+                        pubmed_service = _article_services.get("pubmed")
                         if pubmed_service:
-                            quality_metrics = pubmed_service.get_journal_quality(journal_name, secret_key)
+                            quality_metrics = pubmed_service.get_journal_quality(
+                                journal_name, secret_key
+                            )
                     except Exception as e:
                         logger.warning(f"获取期刊质量指标失败: {e}")
 
@@ -145,7 +145,7 @@ def register_article_tools(mcp, services, logger):
                 "details_by_source": details_by_source,
                 "merged_detail": merged_detail,
                 "quality_metrics": quality_metrics,
-                "processing_time": processing_time
+                "processing_time": processing_time,
             }
 
         except Exception as e:
@@ -158,7 +158,7 @@ def register_article_tools(mcp, services, logger):
                 "details_by_source": {},
                 "merged_detail": None,
                 "quality_metrics": None,
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     return [get_article_details]

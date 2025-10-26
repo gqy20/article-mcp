@@ -3,15 +3,16 @@ arXiv 文献搜索服务
 基于 arXiv API 的学术文献搜索功能
 """
 
-import requests
+import logging
+import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-import urllib.parse
+from typing import Any
+
+import requests
 from dateutil.relativedelta import relativedelta
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-import logging
 
 # ArXiv Atom feed namespace
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
@@ -27,7 +28,7 @@ def create_retry_session() -> requests.Session:
         backoff_factor=1,  # 指数退避（1, 2, 4, 8, 16秒）
         status_forcelist=[429, 500, 502, 503, 504],  # arXiv 常用 503
         allowed_methods=["GET"],  # arXiv API 主要是 GET
-        raise_on_status=False  # 让 raise_for_status() 处理最终错误
+        raise_on_status=False,  # 让 raise_for_status() 处理最终错误
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session = requests.Session()
@@ -48,27 +49,33 @@ def parse_date(date_str: str) -> datetime:
     raise ValueError(f"无法解析日期格式: {date_str}")
 
 
-def process_arxiv_entry(entry) -> Optional[Dict[str, Any]]:
+def process_arxiv_entry(entry) -> dict[str, Any] | None:
     """处理单个 arXiv 条目并提取信息"""
     try:
         # 提取 arXiv ID 和链接
-        entry_id_text = entry.findtext(f'{ATOM_NS}id')
-        arxiv_id = entry_id_text.split('/abs/')[-1] if entry_id_text and '/abs/' in entry_id_text else "N/A"
-        
+        entry_id_text = entry.findtext(f"{ATOM_NS}id")
+        arxiv_id = (
+            entry_id_text.split("/abs/")[-1]
+            if entry_id_text and "/abs/" in entry_id_text
+            else "N/A"
+        )
+
         # 获取摘要页链接
         link_elem = entry.find(f"{ATOM_NS}link[@rel='alternate'][@type='text/html']")
-        link = link_elem.attrib['href'] if link_elem is not None else entry_id_text
+        link = link_elem.attrib["href"] if link_elem is not None else entry_id_text
 
         # 提取标题
-        title = entry.findtext(f'{ATOM_NS}title', "无标题").strip()
+        title = entry.findtext(f"{ATOM_NS}title", "无标题").strip()
 
         # 提取作者
-        authors = [author.findtext(f'{ATOM_NS}name', '').strip()
-                   for author in entry.findall(f'{ATOM_NS}author')
-                   if author.findtext(f'{ATOM_NS}name')]
+        authors = [
+            author.findtext(f"{ATOM_NS}name", "").strip()
+            for author in entry.findall(f"{ATOM_NS}author")
+            if author.findtext(f"{ATOM_NS}name")
+        ]
 
         # 提取发表日期
-        published_str = entry.findtext(f'{ATOM_NS}published')
+        published_str = entry.findtext(f"{ATOM_NS}published")
         publication_date = "日期未知"
         if published_str:
             try:
@@ -79,15 +86,19 @@ def process_arxiv_entry(entry) -> Optional[Dict[str, Any]]:
                 logger.warning(f"无法解析发表日期: {published_str}")
 
         # 提取摘要
-        summary = entry.findtext(f'{ATOM_NS}summary', "无摘要").strip()
+        summary = entry.findtext(f"{ATOM_NS}summary", "无摘要").strip()
 
         # 提取主要 arXiv 分类
-        primary_category_elem = entry.find(f"{{http://arxiv.org/schemas/atom}}primary_category")
-        category = primary_category_elem.attrib.get('term', 'N/A') if primary_category_elem is not None else 'N/A'
+        primary_category_elem = entry.find("{http://arxiv.org/schemas/atom}primary_category")
+        category = (
+            primary_category_elem.attrib.get("term", "N/A")
+            if primary_category_elem is not None
+            else "N/A"
+        )
 
         # 提取PDF链接
         pdf_link_elem = entry.find(f"{ATOM_NS}link[@title='pdf']")
-        pdf_link = pdf_link_elem.attrib['href'] if pdf_link_elem is not None else None
+        pdf_link = pdf_link_elem.attrib["href"] if pdf_link_elem is not None else None
 
         return {
             "arxiv_id": arxiv_id,
@@ -97,7 +108,7 @@ def process_arxiv_entry(entry) -> Optional[Dict[str, Any]]:
             "publication_date": publication_date,
             "abstract": summary,
             "arxiv_link": link,
-            "pdf_link": pdf_link
+            "pdf_link": pdf_link,
         }
 
     except Exception as e:
@@ -107,21 +118,21 @@ def process_arxiv_entry(entry) -> Optional[Dict[str, Any]]:
 
 def search_arxiv(
     keyword: str,
-    email: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    max_results: int = 10
-) -> Dict[str, Any]:
+    email: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    max_results: int = 10,
+) -> dict[str, Any]:
     """
     搜索 arXiv 文献数据库
-    
+
     参数:
         keyword: 搜索关键词
         email: 联系邮箱（可选）
         start_date: 开始日期，格式：YYYY-MM-DD（可选）
         end_date: 结束日期，格式：YYYY-MM-DD（可选）
         max_results: 最大返回结果数量，默认10
-    
+
     返回:
         包含搜索结果的字典
     """
@@ -132,7 +143,7 @@ def search_arxiv(
                 "articles": [],
                 "total_count": 0,
                 "message": "关键词不能为空",
-                "error": "关键词不能为空"
+                "error": "关键词不能为空",
             }
 
         # 验证最大结果数
@@ -141,7 +152,7 @@ def search_arxiv(
                 "articles": [],
                 "total_count": 0,
                 "message": "max_results必须为大于等于1的整数",
-                "error": "max_results必须为大于等于1的整数"
+                "error": "max_results必须为大于等于1的整数",
             }
 
         # 初始化带重试策略的会话
@@ -163,13 +174,13 @@ def search_arxiv(
                         "articles": [],
                         "total_count": 0,
                         "message": "起始时间不能晚于终止时间",
-                        "error": "起始时间不能晚于终止时间"
+                        "error": "起始时间不能晚于终止时间",
                     }
 
                 # 格式化为arXiv日期范围查询条件
                 start_str = start_dt.strftime("%Y%m%d") + "0000"
                 end_str = end_dt.strftime("%Y%m%d") + "2359"
-                date_filter = f'submittedDate:[{start_str} TO {end_str}]'
+                date_filter = f"submittedDate:[{start_str} TO {end_str}]"
                 search_query_parts.append(date_filter)
 
             except ValueError as e:
@@ -177,7 +188,7 @@ def search_arxiv(
                     "articles": [],
                     "total_count": 0,
                     "message": f"日期参数错误: {str(e)}",
-                    "error": f"日期参数错误: {str(e)}"
+                    "error": f"日期参数错误: {str(e)}",
                 }
 
         # 组合查询字符串
@@ -206,26 +217,30 @@ def search_arxiv(
 
             # 设置请求头
             headers = {
-                'User-Agent': f'Europe-PMC-MCP-Server/1.0 (contact: {email})' if email else 'Europe-PMC-MCP-Server/1.0'
+                "User-Agent": (
+                    f"Europe-PMC-MCP-Server/1.0 (contact: {email})"
+                    if email
+                    else "Europe-PMC-MCP-Server/1.0"
+                )
             }
 
             response = session.get(url, headers=headers, timeout=45)
             response.raise_for_status()
 
             # 检查内容类型
-            content_type = response.headers.get('Content-Type', '')
-            if 'application/atom+xml' not in content_type:
+            content_type = response.headers.get("Content-Type", "")
+            if "application/atom+xml" not in content_type:
                 logger.error(f"意外的响应内容类型: {content_type}")
                 return {
                     "articles": [],
                     "total_count": 0,
                     "message": "arXiv API 返回了非预期的内容",
-                    "error": "arXiv API 返回了非预期的内容"
+                    "error": "arXiv API 返回了非预期的内容",
                 }
 
             # 解析XML响应
             root = ET.fromstring(response.content)
-            entries = root.findall(f'{ATOM_NS}entry')
+            entries = root.findall(f"{ATOM_NS}entry")
 
             # 如果当前页没有结果，停止获取
             if not entries:
@@ -254,13 +269,17 @@ def search_arxiv(
         return {
             "articles": articles,
             "total_count": len(articles),
-            "message": f"找到 {len(articles)} 篇相关文献" if articles else "未找到与查询匹配的相关文献",
+            "message": (
+                f"找到 {len(articles)} 篇相关文献" if articles else "未找到与查询匹配的相关文献"
+            ),
             "error": None,
             "search_info": {
                 "keyword": keyword,
-                "date_range": f"{start_date} 到 {end_date}" if start_date or end_date else "无日期限制",
-                "max_results": max_results
-            }
+                "date_range": (
+                    f"{start_date} 到 {end_date}" if start_date or end_date else "无日期限制"
+                ),
+                "max_results": max_results,
+            },
         }
 
     except requests.exceptions.Timeout:
@@ -269,7 +288,7 @@ def search_arxiv(
             "articles": [],
             "total_count": 0,
             "message": "请求 arXiv API 超时",
-            "error": "请求 arXiv API 超时"
+            "error": "请求 arXiv API 超时",
         }
 
     except requests.exceptions.RequestException as e:
@@ -278,7 +297,7 @@ def search_arxiv(
             "articles": [],
             "total_count": 0,
             "message": f"网络请求错误: {str(e)}",
-            "error": f"网络请求错误: {str(e)}"
+            "error": f"网络请求错误: {str(e)}",
         }
 
     except ET.ParseError as e:
@@ -287,7 +306,7 @@ def search_arxiv(
             "articles": [],
             "total_count": 0,
             "message": "解析 arXiv 返回的 XML 数据时出错",
-            "error": "解析 arXiv 返回的 XML 数据时出错"
+            "error": "解析 arXiv 返回的 XML 数据时出错",
         }
 
     except Exception as e:
@@ -296,7 +315,7 @@ def search_arxiv(
             "articles": [],
             "total_count": 0,
             "message": f"处理错误: {str(e)}",
-            "error": f"处理错误: {str(e)}"
+            "error": f"处理错误: {str(e)}",
         }
 
 
@@ -306,45 +325,28 @@ class ArXivSearchService:
     def __init__(self, logger):
         self.logger = logger
 
-    def search(self, keyword: str, max_results: int = 10, **kwargs) -> Dict[str, Any]:
+    def search(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
         """搜索arXiv文献"""
-        return search_arxiv(
-            keyword=keyword,
-            max_results=max_results,
-            logger=self.logger,
-            **kwargs
-        )
+        return search_arxiv(keyword=keyword, max_results=max_results, logger=self.logger, **kwargs)
 
-    def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs) -> Dict[str, Any]:
+    def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs) -> dict[str, Any]:
         """获取arXiv文献详情"""
         if id_type != "arxiv_id":
             return {
                 "success": False,
                 "error": f"arXiv服务不支持标识符类型: {id_type}",
-                "article": None
+                "article": None,
             }
 
         # 通过arXiv ID搜索获取详情
-        result = search_arxiv(
-            keyword=f"id:{identifier}",
-            max_results=1,
-            logger=self.logger
-        )
+        result = search_arxiv(keyword=f"id:{identifier}", max_results=1, logger=self.logger)
 
         if result.get("articles"):
-            return {
-                "success": True,
-                "article": result["articles"][0],
-                "source": "arxiv"
-            }
+            return {"success": True, "article": result["articles"][0], "source": "arxiv"}
         else:
-            return {
-                "success": False,
-                "error": f"未找到arXiv文献: {identifier}",
-                "article": None
-            }
+            return {"success": False, "error": f"未找到arXiv文献: {identifier}", "article": None}
 
 
 def create_arxiv_service(logger):
     """创建arXiv服务实例"""
-    return ArXivSearchService(logger) 
+    return ArXivSearchService(logger)

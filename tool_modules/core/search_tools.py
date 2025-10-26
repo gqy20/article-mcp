@@ -1,13 +1,13 @@
 """
 统一搜索工具 - 核心工具1
 """
-from typing import Dict, Any, List, Optional
-import logging
+
 import time
-import re
+from typing import Any
 
 # 全局服务实例
 _search_services = None
+
 
 def register_search_tools(mcp, services, logger):
     """注册搜索工具"""
@@ -17,10 +17,10 @@ def register_search_tools(mcp, services, logger):
     @mcp.tool()
     def search_literature(
         keyword: str,
-        sources: List[str] = ["europe_pmc", "pubmed"],
+        sources: list[str] = ["europe_pmc", "pubmed"],
         max_results: int = 10,
-        search_type: str = "comprehensive"
-    ) -> Dict[str, Any]:
+        search_type: str = "comprehensive",
+    ) -> dict[str, Any]:
         """多源文献搜索工具
 
         🎯 功能说明：
@@ -80,7 +80,7 @@ def register_search_tools(mcp, services, logger):
                     "sources_used": [],
                     "results_by_source": {},
                     "merged_results": [],
-                    "total_count": 0
+                    "total_count": 0,
                 }
 
             from src.merged_results import merge_articles_by_doi, simple_rank_articles
@@ -114,10 +114,12 @@ def register_search_tools(mcp, services, logger):
                     else:
                         continue
 
-                    if result.get('success', False):
-                        results_by_source[source] = result.get('articles', [])
+                    if result.get("success", False):
+                        results_by_source[source] = result.get("articles", [])
                         sources_used.append(source)
-                        logger.info(f"{source} 搜索成功，找到 {len(results_by_source[source])} 篇文章")
+                        logger.info(
+                            f"{source} 搜索成功，找到 {len(results_by_source[source])} 篇文章"
+                        )
                     else:
                         logger.warning(f"{source} 搜索失败: {result.get('error', '未知错误')}")
 
@@ -136,10 +138,10 @@ def register_search_tools(mcp, services, logger):
                 "keyword": keyword.strip(),
                 "sources_used": sources_used,
                 "results_by_source": results_by_source,
-                "merged_results": merged_results[:max_results * len(sources)],
+                "merged_results": merged_results[: max_results * len(sources)],
                 "total_count": sum(len(results) for results in results_by_source.values()),
                 "search_time": search_time,
-                "search_type": search_type
+                "search_type": search_type,
             }
 
         except Exception as e:
@@ -152,7 +154,7 @@ def register_search_tools(mcp, services, logger):
                 "results_by_source": {},
                 "merged_results": [],
                 "total_count": 0,
-                "search_time": 0
+                "search_time": 0,
             }
 
     return [search_literature]

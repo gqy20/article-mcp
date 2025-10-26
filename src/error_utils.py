@@ -1,11 +1,15 @@
 """
 统一的错误处理工具 - Linus风格：简单直接
 """
-import time
-import logging
-from typing import Dict, Any, Optional
 
-def format_error(operation: str, error: Exception, context: Optional[Dict] = None) -> Dict[str, Any]:
+import logging
+import time
+from typing import Any
+
+
+def format_error(
+    operation: str, error: Exception, context: dict | None = None
+) -> dict[str, Any]:
     """
     统一的错误格式 - 一个函数搞定所有错误
 
@@ -23,7 +27,7 @@ def format_error(operation: str, error: Exception, context: Optional[Dict] = Non
         "operation": operation,
         "error_type": type(error).__name__,
         "context": context or {},
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
 
 
@@ -32,8 +36,8 @@ def format_response(
     data: Any = None,
     operation: str = "",
     message: str = "",
-    context: Optional[Dict] = None
-) -> Dict[str, Any]:
+    context: dict | None = None,
+) -> dict[str, Any]:
     """
     统一的响应格式 - 一个函数搞定所有响应
 
@@ -47,11 +51,7 @@ def format_response(
     Returns:
         标准化的响应
     """
-    response = {
-        "success": success,
-        "operation": operation,
-        "timestamp": time.time()
-    }
+    response = {"success": success, "operation": operation, "timestamp": time.time()}
 
     if data is not None:
         response["data"] = data
@@ -87,15 +87,17 @@ def safe_execute(operation: str, func, *args, **kwargs):
 class ErrorHandler:
     """错误处理器类 - 简单直接"""
 
-    def __init__(self, logger: Optional[logging.Logger] = None):
+    def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
 
-    def handle(self, operation: str, error: Exception, context: Optional[Dict] = None) -> Dict[str, Any]:
+    def handle(
+        self, operation: str, error: Exception, context: dict | None = None
+    ) -> dict[str, Any]:
         """处理错误"""
         self.logger.error(f"{operation} 失败: {error}")
         return format_error(operation, error, context)
 
-    def log_and_return(self, operation: str, message: str, data: Any = None) -> Dict[str, Any]:
+    def log_and_return(self, operation: str, message: str, data: Any = None) -> dict[str, Any]:
         """记录日志并返回响应"""
         self.logger.info(f"{operation}: {message}")
         return format_response(True, data, operation, message)
@@ -104,7 +106,8 @@ class ErrorHandler:
 # 全局错误处理器实例
 _default_handler = ErrorHandler()
 
-def get_error_handler(logger: Optional[logging.Logger] = None) -> ErrorHandler:
+
+def get_error_handler(logger: logging.Logger | None = None) -> ErrorHandler:
     """获取错误处理器"""
     if logger:
         return ErrorHandler(logger)

@@ -1,14 +1,15 @@
 """
 期刊质量评估工具 - 核心工具5
 """
-from typing import Dict, Any, List, Optional
-import logging
-import time
+
 import json
+import time
 from pathlib import Path
+from typing import Any
 
 # 全局服务实例
 _quality_services = None
+
 
 def register_quality_tools(mcp, services, logger):
     """注册期刊质量评估工具"""
@@ -18,9 +19,9 @@ def register_quality_tools(mcp, services, logger):
     @mcp.tool()
     def get_journal_quality(
         journal_name: str,
-        include_metrics: List[str] = ["impact_factor", "quartile", "jci"],
-        use_cache: bool = True
-    ) -> Dict[str, Any]:
+        include_metrics: list[str] = ["impact_factor", "quartile", "jci"],
+        use_cache: bool = True,
+    ) -> dict[str, Any]:
         """获取期刊质量指标工具
 
         功能说明：
@@ -55,7 +56,7 @@ def register_quality_tools(mcp, services, logger):
                     "journal_name": journal_name,
                     "quality_metrics": {},
                     "ranking_info": {},
-                    "data_source": None
+                    "data_source": None,
                 }
 
             start_time = time.time()
@@ -67,14 +68,12 @@ def register_quality_tools(mcp, services, logger):
 
             # 1. 尝试从EasyScholar获取
             try:
-                easyscholar_result = _get_easyscholar_quality(
-                    journal_name.strip(), logger
-                )
+                easyscholar_result = _get_easyscholar_quality(journal_name.strip(), logger)
                 if easyscholar_result.get("success", False):
                     quality_metrics.update(easyscholar_result.get("quality_metrics", {}))
                     ranking_info.update(easyscholar_result.get("ranking_info", {}))
                     data_source = "easyscholar"
-                    logger.info(f"从EasyScholar获取期刊质量信息成功")
+                    logger.info("从EasyScholar获取期刊质量信息成功")
             except Exception as e:
                 logger.debug(f"EasyScholar获取失败: {e}")
 
@@ -85,7 +84,7 @@ def register_quality_tools(mcp, services, logger):
                     quality_metrics.update(cache_result.get("quality_metrics", {}))
                     ranking_info.update(cache_result.get("ranking_info", {}))
                     data_source = "local_cache"
-                    logger.info(f"从本地缓存获取期刊质量信息")
+                    logger.info("从本地缓存获取期刊质量信息")
 
             # 3. 基于期刊名称的简单评估
             if not quality_metrics:
@@ -93,7 +92,7 @@ def register_quality_tools(mcp, services, logger):
                 quality_metrics.update(simple_result.get("quality_metrics", {}))
                 ranking_info.update(simple_result.get("ranking_info", {}))
                 data_source = "simple_assessment"
-                logger.info(f"使用简单评估方法获取期刊质量信息")
+                logger.info("使用简单评估方法获取期刊质量信息")
 
             # 过滤用户请求的指标
             filtered_metrics = {}
@@ -111,7 +110,7 @@ def register_quality_tools(mcp, services, logger):
                 "ranking_info": ranking_info,
                 "data_source": data_source,
                 "processing_time": processing_time,
-                "available_metrics": list(quality_metrics.keys())
+                "available_metrics": list(quality_metrics.keys()),
             }
 
         except Exception as e:
@@ -123,15 +122,15 @@ def register_quality_tools(mcp, services, logger):
                 "quality_metrics": {},
                 "ranking_info": {},
                 "data_source": None,
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     @mcp.tool()
     def evaluate_articles_quality(
-        articles: List[Dict[str, Any]],
-        evaluation_criteria: List[str] = ["journal_quality", "citation_count", "open_access"],
-        weight_config: Optional[Dict[str, float]] = None
-    ) -> Dict[str, Any]:
+        articles: list[dict[str, Any]],
+        evaluation_criteria: list[str] = ["journal_quality", "citation_count", "open_access"],
+        weight_config: dict[str, float] | None = None,
+    ) -> dict[str, Any]:
         """批量评估文献质量工具
 
         功能说明：
@@ -161,7 +160,7 @@ def register_quality_tools(mcp, services, logger):
                     "evaluated_articles": [],
                     "quality_distribution": {},
                     "ranking": [],
-                    "evaluation_summary": {}
+                    "evaluation_summary": {},
                 }
 
             start_time = time.time()
@@ -172,7 +171,7 @@ def register_quality_tools(mcp, services, logger):
                 "citation_count": 0.3,
                 "open_access": 0.1,
                 "author_reputation": 0.1,
-                "publication_recency": 0.1
+                "publication_recency": 0.1,
             }
 
             weights = weight_config or default_weights
@@ -187,23 +186,22 @@ def register_quality_tools(mcp, services, logger):
                         article, evaluation_criteria, weights, logger
                     )
 
-                    evaluated_articles.append({
-                        **article,
-                        "quality_evaluation": article_evaluation
-                    })
+                    evaluated_articles.append({**article, "quality_evaluation": article_evaluation})
 
                     quality_scores.append(article_evaluation.get("overall_score", 0))
 
                 except Exception as e:
                     logger.error(f"评估文献异常: {e}")
-                    evaluated_articles.append({
-                        **article,
-                        "quality_evaluation": {
-                            "overall_score": 0,
-                            "error": str(e),
-                            "evaluated_criteria": []
+                    evaluated_articles.append(
+                        {
+                            **article,
+                            "quality_evaluation": {
+                                "overall_score": 0,
+                                "error": str(e),
+                                "evaluated_criteria": [],
+                            },
                         }
-                    })
+                    )
 
             # 计算质量分布
             quality_distribution = _calculate_quality_distribution(quality_scores)
@@ -212,19 +210,24 @@ def register_quality_tools(mcp, services, logger):
             ranking = sorted(
                 [(i, score) for i, score in enumerate(quality_scores)],
                 key=lambda x: x[1],
-                reverse=True
+                reverse=True,
             )
 
             # 统计信息
             evaluation_summary = {
                 "total_articles": len(articles),
-                "successful_evaluations": sum(1 for eval_result in evaluated_articles
-                                            if eval_result.get("quality_evaluation", {}).get("overall_score", 0) > 0),
-                "average_quality_score": sum(quality_scores) / len(quality_scores) if quality_scores else 0,
+                "successful_evaluations": sum(
+                    1
+                    for eval_result in evaluated_articles
+                    if eval_result.get("quality_evaluation", {}).get("overall_score", 0) > 0
+                ),
+                "average_quality_score": (
+                    sum(quality_scores) / len(quality_scores) if quality_scores else 0
+                ),
                 "highest_score": max(quality_scores) if quality_scores else 0,
                 "lowest_score": min(quality_scores) if quality_scores else 0,
                 "evaluation_criteria_used": evaluation_criteria,
-                "weights_applied": weights
+                "weights_applied": weights,
             }
 
             processing_time = round(time.time() - start_time, 2)
@@ -233,10 +236,12 @@ def register_quality_tools(mcp, services, logger):
                 "success": True,
                 "evaluated_articles": evaluated_articles,
                 "quality_distribution": quality_distribution,
-                "ranking": [{"article_index": idx, "rank": i+1, "score": score}
-                           for i, (idx, score) in enumerate(ranking)],
+                "ranking": [
+                    {"article_index": idx, "rank": i + 1, "score": score}
+                    for i, (idx, score) in enumerate(ranking)
+                ],
                 "evaluation_summary": evaluation_summary,
-                "processing_time": processing_time
+                "processing_time": processing_time,
             }
 
         except Exception as e:
@@ -248,15 +253,13 @@ def register_quality_tools(mcp, services, logger):
                 "quality_distribution": {},
                 "ranking": [],
                 "evaluation_summary": {},
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     @mcp.tool()
     def get_field_ranking(
-        field_name: str,
-        ranking_type: str = "journal_impact",
-        limit: int = 50
-    ) -> Dict[str, Any]:
+        field_name: str, ranking_type: str = "journal_impact", limit: int = 50
+    ) -> dict[str, Any]:
         """获取学科领域期刊排名工具
 
         功能说明：
@@ -286,7 +289,7 @@ def register_quality_tools(mcp, services, logger):
                     "field_name": field_name,
                     "ranking_type": ranking_type,
                     "top_journals": [],
-                    "field_statistics": {}
+                    "field_statistics": {},
                 }
 
             start_time = time.time()
@@ -303,12 +306,23 @@ def register_quality_tools(mcp, services, logger):
 
             top_journals = ranking_data.get(ranking_type, [])[:limit]
 
-            field_statistics = ranking_data.get("statistics", {
-                "total_journals": len(top_journals),
-                "average_impact_factor": sum(j.get("impact_factor", 0) for j in top_journals) / len(top_journals) if top_journals else 0,
-                "highest_impact": top_journals[0].get("impact_factor", 0) if top_journals else 0,
-                "lowest_impact": top_journals[-1].get("impact_factor", 0) if top_journals else 0
-            })
+            field_statistics = ranking_data.get(
+                "statistics",
+                {
+                    "total_journals": len(top_journals),
+                    "average_impact_factor": (
+                        sum(j.get("impact_factor", 0) for j in top_journals) / len(top_journals)
+                        if top_journals
+                        else 0
+                    ),
+                    "highest_impact": (
+                        top_journals[0].get("impact_factor", 0) if top_journals else 0
+                    ),
+                    "lowest_impact": (
+                        top_journals[-1].get("impact_factor", 0) if top_journals else 0
+                    ),
+                },
+            )
 
             processing_time = round(time.time() - start_time, 2)
 
@@ -319,7 +333,7 @@ def register_quality_tools(mcp, services, logger):
                 "top_journals": top_journals,
                 "field_statistics": field_statistics,
                 "data_source": "predefined",
-                "processing_time": processing_time
+                "processing_time": processing_time,
             }
 
         except Exception as e:
@@ -331,13 +345,13 @@ def register_quality_tools(mcp, services, logger):
                 "ranking_type": ranking_type,
                 "top_journals": [],
                 "field_statistics": {},
-                "processing_time": 0
+                "processing_time": 0,
             }
 
     return [get_journal_quality, evaluate_articles_quality, get_field_ranking]
 
 
-def _get_easyscholar_quality(journal_name: str, logger) -> Dict[str, Any]:
+def _get_easyscholar_quality(journal_name: str, logger) -> dict[str, Any]:
     """从EasyScholar获取期刊质量信息"""
     try:
         from src.mcp_config import get_easyscholar_key
@@ -361,7 +375,7 @@ def _get_easyscholar_quality(journal_name: str, logger) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-def _get_cached_journal_quality(journal_name: str, logger) -> Optional[Dict[str, Any]]:
+def _get_cached_journal_quality(journal_name: str, logger) -> dict[str, Any] | None:
     """从本地缓存获取期刊质量信息"""
     try:
         cache_file = Path(__file__).parent.parent.parent / "data" / "journal_quality_cache.json"
@@ -369,7 +383,7 @@ def _get_cached_journal_quality(journal_name: str, logger) -> Optional[Dict[str,
         if not cache_file.exists():
             return None
 
-        with open(cache_file, 'r', encoding='utf-8') as f:
+        with open(cache_file, encoding="utf-8") as f:
             cache_data = json.load(f)
 
         return cache_data.get(journal_name.lower())
@@ -379,7 +393,7 @@ def _get_cached_journal_quality(journal_name: str, logger) -> Optional[Dict[str,
         return None
 
 
-def _simple_journal_assessment(journal_name: str, logger) -> Dict[str, Any]:
+def _simple_journal_assessment(journal_name: str, logger) -> dict[str, Any]:
     """基于期刊名称的简单质量评估"""
     try:
         # 基于期刊名称模式的简单评估
@@ -387,15 +401,31 @@ def _simple_journal_assessment(journal_name: str, logger) -> Dict[str, Any]:
 
         # 高质量期刊关键词
         high_quality_indicators = [
-            "nature", "science", "cell", " lancet", "nejm", "pnas",
-            "nature communications", "nature genetics", "nature medicine",
-            "science advances", "science translational medicine"
+            "nature",
+            "science",
+            "cell",
+            " lancet",
+            "nejm",
+            "pnas",
+            "nature communications",
+            "nature genetics",
+            "nature medicine",
+            "science advances",
+            "science translational medicine",
         ]
 
         # 中等质量期刊关键词
         medium_quality_indicators = [
-            "journal", "review", "research", "studies", "international",
-            "applied", "clinical", "experimental", "molecular", "biochemical"
+            "journal",
+            "review",
+            "research",
+            "studies",
+            "international",
+            "applied",
+            "clinical",
+            "experimental",
+            "molecular",
+            "biochemical",
         ]
 
         quality_metrics = {}
@@ -405,37 +435,25 @@ def _simple_journal_assessment(journal_name: str, logger) -> Dict[str, Any]:
             quality_metrics = {
                 "impact_factor_estimate": 10.0,
                 "quartile_estimate": "Q1",
-                "quality_tier": "High"
+                "quality_tier": "High",
             }
-            ranking_info = {
-                "estimated_rank": "Top 5%",
-                "confidence": "Medium"
-            }
+            ranking_info = {"estimated_rank": "Top 5%", "confidence": "Medium"}
         elif any(indicator in journal_lower for indicator in medium_quality_indicators):
             quality_metrics = {
                 "impact_factor_estimate": 3.0,
                 "quartile_estimate": "Q2",
-                "quality_tier": "Medium"
+                "quality_tier": "Medium",
             }
-            ranking_info = {
-                "estimated_rank": "Top 25%",
-                "confidence": "Low"
-            }
+            ranking_info = {"estimated_rank": "Top 25%", "confidence": "Low"}
         else:
             quality_metrics = {
                 "impact_factor_estimate": 1.0,
                 "quartile_estimate": "Q3-Q4",
-                "quality_tier": "Unknown"
+                "quality_tier": "Unknown",
             }
-            ranking_info = {
-                "estimated_rank": "Unknown",
-                "confidence": "Very Low"
-            }
+            ranking_info = {"estimated_rank": "Unknown", "confidence": "Very Low"}
 
-        return {
-            "quality_metrics": quality_metrics,
-            "ranking_info": ranking_info
-        }
+        return {"quality_metrics": quality_metrics, "ranking_info": ranking_info}
 
     except Exception as e:
         logger.error(f"简单评估异常: {e}")
@@ -443,18 +461,11 @@ def _simple_journal_assessment(journal_name: str, logger) -> Dict[str, Any]:
 
 
 def _evaluate_single_article(
-    article: Dict[str, Any],
-    criteria: List[str],
-    weights: Dict[str, float],
-    logger
-) -> Dict[str, Any]:
+    article: dict[str, Any], criteria: list[str], weights: dict[str, float], logger
+) -> dict[str, Any]:
     """评估单篇文献质量"""
     try:
-        evaluation = {
-            "overall_score": 0,
-            "criteria_scores": {},
-            "evaluated_criteria": []
-        }
+        evaluation = {"overall_score": 0, "criteria_scores": {}, "evaluated_criteria": []}
 
         total_score = 0
         total_weight = 0
@@ -470,7 +481,7 @@ def _evaluate_single_article(
                 evaluation["criteria_scores"][criterion] = {
                     "score": score,
                     "weight": weight,
-                    "weighted_score": score * weight
+                    "weighted_score": score * weight,
                 }
 
                 total_score += score * weight
@@ -491,7 +502,7 @@ def _evaluate_single_article(
         return {"overall_score": 0, "criteria_scores": {}, "evaluated_criteria": []}
 
 
-def _evaluate_criterion(article: Dict[str, Any], criterion: str, logger) -> float:
+def _evaluate_criterion(article: dict[str, Any], criterion: str, logger) -> float:
     """评估单个标准"""
     try:
         if criterion == "journal_quality":
@@ -575,7 +586,7 @@ def _evaluate_criterion(article: Dict[str, Any], criterion: str, logger) -> floa
         return 0.0
 
 
-def _calculate_quality_distribution(scores: List[float]) -> Dict[str, Any]:
+def _calculate_quality_distribution(scores: list[float]) -> dict[str, Any]:
     """计算质量分布统计"""
     try:
         if not scores:
@@ -590,11 +601,7 @@ def _calculate_quality_distribution(scores: List[float]) -> Dict[str, Any]:
             "median": scores[n // 2] if n % 2 == 1 else (scores[n // 2 - 1] + scores[n // 2]) / 2,
             "min": scores[0],
             "max": scores[-1],
-            "quartiles": {
-                "q1": scores[n // 4],
-                "q2": scores[n // 2],
-                "q3": scores[3 * n // 4]
-            }
+            "quartiles": {"q1": scores[n // 4], "q2": scores[n // 2], "q3": scores[3 * n // 4]},
         }
 
         # 质量等级分布
@@ -602,7 +609,7 @@ def _calculate_quality_distribution(scores: List[float]) -> Dict[str, Any]:
             "excellent": sum(1 for s in scores if s >= 0.8),
             "good": sum(1 for s in scores if 0.6 <= s < 0.8),
             "average": sum(1 for s in scores if 0.4 <= s < 0.6),
-            "poor": sum(1 for s in scores if s < 0.4)
+            "poor": sum(1 for s in scores if s < 0.4),
         }
 
         distribution["grade_distribution"] = grade_distribution
@@ -614,7 +621,7 @@ def _calculate_quality_distribution(scores: List[float]) -> Dict[str, Any]:
         return {}
 
 
-def _get_predefined_field_rankings() -> Dict[str, Any]:
+def _get_predefined_field_rankings() -> dict[str, Any]:
     """获取预定义的学科领域排名数据"""
     return {
         "biology": {
@@ -623,12 +630,9 @@ def _get_predefined_field_rankings() -> Dict[str, Any]:
                 {"name": "Science", "impact_factor": 63.714, "rank": 2},
                 {"name": "Cell", "impact_factor": 66.850, "rank": 3},
                 {"name": "Nature Medicine", "impact_factor": 82.9, "rank": 4},
-                {"name": "Nature Genetics", "impact_factor": 38.33, "rank": 5}
+                {"name": "Nature Genetics", "impact_factor": 38.33, "rank": 5},
             ],
-            "statistics": {
-                "total_journals": 100,
-                "average_impact_factor": 4.2
-            }
+            "statistics": {"total_journals": 100, "average_impact_factor": 4.2},
         },
         "medicine": {
             "journal_impact": [
@@ -636,22 +640,16 @@ def _get_predefined_field_rankings() -> Dict[str, Any]:
                 {"name": "New England Journal of Medicine", "impact_factor": 158.5, "rank": 2},
                 {"name": "Nature Medicine", "impact_factor": 82.9, "rank": 3},
                 {"name": "BMJ", "impact_factor": 105.7, "rank": 4},
-                {"name": "JAMA", "impact_factor": 120.7, "rank": 5}
+                {"name": "JAMA", "impact_factor": 120.7, "rank": 5},
             ],
-            "statistics": {
-                "total_journals": 150,
-                "average_impact_factor": 6.8
-            }
+            "statistics": {"total_journals": 150, "average_impact_factor": 6.8},
         },
         "general": {
             "journal_impact": [
                 {"name": "Nature", "impact_factor": 69.504, "rank": 1},
                 {"name": "Science", "impact_factor": 63.714, "rank": 2},
-                {"name": "Cell", "impact_factor": 66.850, "rank": 3}
+                {"name": "Cell", "impact_factor": 66.850, "rank": 3},
             ],
-            "statistics": {
-                "total_journals": 50,
-                "average_impact_factor": 3.5
-            }
-        }
+            "statistics": {"total_journals": 50, "average_impact_factor": 3.5},
+        },
     }
