@@ -151,7 +151,7 @@ def register_search_tools(mcp, europe_pmc_service, pubmed_service, logger):
                 }
 
             # 调用arXiv搜索函数
-            from src.arxiv_search import search_arxiv
+            from ..services.arxiv_search import search_arxiv
 
             result = search_arxiv(
                 keyword=keyword.strip(),

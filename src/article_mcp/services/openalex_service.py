@@ -6,7 +6,7 @@ import logging
 from functools import lru_cache
 from typing import Any
 
-from src.api_utils import get_api_client
+from .api_utils import get_api_client
 
 
 class OpenAlexService:

@@ -73,7 +73,7 @@ def register_reference_tools(mcp, services, logger):
                     "total_count": 0,
                 }
 
-            from src.merged_results import merge_reference_results
+            from ..services.merged_results import merge_reference_results
 
             start_time = time.time()
             reference_results = {}
@@ -260,7 +260,7 @@ def register_reference_tools(mcp, services, logger):
             }
 
         except Exception as e:
-            from src.error_utils import format_error
+            from ..services.error_utils import format_error
 
             logger.error(f"批量处理文献异常: {e}")
             return format_error(
@@ -338,7 +338,7 @@ def _get_article_details_internal(
     if not article_services:
         return {"success": False, "error": "服务未初始化"}
 
-    from src.merged_results import extract_identifier_type, merge_same_doi_articles
+    from ..services.merged_results import extract_identifier_type, merge_same_doi_articles
 
     details_by_source = {}
     sources_found = []

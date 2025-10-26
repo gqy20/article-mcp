@@ -124,7 +124,7 @@ def register_batch_tools(mcp, services, logger):
 
             # 去重和排序
             if all_results:
-                from src.merged_results import deduplicate_articles, simple_rank_articles
+                from ..services.merged_results import deduplicate_articles, simple_rank_articles
 
                 unique_results = deduplicate_articles(all_results)
                 merged_results = simple_rank_articles(unique_results)
@@ -430,7 +430,7 @@ def _search_single_query(
                 continue
 
         # 合并结果
-        from src.merged_results import merge_articles_by_doi, simple_rank_articles
+        from ..services.merged_results import merge_articles_by_doi, simple_rank_articles
 
         merged_results = merge_articles_by_doi(results_by_source)
         merged_results = simple_rank_articles(merged_results)
@@ -460,7 +460,7 @@ def _get_single_article_details(
         if not _article_services:
             return {"success": False, "error": "文章详情服务未初始化", "identifier": identifier}
 
-        from src.merged_results import extract_identifier_type, merge_same_doi_articles
+        from ..services.merged_results import extract_identifier_type, merge_same_doi_articles
 
         # 自动识别标识符类型
         if id_type == "auto":

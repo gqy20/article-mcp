@@ -67,7 +67,7 @@ def register_relation_tools(mcp, services, logger):
 
             # 自动识别标识符类型
             if id_type == "auto":
-                from src.merged_results import extract_identifier_type
+                from ..services.merged_results import extract_identifier_type
 
                 id_type = extract_identifier_type(identifier.strip())
 

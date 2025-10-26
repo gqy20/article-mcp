@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 # 添加src目录到Python路径
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
@@ -37,21 +37,45 @@ def test_server_creation():
     print("🔍 测试MCP服务器创建...")
 
     try:
-        # 使用mock来避免实际的服务创建
+        # 使用mock来避免实际的服务创建，模拟所有导入的模块
         with patch.multiple(
-            'article_mcp.cli',
-            create_europe_pmc_service=Mock(),
-            create_pubmed_service=Mock(),
-            CrossRefService=Mock(),
-            OpenAlexService=Mock(),
-            create_reference_service=Mock(),
-            create_literature_relation_service=Mock(),
-            create_arxiv_service=Mock(),
-            register_search_tools=Mock(),
-            register_article_tools=Mock(),
-            register_reference_tools=Mock(),
-            register_relation_tools=Mock(),
-            register_quality_tools=Mock(),
+            'article_mcp.services.europe_pmc',
+            create_europe_pmc_service=Mock()
+        ), patch.multiple(
+            'article_mcp.services.pubmed_search',
+            create_pubmed_service=Mock()
+        ), patch.multiple(
+            'article_mcp.services.crossref_service',
+            CrossRefService=Mock()
+        ), patch.multiple(
+            'article_mcp.services.openalex_service',
+            OpenAlexService=Mock()
+        ), patch.multiple(
+            'article_mcp.services.reference_service',
+            create_reference_service=Mock()
+        ), patch.multiple(
+            'article_mcp.services.literature_relation_service',
+            create_literature_relation_service=Mock()
+        ), patch.multiple(
+            'article_mcp.services.arxiv_search',
+            create_arxiv_service=Mock()
+        ), patch.multiple(
+            'article_mcp.tools.core.search_tools',
+            register_search_tools=Mock()
+        ), patch.multiple(
+            'article_mcp.tools.core.article_tools',
+            register_article_tools=Mock()
+        ), patch.multiple(
+            'article_mcp.tools.core.reference_tools',
+            register_reference_tools=Mock()
+        ), patch.multiple(
+            'article_mcp.tools.core.relation_tools',
+            register_relation_tools=Mock()
+        ), patch.multiple(
+            'article_mcp.tools.core.quality_tools',
+            register_quality_tools=Mock()
+        ), patch.multiple(
+            'article_mcp.tools.core.batch_tools',
             register_batch_tools=Mock()
         ):
             from article_mcp.cli import create_mcp_server

@@ -64,7 +64,7 @@ def register_article_tools(mcp, services, logger):
             if not identifier or not identifier.strip():
                 return {"success": False, "error": "文献标识符不能为空", "identifier": identifier}
 
-            from src.merged_results import extract_identifier_type, merge_same_doi_articles
+            from ..services.merged_results import extract_identifier_type, merge_same_doi_articles
 
             start_time = time.time()
             details_by_source = {}
@@ -124,7 +124,7 @@ def register_article_tools(mcp, services, logger):
                 journal_name = merged_detail.get("journal", "")
                 if journal_name:
                     try:
-                        from src.mcp_config import get_easyscholar_key
+                        from ..services.mcp_config import get_easyscholar_key
 
                         secret_key = get_easyscholar_key(None, logger)
                         pubmed_service = _article_services.get("pubmed")

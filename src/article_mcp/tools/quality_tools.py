@@ -7,7 +7,7 @@
 
 from typing import Any
 
-from src.mcp_config import get_easyscholar_key
+from ..services.mcp_config import get_easyscholar_key
 
 # 在注册时会注入这些依赖
 quality_tools_deps = {"pubmed_service": None, "logger": None}

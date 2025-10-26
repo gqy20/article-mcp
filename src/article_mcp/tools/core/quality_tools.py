@@ -354,7 +354,7 @@ def register_quality_tools(mcp, services, logger):
 def _get_easyscholar_quality(journal_name: str, logger) -> dict[str, Any]:
     """从EasyScholar获取期刊质量信息"""
     try:
-        from src.mcp_config import get_easyscholar_key
+        from ..services.mcp_config import get_easyscholar_key
 
         # 尝试获取EasyScholar密钥
         secret_key = get_easyscholar_key(None, logger)

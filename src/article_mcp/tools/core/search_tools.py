@@ -83,7 +83,7 @@ def register_search_tools(mcp, services, logger):
                     "total_count": 0,
                 }
 
-            from src.merged_results import merge_articles_by_doi, simple_rank_articles
+            from ..services.merged_results import merge_articles_by_doi, simple_rank_articles
 
             start_time = time.time()
             results_by_source = {}

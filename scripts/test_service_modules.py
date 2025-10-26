@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 
 # 添加src目录到Python路径
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
