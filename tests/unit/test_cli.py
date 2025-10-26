@@ -5,17 +5,17 @@ CLI单元测试
 测试命令行接口功能
 """
 
-import pytest
-import asyncio
-import sys
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from io import StringIO
 import argparse
+import asyncio
+import os
 
 # 导入要测试的CLI模块
 import sys
-import os
+from io import StringIO
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -23,10 +23,10 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from article_mcp.cli import create_mcp_server, main, start_server, show_info, run_test
 from fastmcp import FastMCP
 
-from tests.utils.test_helpers import TestTimer, MockDataGenerator
+from article_mcp.cli import create_mcp_server, main, run_test, show_info, start_server
+from tests.utils.test_helpers import MockDataGenerator, TestTimer
 
 
 class TestCLIBasics:

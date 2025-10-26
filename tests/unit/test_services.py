@@ -5,14 +5,15 @@
 测试各个服务类的基本功能
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+import os
 
 # 导入要测试的服务
 import sys
-import os
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -20,18 +21,17 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from article_mcp.services.europe_pmc import EuropePMCService
 from article_mcp.services.arxiv_search import create_arxiv_service
-from article_mcp.services.reference_service import create_reference_service
 from article_mcp.services.crossref_service import CrossRefService
+from article_mcp.services.europe_pmc import EuropePMCService
 from article_mcp.services.openalex_service import OpenAlexService
-
+from article_mcp.services.reference_service import create_reference_service
 from tests.utils.test_helpers import (
     MockDataGenerator,
     TestTimer,
-    create_mock_service,
     assert_valid_article_structure,
     assert_valid_search_results,
+    create_mock_service,
 )
 
 

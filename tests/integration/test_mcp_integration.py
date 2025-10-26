@@ -5,16 +5,17 @@ MCP集成测试
 测试完整的MCP服务器功能和工作流程
 """
 
-import pytest
 import asyncio
 import json
-from unittest.mock import Mock, AsyncMock, patch
-from fastmcp import FastMCP
+import os
 
 # 导入要测试的模块
 import sys
-import os
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from fastmcp import FastMCP
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -23,16 +24,15 @@ if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 from article_mcp.cli import create_mcp_server
-from article_mcp.tools.core.search_tools import register_search_tools
 from article_mcp.tools.core.article_tools import register_article_tools
 from article_mcp.tools.core.reference_tools import register_reference_tools
-
+from article_mcp.tools.core.search_tools import register_search_tools
 from tests.utils.test_helpers import (
     MockDataGenerator,
-    TestTimer,
     MockResponse,
-    assert_valid_search_results,
+    TestTimer,
     assert_valid_article_structure,
+    assert_valid_search_results,
     run_async_with_timeout,
 )
 
@@ -287,8 +287,9 @@ class TestPerformanceIntegration:
     @pytest.mark.asyncio
     async def test_memory_usage_integration(self):
         """测试内存使用集成"""
-        import psutil
         import os
+
+        import psutil
 
         # 获取当前进程
         process = psutil.Process(os.getpid())

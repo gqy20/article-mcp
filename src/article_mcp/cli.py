@@ -6,33 +6,34 @@ Article MCP CLI入口点
 """
 
 import argparse
-import sys
 import asyncio
 import logging
 import os
-from typing import Optional, Dict, Any, List
+import sys
+from typing import Any, Dict, List, Optional
 
 
 def create_mcp_server():
     """创建MCP服务器 - 集成新的6工具架构"""
     from fastmcp import FastMCP
 
+    from .services.arxiv_search import create_arxiv_service
+    from .services.crossref_service import CrossRefService
+
     # 导入新架构服务（使用新的包结构）
     from .services.europe_pmc import create_europe_pmc_service
-    from .services.pubmed_search import create_pubmed_service
-    from .services.crossref_service import CrossRefService
-    from .services.openalex_service import OpenAlexService
-    from .services.reference_service import create_reference_service
     from .services.literature_relation_service import create_literature_relation_service
-    from .services.arxiv_search import create_arxiv_service
+    from .services.openalex_service import OpenAlexService
+    from .services.pubmed_search import create_pubmed_service
+    from .services.reference_service import create_reference_service
+    from .tools.core.article_tools import register_article_tools
+    from .tools.core.batch_tools import register_batch_tools
+    from .tools.core.quality_tools import register_quality_tools
+    from .tools.core.reference_tools import register_reference_tools
+    from .tools.core.relation_tools import register_relation_tools
 
     # 导入核心工具模块（使用新的包结构）
     from .tools.core.search_tools import register_search_tools
-    from .tools.core.article_tools import register_article_tools
-    from .tools.core.reference_tools import register_reference_tools
-    from .tools.core.relation_tools import register_relation_tools
-    from .tools.core.quality_tools import register_quality_tools
-    from .tools.core.batch_tools import register_batch_tools
 
     # 创建 MCP 服务器实例
     mcp = FastMCP("Article MCP Server", version="2.0.0")

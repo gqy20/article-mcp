@@ -23,16 +23,16 @@ __email__ = "qingyu_ge@foxmail.com"
 
 # 导入核心服务（使用新的包结构）
 try:
+    from .services.arxiv_search import search_arxiv
     from .services.europe_pmc import EuropePMCService
     from .services.reference_service import UnifiedReferenceService
-    from .services.arxiv_search import search_arxiv
     from .services.similar_articles import get_similar_articles_by_doi
 except ImportError:
     # 如果相对导入失败，尝试回退导入
     try:
+        from src.arxiv_search import search_arxiv
         from src.europe_pmc import EuropePMCService
         from src.reference_service import UnifiedReferenceService
-        from src.arxiv_search import search_arxiv
         from src.similar_articles import get_similar_articles_by_doi
     except ImportError:
         # 如果都失败，提供一个占位符
@@ -42,7 +42,8 @@ except ImportError:
         get_similar_articles_by_doi = None
 
 # 导入CLI功能
-from .cli import create_mcp_server, main as cli_main
+from .cli import create_mcp_server
+from .cli import main as cli_main
 
 # 主要API导出
 __all__ = [

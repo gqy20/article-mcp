@@ -5,7 +5,6 @@ OpenAlex 服务单元测试
 from unittest.mock import Mock, patch
 
 import pytest
-
 from src.openalex_service import OpenAlexService
 
 
