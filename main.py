@@ -14,88 +14,141 @@ from typing import Optional, Dict, Any, List
 
 
 def create_mcp_server():
-    """创建MCP服务器"""
+    """创建MCP服务器 - 集成新的6工具架构"""
     from fastmcp import FastMCP
+
+    # 导入新架构服务
     from src.europe_pmc import create_europe_pmc_service
-    from src.reference_service import create_reference_service, get_references_by_doi_sync
     from src.pubmed_search import create_pubmed_service
+    from src.crossref_service import CrossRefService
+    from src.openalex_service import OpenAlexService
+    from src.reference_service import create_reference_service
     from src.literature_relation_service import create_literature_relation_service
-    
-    # 导入工具模块
-    from tool_modules.search_tools import register_search_tools
-    from tool_modules.article_detail_tools import register_article_detail_tools
-    from tool_modules.reference_tools import register_reference_tools
-    from tool_modules.relation_tools import register_relation_tools
-    from tool_modules.quality_tools import register_quality_tools
+    from src.arxiv_search import create_arxiv_service
+
+    # 导入核心工具模块（新架构）
+    from tool_modules.core.search_tools import register_search_tools
+    from tool_modules.core.article_tools import register_article_tools
+    from tool_modules.core.reference_tools import register_reference_tools
+    from tool_modules.core.relation_tools import register_relation_tools
+    from tool_modules.core.quality_tools import register_quality_tools
+    from tool_modules.core.batch_tools import register_batch_tools
 
     # 创建 MCP 服务器实例
-    mcp = FastMCP("Article MCP Server", version="1.0.0")
-    
+    mcp = FastMCP("Article MCP Server", version="2.0.0")
+
     # 创建服务实例
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    
+
+    # 核心服务依赖注入
     pubmed_service = create_pubmed_service(logger)
-    europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)  # 注入PubMed服务依赖
+    europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)
+    crossref_service = CrossRefService(logger)
+    openalex_service = OpenAlexService(logger)
+    arxiv_service = create_arxiv_service(logger)
     reference_service = create_reference_service(logger)
     literature_relation_service = create_literature_relation_service(logger)
-    
-    # 注册工具函数
-    register_search_tools(mcp, europe_pmc_service, pubmed_service, logger)
-    register_article_detail_tools(mcp, europe_pmc_service, logger)
-    register_reference_tools(mcp, reference_service, literature_relation_service, logger)
-    register_relation_tools(mcp, literature_relation_service, logger)
-    register_quality_tools(mcp, pubmed_service, logger)
+
+    # 注册新架构核心工具
+    # 工具1: 统一搜索工具
+    search_services = {
+        "europe_pmc": europe_pmc_service,
+        "pubmed": pubmed_service,
+        "arxiv": arxiv_service,
+        "crossref": crossref_service,
+        "openalex": openalex_service
+    }
+    register_search_tools(mcp, search_services, logger)
+
+    # 工具2: 统一文章详情工具
+    article_services = {
+        "europe_pmc": europe_pmc_service,
+        "crossref": crossref_service,
+        "openalex": openalex_service,
+        "arxiv": arxiv_service,
+        "pubmed": pubmed_service
+    }
+    register_article_tools(mcp, article_services, logger)
+
+    # 工具3: 参考文献工具
+    register_reference_tools(mcp, reference_service, logger)
+
+    # 工具4: 文献关系分析工具
+    relation_services = {
+        "europe_pmc": europe_pmc_service,
+        "pubmed": pubmed_service
+    }
+    register_relation_tools(mcp, relation_services, logger)
+
+    # 工具5: 期刊质量评估工具
+    quality_services = {
+        "pubmed": pubmed_service
+    }
+    register_quality_tools(mcp, quality_services, logger)
+
+    # 工具6: 批量处理工具
+    batch_services = {
+        "europe_pmc": europe_pmc_service,
+        "pubmed": pubmed_service,
+        "crossref": crossref_service,
+        "openalex": openalex_service
+    }
+    register_batch_tools(mcp, batch_services, logger)
 
     return mcp
 
 
 def start_server(transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"):
     """启动MCP服务器"""
-    print(f"启动 Article MCP 服务器 (基于 BioMCP 设计模式)")
+    print(f"启动 Article MCP 服务器 v2.0 (6工具统一架构)")
     print(f"传输模式: {transport}")
-    print("可用工具（仅保留最高性能版本）:")
-    print("1. search_europe_pmc")
-    print("   - 搜索 Europe PMC 文献数据库（高性能优化版本）")
-    print("   - 适用于：文献检索、复杂查询、高性能需求")
-    print("   - 性能：比传统方法快30-50%，支持缓存和并发")
-    print("2. get_article_details")
-    print("   - 获取特定文献的详细信息（高性能优化版本）")
-    print("   - 适用于：文献详情查询、大规模数据处理")
-    print("   - 性能：比传统方法快20-40%，支持缓存和重试")
-    print("3. get_references_by_doi")
-    print("   - 通过DOI获取参考文献列表（批量优化版本）")
-    print("   - 适用于：参考文献获取、文献数据库构建")
-    print("   - 性能：比传统方法快10-15倍，利用Europe PMC批量查询能力")
-    print("4. batch_enrich_references_by_dois")
-    print("   - 批量补全多个DOI的参考文献信息（超高性能版本）")
-    print("   - 适用于：大规模文献数据分析、学术数据库构建")
-    print("   - 性能：比逐个查询快10-15倍，支持最多20个DOI同时处理")
-    print("5. get_similar_articles")
-    print("   - 根据DOI获取相似文章（基于PubMed相关文章算法）")
-    print("   - 适用于：文献综述研究、寻找相关研究、学术调研")
-    print("   - 特点：基于PubMed官方算法，自动过滤最近5年文献")
-    print("6. search_arxiv_papers")
-    print("   - 搜索arXiv文献数据库（基于arXiv官方API）")
-    print("   - 适用于：预印本文献检索、最新研究发现、计算机科学/物理学/数学等领域")
-    print("   - 特点：支持关键词搜索、日期范围过滤、完整错误处理")
-    print("7. get_citing_articles")
-    print("   - 获取引用该文献的文献信息")
-    print("   - 适用于：文献引用分析、学术研究、文献数据库构建")
-    print("   - 特点：基于PubMed和Europe PMC的引用文献获取")
-    print("8. get_literature_relations")
-    print("   - 获取文献的所有关联信息（参考文献、相似文献、引用文献）")
-    print("   - 适用于：全面的文献分析、学术研究综述、文献数据库构建")
-    print("   - 特点：一站式获取所有关联信息，支持多种标识符类型")
-    print("9. get_journal_quality")
-    print("   - 获取期刊质量评估信息（影响因子、分区等）")
-    print("   - 适用于：期刊质量评估、投稿期刊选择、文献质量筛选")
-    print("   - 特点：本地缓存优先，支持EasyScholar API补全")
-    print("10. evaluate_articles_quality")
-    print("    - 批量评估文献的期刊质量")
-    print("    - 适用于：文献质量筛选、学术研究质量评估")
-    print("    - 特点：批量处理，智能缓存，完整质量指标，支持MCP配置密钥")
-    
+    print("🚀 新架构核心工具 (6个统一工具):")
+    print()
+    print("📖 工具1: search_literature")
+    print("   - 统一多源文献搜索工具")
+    print("   - 支持数据源: Europe PMC, PubMed, arXiv, CrossRef, OpenAlex")
+    print("   - 特点: 自动去重、智能排序、透明数据源标识")
+    print("   - 参数: keyword, sources, max_results, search_type")
+    print()
+    print("📄 工具2: get_article_details")
+    print("   - 统一文献详情获取工具")
+    print("   - 支持标识符: DOI, PMID, PMCID, arXiv ID")
+    print("   - 特点: 多源数据合并、自动类型识别、可选质量指标")
+    print("   - 参数: identifier, id_type, sources, include_quality_metrics")
+    print()
+    print("📚 工具3: get_references")
+    print("   - 参考文献获取工具")
+    print("   - 支持从文献标识符获取完整参考文献列表")
+    print("   - 特点: 多源查询、参考文献完整性检查")
+    print("   - 参数: identifier, id_type, sources, max_results")
+    print()
+    print("🔗 工具4: get_literature_relations")
+    print("   - 文献关系分析工具")
+    print("   - 支持分析: 参考文献、相似文献、引用文献、合作网络")
+    print("   - 特点: 网络分析、社区检测、可视化数据")
+    print("   - 参数: identifier, relation_types, max_depth")
+    print()
+    print("⭐ 工具5: get_journal_quality")
+    print("   - 期刊质量评估工具")
+    print("   - 支持指标: 影响因子、JCI、分区、排名")
+    print("   - 特点: EasyScholar集成、本地缓存、批量评估")
+    print("   - 参数: journal_name, include_metrics, evaluation_criteria")
+    print()
+    print("⚡ 工具6: batch_search_literature")
+    print("   - 批量处理工具集合")
+    print("   - 支持: 批量搜索、批量详情获取、结果导出")
+    print("   - 特点: 并发处理、多格式导出、性能优化")
+    print("   - 参数: queries/identifiers, parallel, export_format")
+    print()
+    print("🔧 技术特性:")
+    print("   - FastMCP 2.13.0 框架")
+    print("   - 依赖注入架构模式")
+    print("   - 智能缓存机制")
+    print("   - 并发控制优化")
+    print("   - 多API集成")
+    print("   - MCP配置集成")
+
     mcp = create_mcp_server()
     
     if transport == 'stdio':

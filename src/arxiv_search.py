@@ -297,4 +297,54 @@ def search_arxiv(
             "total_count": 0,
             "message": f"处理错误: {str(e)}",
             "error": f"处理错误: {str(e)}"
-        } 
+        }
+
+
+class ArXivSearchService:
+    """arXiv搜索服务类"""
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def search(self, keyword: str, max_results: int = 10, **kwargs) -> Dict[str, Any]:
+        """搜索arXiv文献"""
+        return search_arxiv(
+            keyword=keyword,
+            max_results=max_results,
+            logger=self.logger,
+            **kwargs
+        )
+
+    def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs) -> Dict[str, Any]:
+        """获取arXiv文献详情"""
+        if id_type != "arxiv_id":
+            return {
+                "success": False,
+                "error": f"arXiv服务不支持标识符类型: {id_type}",
+                "article": None
+            }
+
+        # 通过arXiv ID搜索获取详情
+        result = search_arxiv(
+            keyword=f"id:{identifier}",
+            max_results=1,
+            logger=self.logger
+        )
+
+        if result.get("articles"):
+            return {
+                "success": True,
+                "article": result["articles"][0],
+                "source": "arxiv"
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"未找到arXiv文献: {identifier}",
+                "article": None
+            }
+
+
+def create_arxiv_service(logger):
+    """创建arXiv服务实例"""
+    return ArXivSearchService(logger) 
