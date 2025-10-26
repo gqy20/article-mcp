@@ -7,9 +7,7 @@ import time
 from typing import Any
 
 
-def format_error(
-    operation: str, error: Exception, context: dict | None = None
-) -> dict[str, Any]:
+def format_error(operation: str, error: Exception, context: dict | None = None) -> dict[str, Any]:
     """
     统一的错误格式 - 一个函数搞定所有错误
 

@@ -57,7 +57,7 @@ def create_mcp_server():
         "pubmed": pubmed_service,
         "arxiv": arxiv_service,
         "crossref": crossref_service,
-        "openalex": openalex_service
+        "openalex": openalex_service,
     }
     register_search_tools(mcp, search_services, logger)
 
@@ -67,7 +67,7 @@ def create_mcp_server():
         "crossref": crossref_service,
         "openalex": openalex_service,
         "arxiv": arxiv_service,
-        "pubmed": pubmed_service
+        "pubmed": pubmed_service,
     }
     register_article_tools(mcp, article_services, logger)
 
@@ -75,16 +75,11 @@ def create_mcp_server():
     register_reference_tools(mcp, reference_service, logger)
 
     # 工具4: 文献关系分析工具
-    relation_services = {
-        "europe_pmc": europe_pmc_service,
-        "pubmed": pubmed_service
-    }
+    relation_services = {"europe_pmc": europe_pmc_service, "pubmed": pubmed_service}
     register_relation_tools(mcp, relation_services, logger)
 
     # 工具5: 期刊质量评估工具
-    quality_services = {
-        "pubmed": pubmed_service
-    }
+    quality_services = {"pubmed": pubmed_service}
     register_quality_tools(mcp, quality_services, logger)
 
     # 工具6: 批量处理工具
@@ -92,14 +87,16 @@ def create_mcp_server():
         "europe_pmc": europe_pmc_service,
         "pubmed": pubmed_service,
         "crossref": crossref_service,
-        "openalex": openalex_service
+        "openalex": openalex_service,
     }
     register_batch_tools(mcp, batch_services, logger)
 
     return mcp
 
 
-def start_server(transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"):
+def start_server(
+    transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"
+):
     """启动MCP服务器"""
     print(f"启动 Article MCP 服务器 v2.0 (6工具统一架构)")
     print(f"传输模式: {transport}")
@@ -151,14 +148,14 @@ def start_server(transport: str = "stdio", host: str = "localhost", port: int = 
 
     mcp = create_mcp_server()
 
-    if transport == 'stdio':
+    if transport == "stdio":
         print("使用 stdio 传输模式 (推荐用于 Claude Desktop)")
         mcp.run(transport="stdio")
-    elif transport == 'sse':
+    elif transport == "sse":
         print(f"使用 SSE 传输模式")
         print(f"服务器地址: http://{host}:{port}/sse")
         mcp.run(transport="sse", host=host, port=port)
-    elif transport == 'streamable-http':
+    elif transport == "streamable-http":
         print(f"使用 Streamable HTTP 传输模式")
         print(f"服务器地址: http://{host}:{port}{path}")
         mcp.run(transport="streamable-http", host=host, port=port, path=path)
@@ -181,10 +178,7 @@ async def run_test():
         print("✓ 开始测试搜索功能...")
 
         # 创建测试参数
-        test_args = {
-            "keyword": "machine learning",
-            "max_results": 3
-        }
+        test_args = {"keyword": "machine learning", "max_results": 3}
 
         # 这里我们不能直接调用工具，因为需要MCP客户端
         # 但我们可以测试服务器是否正确创建
@@ -203,6 +197,7 @@ async def run_test():
     except Exception as e:
         print(f"测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -292,7 +287,7 @@ def show_info():
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(
-        description='Article MCP 文献搜索服务器',
+        description="Article MCP 文献搜索服务器",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
@@ -301,52 +296,38 @@ def main():
   python -m article_mcp server --transport streamable-http # 启动Streamable HTTP服务器
   python -m article_mcp test                             # 运行测试
   python -m article_mcp info                             # 显示项目信息
-        """
+        """,
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='可用命令')
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
     # 服务器命令
-    server_parser = subparsers.add_parser('server', help='启动MCP服务器')
+    server_parser = subparsers.add_parser("server", help="启动MCP服务器")
     server_parser.add_argument(
-        '--transport',
-        choices=['stdio', 'sse', 'streamable-http'],
-        default='stdio',
-        help='传输模式 (默认: stdio)'
+        "--transport",
+        choices=["stdio", "sse", "streamable-http"],
+        default="stdio",
+        help="传输模式 (默认: stdio)",
     )
     server_parser.add_argument(
-        '--host',
-        default='localhost',
-        help='服务器主机地址 (默认: localhost)'
+        "--host", default="localhost", help="服务器主机地址 (默认: localhost)"
     )
+    server_parser.add_argument("--port", type=int, default=9000, help="服务器端口 (默认: 9000)")
     server_parser.add_argument(
-        '--port',
-        type=int,
-        default=9000,
-        help='服务器端口 (默认: 9000)'
-    )
-    server_parser.add_argument(
-        '--path',
-        default='/mcp',
-        help='HTTP 路径 (仅用于 streamable-http 模式, 默认: /mcp)'
+        "--path", default="/mcp", help="HTTP 路径 (仅用于 streamable-http 模式, 默认: /mcp)"
     )
 
     # 测试命令
-    test_parser = subparsers.add_parser('test', help='运行测试')
+    test_parser = subparsers.add_parser("test", help="运行测试")
 
     # 信息命令
-    info_parser = subparsers.add_parser('info', help='显示项目信息')
+    info_parser = subparsers.add_parser("info", help="显示项目信息")
 
     args = parser.parse_args()
 
-    if args.command == 'server':
+    if args.command == "server":
         try:
-            start_server(
-                transport=args.transport,
-                host=args.host,
-                port=args.port,
-                path=args.path
-            )
+            start_server(transport=args.transport, host=args.host, port=args.port, path=args.path)
         except KeyboardInterrupt:
             print("\n服务器已停止")
             sys.exit(0)
@@ -354,14 +335,14 @@ def main():
             print(f"启动失败: {e}")
             sys.exit(1)
 
-    elif args.command == 'test':
+    elif args.command == "test":
         try:
             asyncio.run(run_test())
         except Exception as e:
             print(f"测试失败: {e}")
             sys.exit(1)
 
-    elif args.command == 'info':
+    elif args.command == "info":
         show_info()
 
     else:

@@ -2,7 +2,6 @@
 合并结果工具单元测试
 """
 
-
 from src.merged_results import (
     deduplicate_articles,
     extract_identifier_type,

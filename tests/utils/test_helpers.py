@@ -25,9 +25,14 @@ class MockDataGenerator:
     """模拟数据生成器"""
 
     @staticmethod
-    def create_article(title: str = "Test Article", authors: List[str] = None,
-                     doi: str = "10.1000/test", pmid: str = "12345678",
-                     pmcid: str = "PMC1234567", **kwargs) -> Dict[str, Any]:
+    def create_article(
+        title: str = "Test Article",
+        authors: List[str] = None,
+        doi: str = "10.1000/test",
+        pmid: str = "12345678",
+        pmcid: str = "PMC1234567",
+        **kwargs,
+    ) -> Dict[str, Any]:
         """创建模拟文章数据"""
         if authors is None:
             authors = ["Test Author", "Second Author"]
@@ -43,7 +48,7 @@ class MockDataGenerator:
             "abstract": kwargs.get("abstract", "This is a test article abstract."),
             "keywords": kwargs.get("keywords", ["test", "article"]),
             "url": kwargs.get("url", f"https://doi.org/{doi}"),
-            "source": kwargs.get("source", "test")
+            "source": kwargs.get("source", "test"),
         }
 
         # 添加额外字段
@@ -59,7 +64,7 @@ class MockDataGenerator:
                 title=f"Test Article {i+1}",
                 doi=f"10.1000/test-{i+1}",
                 pmid=f"{12345678+i}",
-                **kwargs
+                **kwargs,
             )
             articles.append(article)
 
@@ -67,7 +72,7 @@ class MockDataGenerator:
             "articles": articles,
             "total_count": count,
             "query": kwargs.get("query", "test query"),
-            "search_time": kwargs.get("search_time", 1.5)
+            "search_time": kwargs.get("search_time", 1.5),
         }
 
     @staticmethod
@@ -79,7 +84,7 @@ class MockDataGenerator:
                 title=f"Reference Article {i+1}",
                 doi=f"10.1000/ref-{i+1}",
                 pmid=f"{20000000+i}",
-                **kwargs
+                **kwargs,
             )
             references.append(ref)
         return references
@@ -114,8 +119,13 @@ class TestTimer:
 class MockResponse:
     """模拟HTTP响应"""
 
-    def __init__(self, json_data: Dict[str, Any] = None, status_code: int = 200,
-                 text: str = "", ok: bool = True):
+    def __init__(
+        self,
+        json_data: Dict[str, Any] = None,
+        status_code: int = 200,
+        text: str = "",
+        ok: bool = True,
+    ):
         self.json_data = json_data or {}
         self.status_code = status_code
         self.text = text
@@ -131,7 +141,7 @@ def create_mock_service(service_class, **method_returns):
 
     for method_name, return_value in method_returns.items():
         mock_method = Mock(return_value=return_value)
-        if asyncio.iscoroutinefunction(return_value) or hasattr(return_value, '__await__'):
+        if asyncio.iscoroutinefunction(return_value) or hasattr(return_value, "__await__"):
             mock_method = asyncio.coroutine(lambda r=return_value: r)()
         setattr(service, method_name, mock_method)
 
@@ -204,7 +214,7 @@ DEFAULT_TEST_CONFIG = {
     "test_doi": "10.1000/test-article",
     "test_pmid": "12345678",
     "max_results": 10,
-    "timeout": 30.0
+    "timeout": 30.0,
 }
 
 

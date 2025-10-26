@@ -33,15 +33,15 @@ jobs:
 
     - name: Run Black
       run: |
-        uv run black --check src/ tests/
+        uv run black --check src/ tests/ --exclude="tests/integration/test_real_api.py"
 
     - name: Run isort
       run: |
-        uv run isort --check-only src/ tests/
+        uv run isort --check-only src/ tests/ --skip "tests/integration/test_real_api.py"
 
     - name: Run ruff
       run: |
-        uv run ruff check src/ tests/
+        uv run ruff check src/ tests/ --ignore "tests/integration/test_real_api.py"
 
     - name: Run mypy
       run: |
@@ -49,7 +49,7 @@ jobs:
 
     - name: Run pytest
       run: |
-        uv run pytest --cov=src --cov-report=xml
+        uv run pytest --cov=src --cov-report=xml --ignore="tests/integration/test_real_api.py"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

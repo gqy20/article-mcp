@@ -33,7 +33,7 @@ from tests.utils.test_helpers import (
     MockResponse,
     assert_valid_search_results,
     assert_valid_article_structure,
-    run_async_with_timeout
+    run_async_with_timeout,
 )
 
 
@@ -44,7 +44,7 @@ class TestMCPServerIntegration:
     async def mcp_server(self):
         """创建MCP服务器实例"""
         with patch.multiple(
-            'article_mcp.cli',
+            "article_mcp.cli",
             create_europe_pmc_service=Mock(),
             create_pubmed_service=Mock(),
             CrossRefService=Mock(),
@@ -57,7 +57,7 @@ class TestMCPServerIntegration:
             register_reference_tools=Mock(),
             register_relation_tools=Mock(),
             register_quality_tools=Mock(),
-            register_batch_tools=Mock()
+            register_batch_tools=Mock(),
         ):
             server = create_mcp_server()
             yield server
@@ -72,7 +72,7 @@ class TestMCPServerIntegration:
             "pubmed": Mock(),
             "arxiv": Mock(),
             "crossref": Mock(),
-            "openalex": Mock()
+            "openalex": Mock(),
         }
         mock_logger = Mock()
 
@@ -85,7 +85,7 @@ class TestMCPServerIntegration:
         register_reference_tools(mcp, Mock(), mock_logger)
 
         # 验证工具注册
-        assert hasattr(mcp, '_tools')
+        assert hasattr(mcp, "_tools")
         assert len(mcp._tools) > 0
 
     @pytest.mark.integration
@@ -113,7 +113,7 @@ class TestMCPServerIntegration:
         # 模拟工具调用
         search_tool = None
         for tool in mcp._tools:
-            if hasattr(tool, 'name') and 'search' in tool.name:
+            if hasattr(tool, "name") and "search" in tool.name:
                 search_tool = tool
                 break
 
@@ -136,10 +136,7 @@ class TestMCPServerIntegration:
 
         # 创建MCP服务器
         mcp = FastMCP("Multi-source Test Server")
-        mock_services = {
-            "europe_pmc": mock_europe_pmc_service,
-            "arxiv": mock_arxiv_service
-        }
+        mock_services = {"europe_pmc": mock_europe_pmc_service, "arxiv": mock_arxiv_service}
         mock_logger = Mock()
 
         # 注册工具
@@ -161,11 +158,13 @@ class TestMCPServerIntegration:
 
         # 创建模拟服务
         mock_reference_service = Mock()
-        mock_reference_service.get_references = AsyncMock(return_value={
-            "references": mock_references,
-            "total_count": len(mock_references),
-            "processing_time": 1.5
-        })
+        mock_reference_service.get_references = AsyncMock(
+            return_value={
+                "references": mock_references,
+                "total_count": len(mock_references),
+                "processing_time": 1.5,
+            }
+        )
 
         # 创建MCP服务器
         mcp = FastMCP("Reference Test Server")
@@ -190,9 +189,7 @@ class TestDataFlowIntegration:
         """测试搜索到文章详情的数据流"""
         # 模拟搜索结果
         search_results = MockDataGenerator.create_search_results(3)
-        article_details = MockDataGenerator.create_article(
-            doi=search_results["articles"][0]["doi"]
-        )
+        article_details = MockDataGenerator.create_article(doi=search_results["articles"][0]["doi"])
 
         # 创建模拟服务
         mock_europe_pmc_service = Mock()
@@ -227,15 +224,14 @@ class TestDataFlowIntegration:
 
         # 创建模拟服务
         mock_reference_service = Mock()
-        mock_reference_service.get_references = AsyncMock(return_value={
-            "references": first_level_refs,
-            "total_count": len(first_level_refs)
-        })
+        mock_reference_service.get_references = AsyncMock(
+            return_value={"references": first_level_refs, "total_count": len(first_level_refs)}
+        )
 
         # 模拟二级参考文献获取
         mock_reference_service.get_references.side_effect = [
             {"references": first_level_refs, "total_count": len(first_level_refs)},
-            {"references": second_level_refs, "total_count": len(second_level_refs)}
+            {"references": second_level_refs, "total_count": len(second_level_refs)},
         ]
 
         # 创建MCP服务器
@@ -363,16 +359,11 @@ class TestErrorRecoveryIntegration:
         )
 
         failing_service = Mock()
-        failing_service.search_papers = AsyncMock(
-            side_effect=Exception("Service down")
-        )
+        failing_service.search_papers = AsyncMock(side_effect=Exception("Service down"))
 
         # 创建MCP服务器
         mcp = FastMCP("Partial Failure Test Server")
-        mock_services = {
-            "europe_pmc": working_service,
-            "arxiv": failing_service
-        }
+        mock_services = {"europe_pmc": working_service, "arxiv": failing_service}
         mock_logger = Mock()
 
         # 注册工具
@@ -394,7 +385,13 @@ class TestConfigurationIntegration:
         configurations = [
             {"europe_pmc": Mock(), "pubmed": Mock()},
             {"europe_pmc": Mock(), "arxiv": Mock(), "crossref": Mock()},
-            {"europe_pmc": Mock(), "pubmed": Mock(), "arxiv": Mock(), "crossref": Mock(), "openalex": Mock()}
+            {
+                "europe_pmc": Mock(),
+                "pubmed": Mock(),
+                "arxiv": Mock(),
+                "crossref": Mock(),
+                "openalex": Mock(),
+            },
         ]
 
         for config in configurations:

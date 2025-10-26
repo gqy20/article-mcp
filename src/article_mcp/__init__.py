@@ -50,26 +50,27 @@ __all__ = [
     "__version__",
     "__author__",
     "__email__",
-
     # 服务类 (如果可用)
     "EuropePMCService",
     "UnifiedReferenceService",
     "search_arxiv",
     "get_similar_articles_by_doi",
-
     # CLI功能
     "create_mcp_server",
     "cli_main",
 ]
+
 
 # 便捷入口函数
 def main():
     """CLI入口点 - 启动Article MCP服务器"""
     cli_main()
 
+
 def get_version():
     """获取版本信息"""
     return __version__
+
 
 def get_server_info():
     """获取服务器信息"""
@@ -78,14 +79,9 @@ def get_server_info():
         "version": __version__,
         "author": __author__,
         "description": "基于 FastMCP 框架的学术文献搜索工具",
-        "supported_databases": [
-            "Europe PMC",
-            "arXiv",
-            "PubMed",
-            "CrossRef",
-            "OpenAlex"
-        ]
+        "supported_databases": ["Europe PMC", "arXiv", "PubMed", "CrossRef", "OpenAlex"],
     }
+
 
 # 模块级别的便捷函数
 def quick_search(keyword, max_results=10):
@@ -94,6 +90,7 @@ def quick_search(keyword, max_results=10):
     print(f"搜索关键词: {keyword}")
     print(f"最大结果数: {max_results}")
     print("请使用 'article-mcp server' 启动MCP服务器")
+
 
 def quick_article_details(identifier, id_type="auto"):
     """快速获取文献详情接口 (需要MCP环境)"""
