@@ -87,7 +87,7 @@ def get_server_info():
 # 模块级别的便捷函数
 def quick_search(keyword, max_results=10):
     """快速搜索接口 (需要MCP环境)"""
-    print(f"快速搜索功能需要在MCP客户端环境中使用")
+    print("快速搜索功能需要在MCP客户端环境中使用")
     print(f"搜索关键词: {keyword}")
     print(f"最大结果数: {max_results}")
     print("请使用 'article-mcp server' 启动MCP服务器")
@@ -95,7 +95,7 @@ def quick_search(keyword, max_results=10):
 
 def quick_article_details(identifier, id_type="auto"):
     """快速获取文献详情接口 (需要MCP环境)"""
-    print(f"文献详情获取功能需要在MCP客户端环境中使用")
+    print("文献详情获取功能需要在MCP客户端环境中使用")
     print(f"标识符: {identifier}")
     print(f"标识类型: {id_type}")
     print("请使用 'article-mcp server' 启动MCP服务器")

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 测试辅助工具和模拟数据生成器
 """
 
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -27,12 +25,12 @@ class MockDataGenerator:
     @staticmethod
     def create_article(
         title: str = "Test Article",
-        authors: List[str] = None,
+        authors: list[str] = None,
         doi: str = "10.1000/test",
         pmid: str = "12345678",
         pmcid: str = "PMC1234567",
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """创建模拟文章数据"""
         if authors is None:
             authors = ["Test Author", "Second Author"]
@@ -56,7 +54,7 @@ class MockDataGenerator:
         return article
 
     @staticmethod
-    def create_search_results(count: int = 5, **kwargs) -> Dict[str, Any]:
+    def create_search_results(count: int = 5, **kwargs) -> dict[str, Any]:
         """创建模拟搜索结果"""
         articles = []
         for i in range(count):
@@ -76,7 +74,7 @@ class MockDataGenerator:
         }
 
     @staticmethod
-    def create_reference_list(count: int = 10, **kwargs) -> List[Dict[str, Any]]:
+    def create_reference_list(count: int = 10, **kwargs) -> list[dict[str, Any]]:
         """创建模拟参考文献列表"""
         references = []
         for i in range(count):
@@ -121,7 +119,7 @@ class MockResponse:
 
     def __init__(
         self,
-        json_data: Dict[str, Any] = None,
+        json_data: dict[str, Any] = None,
         status_code: int = 200,
         text: str = "",
         ok: bool = True,
@@ -131,7 +129,7 @@ class MockResponse:
         self.text = text
         self.ok = ok
 
-    def json(self) -> Dict[str, Any]:
+    def json(self) -> dict[str, Any]:
         return self.json_data
 
 
@@ -148,7 +146,7 @@ def create_mock_service(service_class, **method_returns):
     return service
 
 
-def assert_valid_article_structure(article: Dict[str, Any]) -> None:
+def assert_valid_article_structure(article: dict[str, Any]) -> None:
     """验证文章结构的有效性"""
     required_fields = ["title", "authors"]
     for field in required_fields:
@@ -165,7 +163,7 @@ def assert_valid_article_structure(article: Dict[str, Any]) -> None:
             assert isinstance(article[id_field], str), f"{id_field} 必须是字符串"
 
 
-def assert_valid_search_results(results: Dict[str, Any]) -> None:
+def assert_valid_search_results(results: dict[str, Any]) -> None:
     """验证搜索结果结构的有效性"""
     required_fields = ["articles", "total_count"]
     for field in required_fields:

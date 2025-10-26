@@ -229,7 +229,6 @@ def error_response_data():
 @pytest.fixture(autouse=True)
 def test_environment():
     """设置测试环境变量"""
-    import os
 
     os.environ["PYTHONUNBUFFERED"] = "1"
     # 设置测试模式，避免实际API调用

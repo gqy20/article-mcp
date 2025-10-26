@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 MCP集成测试
 测试完整的MCP服务器功能和工作流程
 """
 
 import asyncio
-import json
 import os
 
 # 导入要测试的模块
@@ -29,11 +27,7 @@ from article_mcp.tools.core.reference_tools import register_reference_tools
 from article_mcp.tools.core.search_tools import register_search_tools
 from tests.utils.test_helpers import (
     MockDataGenerator,
-    MockResponse,
     TestTimer,
-    assert_valid_article_structure,
-    assert_valid_search_results,
-    run_async_with_timeout,
 )
 
 
@@ -287,7 +281,6 @@ class TestPerformanceIntegration:
     @pytest.mark.asyncio
     async def test_memory_usage_integration(self):
         """测试内存使用集成"""
-        import os
 
         import psutil
 

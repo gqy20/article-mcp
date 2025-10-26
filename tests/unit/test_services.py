@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 服务层单元测试
 测试各个服务类的基本功能
 """
 
 import asyncio
-import os
 
 # 导入要测试的服务
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 

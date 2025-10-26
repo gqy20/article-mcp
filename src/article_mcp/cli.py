@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Article MCP CLI入口点
 从main.py迁移的核心功能，保持完全兼容
@@ -8,9 +7,7 @@ Article MCP CLI入口点
 import argparse
 import asyncio
 import logging
-import os
 import sys
-from typing import Any, Dict, List, Optional
 
 
 def create_mcp_server():
@@ -99,7 +96,7 @@ def start_server(
     transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"
 ):
     """启动MCP服务器"""
-    print(f"启动 Article MCP 服务器 v2.0 (6工具统一架构)")
+    print("启动 Article MCP 服务器 v2.0 (6工具统一架构)")
     print(f"传输模式: {transport}")
     print("🚀 新架构核心工具 (6个统一工具):")
     print()
@@ -153,11 +150,11 @@ def start_server(
         print("使用 stdio 传输模式 (推荐用于 Claude Desktop)")
         mcp.run(transport="stdio")
     elif transport == "sse":
-        print(f"使用 SSE 传输模式")
+        print("使用 SSE 传输模式")
         print(f"服务器地址: http://{host}:{port}/sse")
         mcp.run(transport="sse", host=host, port=port)
     elif transport == "streamable-http":
-        print(f"使用 Streamable HTTP 传输模式")
+        print("使用 Streamable HTTP 传输模式")
         print(f"服务器地址: http://{host}:{port}{path}")
         mcp.run(transport="streamable-http", host=host, port=port, path=path)
     else:

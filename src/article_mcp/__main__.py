@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Article MCP 模块执行入口
 支持 python -m article_mcp 命令
