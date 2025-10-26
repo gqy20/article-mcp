@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-快速测试脚本
-运行最重要的几个测试来快速验证项目状态
+快速验证脚本
+运行最基本的功能测试来快速验证项目状态
+注意：这是test_working_functions.py的简化版本，用于快速检查
 """
 
 import sys

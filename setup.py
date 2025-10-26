@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='article-mcp',
-    version='0.2.0',
+    version='0.1.2',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     package_data={'': ['*.json']},

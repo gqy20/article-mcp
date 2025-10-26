@@ -4,9 +4,7 @@
       "command": "uv",
       "args": [
         "run",
-        "python",
-        "-m",
-        "article_mcp",
+        "main.py",
         "server"
       ],
       "env": {

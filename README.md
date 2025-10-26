@@ -46,10 +46,14 @@ uvx article-mcp server
 #### 本地开发
 
 ```bash
-# 启动 MCP 服务器
-uv run main.py server
+# 启动 MCP 服务器 (推荐新入口点)
+uv run python -m article_mcp server
 
 # 或使用 Python
+python -m article_mcp server
+
+# 兼容性入口点 (仍然支持)
+uv run main.py server
 python main.py server
 ```
 
@@ -253,7 +257,7 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 # 核心功能测试（推荐日常使用）
 python scripts/test_working_functions.py
 
-# 快速测试
+# 快速测试（功能验证）
 python scripts/quick_test.py
 
 # 完整测试套件
@@ -293,7 +297,7 @@ uv run python -m article_mcp --help
 
 ```
 article-mcp/
-├── main.py              # 兼容性入口文件（重定向到新CLI）
+├── main.py              # 兼容性入口文件（向后兼容）
 ├── pyproject.toml       # 项目配置文件
 ├── README.md            # 项目文档
 ├── src/                 # 源代码根目录
