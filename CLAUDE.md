@@ -8,31 +8,60 @@ Article MCP is a high-performance literature search server based on FastMCP fram
 
 ## Architecture
 
-The project follows a modular architecture with clear separation of concerns:
+The project follows a standard Python src layout architecture with clear separation of concerns:
 
-- **Core Services** (`src/`): Service layer for API integrations and business logic
-- **Tool Modules** (`tool_modules/`): MCP tool registration and implementations
-- **Main Entry Point** (`main.py`): Server creation and CLI interface
+- **Core Package** (`src/article_mcp/`): Main package following Python packaging best practices
+- **Service Layer** (`src/article_mcp/services/`): Service layer for API integrations and business logic
+- **Tool Layer** (`src/article_mcp/tools/`): MCP tool registration and implementations
+- **Compatibility Layer** (`main.py`): Backward-compatible CLI interface
 
-### Core Services Architecture
+### Core Package Structure
 
-The service layer implements dependency injection pattern with these key services:
+The main package (`src/article_mcp/`) follows Python packaging standards with:
 
-- `EuropePMCService` (`src/europe_pmc.py`): Europe PMC API integration with caching and performance optimizations
-- `ReferenceService` (`src/reference_service.py`): Reference management and DOI resolution
-- `PubMedService` (`src/pubmed_search.py`): PubMed search and literature retrieval
-- `LiteratureRelationService` (`src/literature_relation_service.py`): Literature relationship analysis
-- `ArXivSearchService` (`src/arxiv_search.py`): arXiv preprint search functionality
+- `__init__.py`: Package initialization and clean API exports
+- `cli.py`: Main CLI entry point and MCP server creation
+- `__main__.py`: Python module execution support
 
-### Tool Module Organization
+### Service Layer Architecture
 
-Each tool module contains specific MCP tool implementations:
+The service layer (`src/article_mcp/services/`) implements dependency injection pattern with these key services:
 
-- `search_tools.py`: Literature search tools (Europe PMC, arXiv)
-- `article_detail_tools.py`: Article detail retrieval
-- `reference_tools.py`: Reference management and batch processing
-- `relation_tools.py`: Literature relationship analysis
-- `quality_tools.py`: Journal quality evaluation
+- `EuropePMCService` (`europe_pmc.py`): Europe PMC API integration with caching and performance optimizations
+- `ReferenceService` (`reference_service.py`): Reference management and DOI resolution
+- `PubMedService` (`pubmed_search.py`): PubMed search and literature retrieval
+- `LiteratureRelationService` (`literature_relation_service.py`): Literature relationship analysis
+- `ArXivSearchService` (`arxiv_search.py`): arXiv preprint search functionality
+- `CrossRefService` (`crossref_service.py`): CrossRef API integration
+- `OpenAlexService` (`openalex_service.py`): OpenAlex API integration
+
+**Supporting Services:**
+- `api_utils.py`: API client utilities and common patterns
+- `mcp_config.py`: MCP configuration management
+- `error_utils.py`: Error handling utilities
+- `html_to_markdown.py`: HTML to Markdown conversion
+- `merged_results.py`: Result merging and deduplication
+- `similar_articles.py`: Similar article finding algorithms
+
+### Tool Layer Organization
+
+The tool layer (`src/article_mcp/tools/`) contains MCP tool implementations:
+
+**Core Tool Modules** (`src/article_mcp/tools/core/`):
+- `search_tools.py`: Literature search tools registration
+- `article_tools.py`: Article detail tools registration
+- `reference_tools.py`: Reference management tools registration
+- `relation_tools.py`: Literature relationship analysis tools registration
+- `quality_tools.py`: Journal quality evaluation tools registration
+- `batch_tools.py`: Batch processing tools registration
+
+**Additional Tool Modules:**
+- `article_detail_tools.py`: Article detail retrieval tools
+- `quality_tools.py`: Quality assessment tools
+- `reference_tools.py`: Reference processing tools
+- `relation_tools.py`: Relationship analysis tools
+- `search_tools.py`: Search functionality tools
+- `legacy/`: Backward compatibility support
 
 ## Development Commands
 
@@ -50,22 +79,40 @@ pip install fastmcp requests python-dateutil aiohttp markdownify
 # Production (recommended)
 uvx article-mcp server
 
-# Local development
+# Local development - using new CLI
+uv run python -m article_mcp server
+
+# Compatibility through main.py (still works)
 uv run main.py server
 
 # Alternative transport modes
-uv run main.py server --transport stdio
-uv run main.py server --transport sse --host 0.0.0.0 --port 9000
-uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
+uv run python -m article_mcp server --transport stdio
+uv run python -m article_mcp server --transport sse --host 0.0.0.0 --port 9000
+uv run python -m article_mcp server --transport streamable-http --host 0.0.0.0 --port 9000
 ```
 
 ### Testing
+The project provides a comprehensive test suite:
+
 ```bash
-# Run functional tests
-uv run main.py test
+# Core functionality tests (recommended for daily use)
+python scripts/test_working_functions.py
+
+# Quick test for basic validation
+python scripts/quick_test.py
+
+# Complete test suite
+python scripts/run_all_tests.py
+
+# Individual test categories
+python scripts/test_basic_functionality.py  # Basic functionality
+python scripts/test_cli_functions.py       # CLI functions
+python scripts/test_service_modules.py     # Service modules
+python scripts/test_integration.py         # Integration tests
+python scripts/test_performance.py         # Performance tests
 
 # View project info
-uv run main.py info
+uv run python -m article_mcp info
 ```
 
 ### Package Management
@@ -83,7 +130,7 @@ uvx article-mcp server
 ## Key Development Patterns
 
 ### Service Registration Pattern
-All services are registered in `main.py:create_mcp_server()` using dependency injection:
+All services are registered in `src/article_mcp/cli.py:create_mcp_server()` using dependency injection:
 ```python
 pubmed_service = create_pubmed_service(logger)
 europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)
@@ -170,26 +217,81 @@ The project supports multiple AI client configurations (Claude Desktop, Cherry S
 
 ```
 article-mcp/
-├── main.py              # Entry point with CLI interface
+├── main.py              # Compatibility entry point (redirects to new CLI)
 ├── pyproject.toml       # Project configuration and dependencies
-├── src/                 # Core services
-│   ├── europe_pmc.py    # Europe PMC integration
-│   ├── reference_service.py  # Reference management
-│   ├── pubmed_search.py # PubMed search
-│   ├── literature_relation_service.py  # Literature analysis
-│   └── arxiv_search.py  # arXiv integration
-├── tool_modules/        # MCP tool implementations
-│   ├── search_tools.py
-│   ├── article_detail_tools.py
-│   ├── reference_tools.py
-│   ├── relation_tools.py
-│   └── quality_tools.py
-└── tests/               # Test suite
+├── src/                 # Source code root
+│   └── article_mcp/     # Main package (standard Python src layout)
+│       ├── __init__.py  # Package initialization
+│       ├── cli.py       # Main CLI entry point and MCP server creation
+│       ├── __main__.py  # Python module execution support
+│       ├── services/    # Service layer
+│       │   ├── europe_pmc.py    # Europe PMC integration
+│       │   ├── reference_service.py  # Reference management
+│       │   ├── pubmed_search.py # PubMed search
+│       │   ├── literature_relation_service.py  # Literature analysis
+│       │   ├── arxiv_search.py  # arXiv integration
+│       │   ├── crossref_service.py  # CrossRef service
+│       │   ├── openalex_service.py  # OpenAlex service
+│       │   └── [other utility modules...]
+│       ├── tools/       # Tool layer (MCP tool implementations)
+│       │   ├── core/    # Core tool registration modules
+│       │   ├── search_tools.py
+│       │   ├── article_detail_tools.py
+│       │   ├── reference_tools.py
+│       │   ├── relation_tools.py
+│       │   ├── quality_tools.py
+│       │   └── [other tool modules...]
+│       └── legacy/      # Backward compatibility support
+├── src/resource/        # Resource files
+│   └── journal_info.json
+├── tests/               # Comprehensive test suite
+│   ├── unit/            # Unit tests
+│   ├── integration/     # Integration tests
+│   └── utils/           # Test utilities
+├── scripts/             # Test scripts
+│   ├── test_working_functions.py  # Core functionality tests
+│   ├── test_basic_functionality.py # Basic functionality tests
+│   ├── test_cli_functions.py      # CLI function tests
+│   ├── test_service_modules.py    # Service module tests
+│   ├── test_integration.py        # Integration tests
+│   ├── test_performance.py        # Performance tests
+│   ├── run_all_tests.py           # Complete test suite
+│   └── quick_test.py              # Quick validation
+└── docs/                # Documentation
 ```
 
 ## Testing Strategy
 
-The project uses functional testing through the main CLI:
-- `main.py test` runs integrated functional tests
-- No separate test framework required
-- Tests verify API integration and MCP tool functionality
+The project uses a comprehensive testing approach:
+
+### Test Scripts (scripts/)
+- **Core Functionality Tests**: `test_working_functions.py` - Essential functionality validation
+- **Test Categories**: Individual test modules for different aspects
+- **Complete Suite**: `run_all_tests.py` - Full project validation
+- **Quick Tests**: `quick_test.py` - Fast basic validation
+
+### Test Suite (tests/)
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: Cross-component functionality
+- **Performance Tests**: Performance benchmarks
+- **Test Utilities**: Helper functions and fixtures
+
+### Running Tests
+```bash
+# Recommended daily usage
+python scripts/test_working_functions.py
+
+# Complete validation
+python scripts/run_all_tests.py
+
+# Individual testing
+python scripts/test_basic_functionality.py
+```
+
+The testing approach verifies:
+- Package imports and structure integrity
+- CLI functionality and command processing
+- Service module initialization and basic operations
+- MCP server creation and tool registration
+- Integration between components
+- Performance characteristics

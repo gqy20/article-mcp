@@ -247,15 +247,37 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 
 ### 运行测试
 
-```bash
-# 运行功能测试
-uv run main.py test
+项目提供了完整的测试套件来验证功能：
 
+```bash
+# 核心功能测试（推荐日常使用）
+python scripts/test_working_functions.py
+
+# 快速测试
+python scripts/quick_test.py
+
+# 完整测试套件
+python scripts/run_all_tests.py
+
+# 分类测试
+python scripts/test_basic_functionality.py  # 基础功能测试
+python scripts/test_cli_functions.py       # CLI功能测试
+python scripts/test_service_modules.py     # 服务模块测试
+python scripts/test_integration.py         # 集成测试
+python scripts/test_performance.py         # 性能测试
+```
+
+### 项目信息
+
+```bash
 # 查看项目信息
-uv run main.py info
+uv run python -m article_mcp info
 
 # 或使用 PyPI 包
 uvx article-mcp info
+
+# 查看帮助
+uv run python -m article_mcp --help
 ```
 
 ### 故障排除
@@ -271,24 +293,59 @@ uvx article-mcp info
 
 ```
 article-mcp/
-├── main.py              # 主入口文件
+├── main.py              # 兼容性入口文件（重定向到新CLI）
 ├── pyproject.toml       # 项目配置文件
 ├── README.md            # 项目文档
-├── src/                 # 核心服务模块
-│   ├── europe_pmc.py    # Europe PMC API 接口
-│   ├── reference_service.py  # 参考文献服务
-│   ├── pubmed_search.py # PubMed 搜索服务
-│   ├── similar_articles.py   # 相似文章获取
-│   ├── arxiv_search.py  # arXiv 搜索服务
-│   ├── literature_relation_service.py  # 文献关联服务
-│   └── resource/        # 资源文件目录
-│       └── journal_info.json  # 期刊信息缓存
-└── tool_modules/        # 工具模块
-    ├── search_tools.py       # 搜索工具
-    ├── article_detail_tools.py  # 文献详情工具
-    ├── reference_tools.py    # 参考文献工具
-    ├── relation_tools.py     # 关联文献工具
-    └── quality_tools.py      # 期刊质量工具
+├── src/                 # 源代码根目录
+│   └── article_mcp/     # 主包（标准Python src layout）
+│       ├── __init__.py  # 包初始化
+│       ├── cli.py       # CLI入口点和MCP服务器创建
+│       ├── __main__.py  # Python模块执行入口
+│       ├── services/    # 服务层
+│       │   ├── europe_pmc.py              # Europe PMC API 集成
+│       │   ├── arxiv_search.py            # arXiv 搜索服务
+│       │   ├── pubmed_search.py           # PubMed 搜索服务
+│       │   ├── reference_service.py       # 参考文献管理
+│       │   ├── literature_relation_service.py # 文献关系分析
+│       │   ├── crossref_service.py        # Crossref 服务
+│       │   ├── openalex_service.py        # OpenAlex 服务
+│       │   ├── api_utils.py               # API 工具类
+│       │   ├── mcp_config.py              # MCP 配置管理
+│       │   ├── error_utils.py             # 错误处理工具
+│       │   ├── html_to_markdown.py        # HTML 转换工具
+│       │   ├── merged_results.py          # 结果合并工具
+│       │   └── similar_articles.py        # 相似文章工具
+│       ├── tools/       # 工具层（MCP工具注册）
+│       │   ├── core/                      # 核心工具模块
+│       │   │   ├── search_tools.py        # 搜索工具注册
+│       │   │   ├── article_tools.py       # 文章工具注册
+│       │   │   ├── reference_tools.py     # 参考文献工具注册
+│       │   │   ├── relation_tools.py      # 关系分析工具注册
+│       │   │   ├── quality_tools.py       # 质量评估工具注册
+│       │   │   └── batch_tools.py         # 批量处理工具注册
+│       │   ├── article_detail_tools.py    # 文章详情工具
+│       │   ├── quality_tools.py           # 质量工具
+│       │   ├── reference_tools.py         # 参考文献工具
+│       │   ├── relation_tools.py          # 关系工具
+│       │   └── search_tools.py            # 搜索工具
+│       └── legacy/       # 向后兼容模块
+│           └── __init__.py
+├── src/resource/        # 资源文件目录
+│   └── journal_info.json  # 期刊信息缓存
+├── tests/               # 测试套件
+│   ├── unit/            # 单元测试
+│   ├── integration/     # 集成测试
+│   └── utils/           # 测试工具
+├── scripts/             # 测试脚本
+│   ├── test_working_functions.py  # 核心功能测试
+│   ├── test_basic_functionality.py # 基础功能测试
+│   ├── test_cli_functions.py      # CLI功能测试
+│   ├── test_service_modules.py    # 服务模块测试
+│   ├── test_integration.py        # 集成测试
+│   ├── test_performance.py        # 性能测试
+│   ├── run_all_tests.py           # 完整测试套件
+│   └── quick_test.py              # 快速测试
+└── docs/                # 文档目录
 ```
 
 ---
