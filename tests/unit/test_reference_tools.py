@@ -1,4 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
+n# 添加src目录到Python路径
+import sys
+import os
+from pathlib import Path
+
+project_root = Path(__file__).parent.parent.parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 参考文献工具单元测试
 """
 
@@ -6,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from tool_modules.reference_tools import register_reference_tools
+from article_mcp.tools.reference_tools import register_reference_tools
 
 
 class TestReferenceTools:
@@ -300,7 +311,7 @@ class TestReferenceTools:
         )
 
         # 验证依赖已正确注入
-        from tool_modules.reference_tools import reference_tools_deps
+        from article_mcp.tools.reference_tools import reference_tools_deps
 
         assert reference_tools_deps["reference_service"] is mock_reference_service
         assert (

@@ -3,14 +3,23 @@ pytest 配置和共享 fixtures
 """
 
 import logging
+import sys
+import os
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
-from src.crossref_service import CrossRefService
-from src.europe_pmc import EuropePMCService
-from src.openalex_service import OpenAlexService
-from src.pubmed_search import PubMedService
+# 添加src目录到Python路径
+project_root = Path(__file__).parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from article_mcp.services.crossref_service import CrossRefService
+from article_mcp.services.europe_pmc import EuropePMCService
+from article_mcp.services.openalex_service import OpenAlexService
+from article_mcp.services.pubmed_search import PubMedService
 
 
 @pytest.fixture

@@ -1,12 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 期刊质量工具单元测试
 """
 
+import pytest
 from unittest.mock import Mock, patch
 
-import pytest
+# 添加src目录到Python路径
+import sys
+import os
+from pathlib import Path
 
-from tool_modules.quality_tools import register_quality_tools
+project_root = Path(__file__).parent.parent.parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from article_mcp.tools.quality_tools import register_quality_tools
 
 
 class TestQualityTools:
@@ -270,7 +281,7 @@ class TestQualityTools:
         tools = register_quality_tools(mock_mcp, mock_pubmed_service, logger)
 
         # 验证依赖已正确注入
-        from tool_modules.quality_tools import quality_tools_deps
+        from article_mcp.tools.quality_tools import quality_tools_deps
 
         assert quality_tools_deps["pubmed_service"] is mock_pubmed_service
         assert quality_tools_deps["logger"] is logger

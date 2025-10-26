@@ -1,12 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 搜索工具单元测试
 """
 
+import pytest
 from unittest.mock import Mock
 
-import pytest
+# 添加src目录到Python路径
+import sys
+import os
+from pathlib import Path
 
-from tool_modules.core.search_tools import register_search_tools
+project_root = Path(__file__).parent.parent.parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from article_mcp.tools.core.search_tools import register_search_tools
 
 
 class TestSearchTools:
@@ -74,7 +85,7 @@ class TestSearchTools:
         }
 
         # 导入搜索工具函数
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -98,7 +109,7 @@ class TestSearchTools:
 
     def test_search_literature_empty_keyword(self, mock_services, logger):
         """测试空关键词搜索"""
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -113,7 +124,7 @@ class TestSearchTools:
 
     def test_search_literature_unknown_service(self, mock_services, logger):
         """测试未知数据源搜索"""
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -134,7 +145,7 @@ class TestSearchTools:
             "total_count": 0,
         }
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -154,7 +165,7 @@ class TestSearchTools:
             "total_count": 1,
         }
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -176,7 +187,7 @@ class TestSearchTools:
             "total_count": 20,
         }
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -193,7 +204,7 @@ class TestSearchTools:
         """测试异常处理"""
         mock_services["europe_pmc"].search.side_effect = Exception("Network Error")
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -222,7 +233,7 @@ class TestSearchTools:
             "total_count": 1,
         }
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -240,7 +251,7 @@ class TestSearchTools:
 
     def test_search_literature_parameter_validation(self, mock_services, logger):
         """测试参数验证"""
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -269,7 +280,7 @@ class TestSearchTools:
             "total_count": 1,
         }
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
@@ -312,7 +323,7 @@ class TestSearchTools:
             "total_count": 1,
         }
 
-        from tool_modules.core.search_tools import register_search_tools
+        from article_mcp.tools.core.search_tools import register_search_tools
 
         mock_mcp = Mock()
         mock_mcp.tool = Mock()
