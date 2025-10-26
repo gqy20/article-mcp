@@ -41,7 +41,7 @@ jobs:
 
     - name: Run ruff
       run: |
-        uv run ruff check src/ tests/ --ignore "tests/integration/test_real_api.py"
+        uv run ruff check src/ tests/ --exclude "tests/integration/test_real_api.py"
 
     - name: Run mypy
       run: |
