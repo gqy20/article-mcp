@@ -26,41 +26,17 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
     ) -> dict[str, Any]:
         """获取参考文献工具
 
-        🎯 功能说明：
-        - 获取指定文献的参考文献列表
-        - 支持多种文献标识符类型
-        - 提供完整的引用信息
+        通过文献标识符获取其引用的参考文献列表。
 
-        📋 使用示例：
-        1. get_references("10.1038/s41586-021-03819-2")
-        2. get_references("34567890", id_type="pmid", max_results=50)
-        3. get_references("arXiv:2101.00001", sources=["arxiv"])
+        Args:
+            identifier: 文献标识符 (DOI, PMID, PMCID, arXiv ID)
+            id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
+            sources: 数据源列表，支持多源查询
+            max_results: 最大参考文献数量 (建议20-100)
+            include_metadata: 是否包含详细元数据
 
-        🔧 参数说明：
-        - identifier: 文献标识符 (支持DOI、PMID、PMCID)
-        - id_type: 标识符类型 ["auto"(自动识别), "doi", "pmid", "pmcid"]
-        - sources: 数据源列表 (目前主要支持 europe_pmc)
-        - max_results: 最大返回参考文献数量 (建议20-100)
-        - include_metadata: 是否包含详细元数据
-
-        ✅ 推荐用法：
-        - 获取引用关系：传入文献DOI，获取其参考文献
-        - 大量参考文献：增加 max_results 参数
-        - 特定数据源：指定 sources 参数
-
-        📊 返回格式：
-        {
-            "success": true,
-            "identifier": "10.1038/s41586-021-03819-2",
-            "id_type": "doi",
-            "sources_used": ["europe_pmc"],
-            "references_by_source": {
-                "europe_pmc": [...]
-            },
-            "merged_references": [...],
-            "total_count": 25,
-            "processing_time": 2.34
-        }
+        Returns:
+            包含参考文献列表的字典，包括引用信息和统计
         """
         try:
             if not identifier or not identifier.strip():

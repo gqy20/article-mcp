@@ -26,25 +26,21 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
         analysis_type: str = "basic",
         max_depth: int = 1,
     ) -> dict[str, Any]:
-        """统一文献关系分析工具
+        """文献关系分析工具
 
-        功能说明：
-        - 支持单个或多个文献的关系分析
-        - 支持参考文献、相似文献、引用文献查询
-        - 支持文献网络分析和可视化
+        分析文献间的引用关系、相似性和合作网络。
 
-        参数说明：
-        - identifiers: 文献标识符（字符串或字符串列表）
-        - id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
-        - relation_types: 关系类型列表 ["references", "similar", "citing"]
-        - max_results: 每种关系类型最大返回数
-        - sources: 数据源列表
-        - analysis_type: 分析类型 ["basic", "comprehensive", "citation", "collaboration"]
-        - max_depth: 分析深度（用于网络分析）
+        Args:
+            identifiers: 文献标识符（单个或列表）
+            id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
+            relation_types: 关系类型 ["references", "similar", "citing"]
+            max_results: 每种关系类型最大结果数
+            sources: 数据源列表
+            analysis_type: 分析类型 ["basic", "comprehensive", "network"]
+            max_depth: 分析深度
 
-        返回格式：
-        basic操作: {"success": true, "identifier": "...", "relations": {...}}
-        comprehensive操作: {"success": true, "network_data": {...}, "analysis_metrics": {...}}
+        Returns:
+            包含文献关系网络的字典，支持引用链和相似文献分析
         """
         try:
             # 处理None值的参数

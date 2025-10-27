@@ -25,27 +25,18 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
         output_path: str | None = None,
         include_metadata: bool = True,
     ) -> dict[str, Any]:
-        """通用结果导出工具
+        """批量结果导出工具
 
-        功能说明：
-        - 将批量处理结果导出为不同格式
-        - 支持JSON、CSV、Excel等格式
-        - 可选包含处理元数据
+        导出批量处理结果为不同格式文件。
 
-        参数说明：
-        - results: 批量处理结果
-        - format_type: 导出格式 ["json", "csv", "excel"]
-        - output_path: 输出文件路径（可选）
-        - include_metadata: 是否包含元数据
+        Args:
+            results: 批量处理结果
+            format_type: 导出格式 ["json", "csv", "excel"]
+            output_path: 输出文件路径(可选)
+            include_metadata: 是否包含元数据
 
-        返回格式：
-        {
-            "success": true,
-            "export_path": "/path/to/export.json",
-            "format_type": "json",
-            "records_exported": 25,
-            "file_size": "1.2MB"
-        }
+        Returns:
+            包含导出结果的字典，包括文件路径、记录数量和文件大小
         """
         try:
             if not results:

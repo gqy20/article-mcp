@@ -20,7 +20,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
     @mcp.tool()
     def get_journal_quality(
-        journals: str | list[str],
+        journal_name: str,
         operation: str = "quality",
         evaluation_criteria: list[str] | None = None,
         include_metrics: list[str] | None = None,
@@ -29,27 +29,19 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         ranking_type: str = "journal_impact",
         limit: int = 50,
     ) -> dict[str, Any]:
-        """统一期刊质量评估工具
+        """期刊质量评估工具
 
-        功能说明：
-        - 支持单个或多个期刊的质量评估
-        - 支持批量文献质量评估
-        - 支持学科领域期刊排名
+        评估期刊的学术质量和影响力指标。
 
-        参数说明：
-        - journals: 期刊名称（字符串或字符串列表）
-        - operation: 操作类型 ["quality", "evaluation", "ranking", "field_ranking"]
-        - evaluation_criteria: 评估标准（用于evaluation操作）
-        - include_metrics: 包含的指标类型（用于quality操作）
-        - use_cache: 是否使用缓存
-        - weight_config: 权重配置（用于evaluation操作）
-        - ranking_type: 排名类型（用于ranking操作）
-        - limit: 返回结果数量限制
+        Args:
+            journal_name: 期刊名称（支持中英文）
+            operation: 操作类型 ["quality", "ranking", "field_analysis"]
+            evaluation_criteria: 评估标准 ["impact_factor", "quartile", "jci"]
+            include_metrics: 包含的质量指标类型
+            use_cache: 是否使用缓存数据
 
-        返回格式：
-        quality操作: {"success": true, "journal_name": "Nature", "quality_metrics": {...}}
-        evaluation操作: {"success": true, "evaluated_articles": [...], "quality_distribution": {...}}
-        ranking操作: {"success": true, "field_name": "Biology", "top_journals": [...]}
+        Returns:
+            包含期刊质量评估结果的字典，包括影响因子、分区等
         """
         try:
             # 根据操作类型分发到具体处理函数

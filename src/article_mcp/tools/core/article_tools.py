@@ -25,42 +25,16 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     ) -> dict[str, Any]:
         """获取文献详情工具
 
-        🎯 功能说明：
-        - 获取单篇文献的完整详细信息
-        - 自动识别标识符类型
-        - 合并多源数据，信息更完整
+        通过DOI、PMID等标识符获取文献的详细信息。
 
-        📋 使用示例：
-        1. get_article_details("10.1038/s41586-021-03819-2")
-        2. get_article_details("34567890", id_type="pmid")
-        3. get_article_details("arXiv:2101.00001", sources=["arxiv"])
-        4. get_article_details("10.1234/example", include_quality_metrics=True)
+        Args:
+            identifier: 文献标识符 (DOI, PMID, PMCID, arXiv ID)
+            id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid", "arxiv_id"]
+            sources: 数据源列表，优先级顺序查询
+            include_quality_metrics: 是否包含期刊质量指标
 
-        🔧 参数说明：
-        - identifier: 文献标识符 (支持DOI、PMID、PMCID、arXiv ID)
-        - id_type: 标识符类型，可选 ["auto"(自动识别), "doi", "pmid", "pmcid", "arxiv_id"]
-        - sources: 数据源列表，推荐 ["europe_pmc", "crossref", "openalex", "arxiv"]
-        - include_quality_metrics: 是否包含期刊质量指标 (需要EasyScholar密钥)
-
-        ✅ 推荐用法：
-        - 已知DOI：直接传入，使用默认参数
-        - 已知PMID：指定 id_type="pmid"
-        - 需要质量评估：设置 include_quality_metrics=True
-        - 查询arXiv论文：指定 arxiv 数据源
-
-        📊 返回格式：
-        {
-            "success": true,
-            "identifier": "传入的标识符",
-            "id_type": "识别出的标识符类型",
-            "sources_found": ["成功获取的数据源"],
-            "details_by_source": {
-                "数据源名称": {原始数据}
-            },
-            "merged_detail": {合并后的完整数据},
-            "quality_metrics": {期刊质量指标(如果请求)},
-            "processing_time": 处理耗时(秒)
-        }
+        Returns:
+            包含文献详细信息的字典，包括标题、作者、摘要、期刊等
         """
         try:
             if not identifier or not identifier.strip():

@@ -25,53 +25,16 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
     ) -> dict[str, Any]:
         """多源文献搜索工具
 
-        🎯 功能说明：
-        - 从5个主要学术数据库搜索文献
-        - 自动去重和智能排序
-        - 透明显示每个数据源的搜索结果
+        搜索多个学术数据库的文献，支持关键词检索和结果合并。
 
-        📋 使用示例：
-        1. search_literature("CRISPR gene editing")
-        2. search_literature("machine learning", sources=["pubmed", "arxiv"], max_results=20)
-        3. search_literature("COVID-19 vaccine", search_type="recent")
+        Args:
+            keyword: 搜索关键词
+            sources: 数据源列表，可选 ["europe_pmc", "pubmed", "arxiv", "crossref", "openalex"]
+            max_results: 最大结果数 (建议10-50)
+            search_type: 搜索策略 ["comprehensive", "recent", "high_quality"]
 
-        🚀 高级检索示例：
-        1. search_literature("cancer[Title] AND immunotherapy[Abstract]")
-        2. search_literature("author:smith AND journal:nature AND 2023:2024")
-        3. search_literature('"machine learning"[Title/Abstract] NOT review[Publication Type]')
-        4. search_literature("CRISPR[Title] AND (gene editing OR genome editing) AND 2020[Publication Date]")
-
-        🔧 参数说明：
-        - keyword: 搜索关键词，支持各API原生高级检索语法
-        - sources: 数据源列表，可选 ["europe_pmc", "pubmed", "arxiv", "crossref", "openalex"]
-        - max_results: 每个数据源最大返回结果数 (建议10-50)
-        - search_type: 搜索策略 ["comprehensive"(默认), "recent", "high_quality"]
-
-        🔍 支持的高级检索语法：
-        • Europe PMC: title:cancer, abstract:immunotherapy, author:smith
-        • PubMed: cancer[Title], immunotherapy[Abstract], smith[Author]
-        • 布尔运算：AND, OR, NOT (所有API支持)
-        • 时间范围：2020:2024[Publication Date] (PubMed), 2020-2024 (Europe PMC)
-        • 精确匹配："machine learning" (所有API支持)
-        • 括号分组：(gene editing OR genome editing) AND CRISPR (所有API支持)
-
-        ✅ 推荐用法：
-        - 新手：使用默认参数，搜索关键词即可
-        - 专业人士：直接使用API原生语法进行精确检索
-        - 大规模搜索：使用批量工具 batch_search_literature
-
-        📊 返回格式：
-        {
-            "success": true,
-            "keyword": "搜索的关键词",
-            "sources_used": ["实际搜索的数据源"],
-            "results_by_source": {
-                "数据源名称": [搜索结果列表]
-            },
-            "merged_results": [去重后的结果列表],
-            "total_count": 总结果数量,
-            "search_time": 搜索耗时(秒)
-        }
+        Returns:
+            包含搜索结果的字典，包括成功状态、文章列表和统计信息
         """
         try:
             if not keyword or not keyword.strip():
