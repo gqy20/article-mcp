@@ -9,3 +9,42 @@ wheels/
 legacy_scripts/
 # Virtual environments
 .venv
+
+# 临时文档和报告
+*_CLEANUP_*.md
+*_SUMMARY.md
+
+# IDE和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+
+# 测试和覆盖率文件
+.coverage
+htmlcov/
+.pytest_cache/
+test-reports/
+
+# 缓存目录
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# 构建和分发
+build/
+dist/
+wheels/
+*.egg-info/
+backup/
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
