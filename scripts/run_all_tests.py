@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 运行所有测试的主脚本
 """
 
-import sys
-import os
-import time
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 # 获取脚本目录
@@ -19,7 +17,7 @@ test_scripts = [
     ("CLI功能测试", "test_cli_functions.py"),
     ("服务模块测试", "test_service_modules.py"),
     ("集成测试", "test_integration.py"),
-    ("性能测试", "test_performance.py")
+    ("性能测试", "test_performance.py"),
 ]
 
 
@@ -40,7 +38,7 @@ def run_test_script(script_name, description):
             capture_output=True,
             text=True,
             timeout=120,  # 2分钟超时
-            cwd=script_dir.parent
+            cwd=script_dir.parent,
         )
 
         # 输出测试结果
@@ -94,7 +92,7 @@ def main():
     print(f"通过数: {passed_count}")
     print(f"失败数: {total_count - passed_count}")
     print(f"总耗时: {duration:.2f} 秒")
-    print(f"成功率: {(passed_count/total_count)*100:.1f}%")
+    print(f"成功率: {(passed_count / total_count) * 100:.1f}%")
     print("结束时间:", time.strftime("%Y-%m-%d %H:%M:%S"))
 
     if passed_count == total_count:

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 快速验证脚本
 运行最基本的功能测试来快速验证项目状态
 注意：这是test_working_functions.py的简化版本，用于快速检查
 """
 
-import sys
 import os
+import sys
 import time
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -24,6 +23,7 @@ def test_package_import():
     print("🔍 测试包导入...")
     try:
         from article_mcp.cli import create_mcp_server, show_info
+
         print("✅ 包导入成功")
         return True
     except ImportError as e:
@@ -36,20 +36,49 @@ def test_server_creation():
     print("🔍 测试服务器创建...")
     try:
         # 需要mock所有在cli.py中导入的模块
-        with patch('article_mcp.services.europe_pmc.create_europe_pmc_service', Mock()):
-            with patch('article_mcp.services.pubmed_search.create_pubmed_service', Mock()):
-                with patch('article_mcp.services.crossref_service.CrossRefService', Mock()):
-                    with patch('article_mcp.services.openalex_service.OpenAlexService', Mock()):
-                        with patch('article_mcp.services.reference_service.create_reference_service', Mock()):
-                            with patch('article_mcp.services.literature_relation_service.create_literature_relation_service', Mock()):
-                                with patch('article_mcp.services.arxiv_search.create_arxiv_service', Mock()):
-                                    with patch('article_mcp.tools.core.search_tools.register_search_tools', Mock()):
-                                        with patch('article_mcp.tools.core.article_tools.register_article_tools', Mock()):
-                                            with patch('article_mcp.tools.core.reference_tools.register_reference_tools', Mock()):
-                                                with patch('article_mcp.tools.core.relation_tools.register_relation_tools', Mock()):
-                                                    with patch('article_mcp.tools.core.quality_tools.register_quality_tools', Mock()):
-                                                        with patch('article_mcp.tools.core.batch_tools.register_batch_tools', Mock()):
-                                                            from article_mcp.cli import create_mcp_server
+        with patch("article_mcp.services.europe_pmc.create_europe_pmc_service", Mock()):
+            with patch("article_mcp.services.pubmed_search.create_pubmed_service", Mock()):
+                with patch("article_mcp.services.crossref_service.CrossRefService", Mock()):
+                    with patch("article_mcp.services.openalex_service.OpenAlexService", Mock()):
+                        with patch(
+                            "article_mcp.services.reference_service.create_reference_service",
+                            Mock(),
+                        ):
+                            with patch(
+                                "article_mcp.services.literature_relation_service.create_literature_relation_service",
+                                Mock(),
+                            ):
+                                with patch(
+                                    "article_mcp.services.arxiv_search.create_arxiv_service", Mock()
+                                ):
+                                    with patch(
+                                        "article_mcp.tools.core.search_tools.register_search_tools",
+                                        Mock(),
+                                    ):
+                                        with patch(
+                                            "article_mcp.tools.core.article_tools.register_article_tools",
+                                            Mock(),
+                                        ):
+                                            with patch(
+                                                "article_mcp.tools.core.reference_tools.register_reference_tools",
+                                                Mock(),
+                                            ):
+                                                with patch(
+                                                    "article_mcp.tools.core.relation_tools.register_relation_tools",
+                                                    Mock(),
+                                                ):
+                                                    with patch(
+                                                        "article_mcp.tools.core.quality_tools.register_quality_tools",
+                                                        Mock(),
+                                                    ):
+                                                        with patch(
+                                                            "article_mcp.tools.core.batch_tools.register_batch_tools",
+                                                            Mock(),
+                                                        ):
+                                                            from article_mcp.cli import (
+                                                                create_mcp_server,
+                                                            )
+
                                                             server = create_mcp_server()
         print("✅ 服务器创建成功")
         return True
@@ -63,17 +92,13 @@ def test_cli_command():
     print("🔍 测试CLI命令...")
     try:
         import subprocess
+
         env = os.environ.copy()
-        env['PYTHONPATH'] = str(src_path)
+        env["PYTHONPATH"] = str(src_path)
 
         cmd = [sys.executable, "-m", "article_mcp", "info"]
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            env=env,
-            cwd=project_root
+            cmd, capture_output=True, text=True, timeout=10, env=env, cwd=project_root
         )
 
         if result.returncode == 0 and "Article MCP 文献搜索服务器" in result.stdout:
@@ -91,15 +116,15 @@ def test_service_imports():
     """测试服务导入"""
     print("🔍 测试服务导入...")
     services = [
-        ('europe_pmc', 'EuropePMCService'),
-        ('arxiv_search', 'create_arxiv_service'),
-        ('crossref_service', 'CrossRefService')
+        ("europe_pmc", "EuropePMCService"),
+        ("arxiv_search", "create_arxiv_service"),
+        ("crossref_service", "CrossRefService"),
     ]
 
     success_count = 0
     for module_name, class_name in services:
         try:
-            module = __import__(f'article_mcp.services.{module_name}', fromlist=[class_name])
+            module = __import__(f"article_mcp.services.{module_name}", fromlist=[class_name])
             getattr(module, class_name)
             print(f"✅ {module_name}.{class_name}")
             success_count += 1
@@ -119,12 +144,7 @@ def main():
     print("⚡ Article MCP 快速测试")
     print("=" * 40)
 
-    tests = [
-        test_package_import,
-        test_server_creation,
-        test_cli_command,
-        test_service_imports
-    ]
+    tests = [test_package_import, test_server_creation, test_cli_command, test_service_imports]
 
     passed = 0
     start_time = time.time()

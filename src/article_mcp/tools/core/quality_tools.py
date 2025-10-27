@@ -62,7 +62,9 @@ def register_quality_tools(mcp, services, logger):
             elif operation == "evaluation":
                 # 批量文献质量评估
                 if isinstance(journals, list):
-                    return _batch_articles_quality_evaluation(journals, evaluation_criteria, weight_config, logger)
+                    return _batch_articles_quality_evaluation(
+                        journals, evaluation_criteria, weight_config, logger
+                    )
                 else:
                     return {
                         "success": False,
@@ -75,7 +77,9 @@ def register_quality_tools(mcp, services, logger):
 
             elif operation in ["ranking", "field_ranking"]:
                 # 学科领域期刊排名
-                field_name = journals if isinstance(journals, str) else (journals[0] if journals else "")
+                field_name = (
+                    journals if isinstance(journals, str) else (journals[0] if journals else "")
+                )
                 return _get_field_ranking(field_name, ranking_type, limit, logger)
 
             else:
@@ -237,7 +241,10 @@ def _batch_journal_quality(
 
 
 def _batch_articles_quality_evaluation(
-    articles: list[dict[str, Any]], evaluation_criteria: list[str], weight_config: dict[str, float] | None, logger
+    articles: list[dict[str, Any]],
+    evaluation_criteria: list[str],
+    weight_config: dict[str, float] | None,
+    logger,
 ) -> dict[str, Any]:
     """批量文献质量评估"""
     try:
@@ -269,7 +276,9 @@ def _batch_articles_quality_evaluation(
 
         for i, article in enumerate(articles):
             try:
-                quality_evaluation = _evaluate_article_quality(article, evaluation_criteria, weights, logger)
+                quality_evaluation = _evaluate_article_quality(
+                    article, evaluation_criteria, weights, logger
+                )
                 quality_score = quality_evaluation.get("overall_score", 0)
 
                 evaluated_articles.append(
@@ -282,7 +291,7 @@ def _batch_articles_quality_evaluation(
                 quality_scores.append(quality_score)
 
             except Exception as e:
-                logger.error(f"评估第 {i+1} 篇文献失败: {e}")
+                logger.error(f"评估第 {i + 1} 篇文献失败: {e}")
                 evaluated_articles.append(
                     {
                         "index": i,
@@ -348,9 +357,7 @@ def _batch_articles_quality_evaluation(
         }
 
 
-def _get_field_ranking(
-    field_name: str, ranking_type: str, limit: int, logger
-) -> dict[str, Any]:
+def _get_field_ranking(field_name: str, ranking_type: str, limit: int, logger) -> dict[str, Any]:
     """获取学科领域期刊排名"""
     try:
         if not field_name or not field_name.strip():
@@ -371,7 +378,10 @@ def _get_field_ranking(
         # 查找匹配的领域排名
         field_data = None
         for field in field_rankings:
-            if field_name.lower() in field["name"].lower() or field["name"].lower() in field_name.lower():
+            if (
+                field_name.lower() in field["name"].lower()
+                or field["name"].lower() in field_name.lower()
+            ):
                 field_data = field
                 break
 
@@ -404,8 +414,12 @@ def _get_field_ranking(
             "average_impact_factor": (
                 sum(j.get("impact_factor", 0) for j in journals) / len(journals) if journals else 0
             ),
-            "highest_impact_factor": max(j.get("impact_factor", 0) for j in journals) if journals else 0,
-            "lowest_impact_factor": min(j.get("impact_factor", 0) for j in journals) if journals else 0,
+            "highest_impact_factor": (
+                max(j.get("impact_factor", 0) for j in journals) if journals else 0
+            ),
+            "lowest_impact_factor": (
+                min(j.get("impact_factor", 0) for j in journals) if journals else 0
+            ),
         }
 
         processing_time = round(time.time() - start_time, 2)
@@ -437,6 +451,7 @@ def _get_easyscholar_quality(journal_name: str, logger) -> dict[str, Any]:
     try:
         # 尝试从环境变量获取API密钥
         import os
+
         api_key = os.getenv("EASYSCHOLAR_SECRET_KEY")
 
         if not api_key:
@@ -451,13 +466,13 @@ def _get_easyscholar_quality(journal_name: str, logger) -> dict[str, Any]:
                 "impact_factor": 4.2,
                 "quartile": "Q2",
                 "jci": 1.8,
-                "分区": "中科院二区"
+                "分区": "中科院二区",
             },
             "ranking_info": {
                 "rank_in_category": 45,
                 "total_journals_in_category": 200,
-                "percentile": 77.5
-            }
+                "percentile": 77.5,
+            },
         }
     except Exception as e:
         logger.error(f"从EasyScholar获取质量信息失败: {e}")
@@ -471,7 +486,7 @@ def _get_cached_journal_quality(journal_name: str, logger) -> dict[str, Any] | N
         if not cache_file.exists():
             return None
 
-        with open(cache_file, "r", encoding="utf-8") as f:
+        with open(cache_file, encoding="utf-8") as f:
             journal_data = json.load(f)
 
         # 简单的名称匹配
@@ -479,7 +494,7 @@ def _get_cached_journal_quality(journal_name: str, logger) -> dict[str, Any] | N
             if journal_name.lower() in cached_journal.get("name", "").lower():
                 return {
                     "quality_metrics": cached_journal.get("metrics", {}),
-                    "ranking_info": cached_journal.get("ranking", {})
+                    "ranking_info": cached_journal.get("ranking", {}),
                 }
 
         return None
@@ -518,12 +533,9 @@ def _simple_journal_assessment(journal_name: str, logger) -> dict[str, Any]:
                 "impact_factor": impact_factor,
                 "quartile": quartile,
                 "jci": jci,
-                "分区": 分区
+                "分区": 分区,
             },
-            "ranking_info": {
-                "assessment_method": "simple_keyword_based",
-                "confidence": "low"
-            }
+            "ranking_info": {"assessment_method": "simple_keyword_based", "confidence": "low"},
         }
     except Exception as e:
         logger.error(f"简单期刊评估失败: {e}")
@@ -625,27 +637,72 @@ def _get_predefined_field_rankings() -> list[dict[str, Any]]:
                 {"name": "Science", "impact_factor": 63.714, "jci": 24.1, "citation_score": 87.5},
                 {"name": "Cell", "impact_factor": 66.850, "jci": 23.9, "citation_score": 85.3},
                 {"name": "PNAS", "impact_factor": 12.779, "jci": 8.5, "citation_score": 65.2},
-                {"name": "Nature Communications", "impact_factor": 17.694, "jci": 12.3, "citation_score": 72.8},
-            ]
+                {
+                    "name": "Nature Communications",
+                    "impact_factor": 17.694,
+                    "jci": 12.3,
+                    "citation_score": 72.8,
+                },
+            ],
         },
         {
             "name": "Medicine",
             "journals": [
-                {"name": "The Lancet", "impact_factor": 202.731, "jci": 45.2, "citation_score": 95.8},
-                {"name": "New England Journal of Medicine", "impact_factor": 158.432, "jci": 42.1, "citation_score": 94.2},
-                {"name": "Nature Medicine", "impact_factor": 82.889, "jci": 28.5, "citation_score": 88.9},
+                {
+                    "name": "The Lancet",
+                    "impact_factor": 202.731,
+                    "jci": 45.2,
+                    "citation_score": 95.8,
+                },
+                {
+                    "name": "New England Journal of Medicine",
+                    "impact_factor": 158.432,
+                    "jci": 42.1,
+                    "citation_score": 94.2,
+                },
+                {
+                    "name": "Nature Medicine",
+                    "impact_factor": 82.889,
+                    "jci": 28.5,
+                    "citation_score": 88.9,
+                },
                 {"name": "BMJ", "impact_factor": 105.726, "jci": 32.4, "citation_score": 91.3},
                 {"name": "JAMA", "impact_factor": 120.754, "jci": 35.8, "citation_score": 92.7},
-            ]
+            ],
         },
         {
             "name": "Computer Science",
             "journals": [
-                {"name": "Nature Machine Intelligence", "impact_factor": 25.898, "jci": 15.2, "citation_score": 78.5},
-                {"name": "IEEE Transactions on Pattern Analysis", "impact_factor": 24.314, "jci": 14.8, "citation_score": 76.2},
-                {"name": "Journal of Machine Learning Research", "impact_factor": 6.775, "jci": 8.9, "citation_score": 68.4},
-                {"name": "Nature Communications", "impact_factor": 17.694, "jci": 12.3, "citation_score": 72.8},
-                {"name": "Advanced Neural Networks", "impact_factor": 12.345, "jci": 9.8, "citation_score": 69.7},
-            ]
-        }
+                {
+                    "name": "Nature Machine Intelligence",
+                    "impact_factor": 25.898,
+                    "jci": 15.2,
+                    "citation_score": 78.5,
+                },
+                {
+                    "name": "IEEE Transactions on Pattern Analysis",
+                    "impact_factor": 24.314,
+                    "jci": 14.8,
+                    "citation_score": 76.2,
+                },
+                {
+                    "name": "Journal of Machine Learning Research",
+                    "impact_factor": 6.775,
+                    "jci": 8.9,
+                    "citation_score": 68.4,
+                },
+                {
+                    "name": "Nature Communications",
+                    "impact_factor": 17.694,
+                    "jci": 12.3,
+                    "citation_score": 72.8,
+                },
+                {
+                    "name": "Advanced Neural Networks",
+                    "impact_factor": 12.345,
+                    "jci": 9.8,
+                    "citation_score": 69.7,
+                },
+            ],
+        },
     ]

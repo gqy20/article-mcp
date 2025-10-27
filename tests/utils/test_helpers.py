@@ -59,9 +59,9 @@ class MockDataGenerator:
         articles = []
         for i in range(count):
             article = MockDataGenerator.create_article(
-                title=f"Test Article {i+1}",
-                doi=f"10.1000/test-{i+1}",
-                pmid=f"{12345678+i}",
+                title=f"Test Article {i + 1}",
+                doi=f"10.1000/test-{i + 1}",
+                pmid=f"{12345678 + i}",
                 **kwargs,
             )
             articles.append(article)
@@ -79,9 +79,9 @@ class MockDataGenerator:
         references = []
         for i in range(count):
             ref = MockDataGenerator.create_article(
-                title=f"Reference Article {i+1}",
-                doi=f"10.1000/ref-{i+1}",
-                pmid=f"{20000000+i}",
+                title=f"Reference Article {i + 1}",
+                doi=f"10.1000/ref-{i + 1}",
+                pmid=f"{20000000 + i}",
                 **kwargs,
             )
             references.append(ref)
@@ -183,7 +183,7 @@ def assert_valid_search_results(results: dict[str, Any]) -> None:
         try:
             assert_valid_article_structure(article)
         except AssertionError as e:
-            raise AssertionError(f"第 {i+1} 篇文章结构无效: {e}")
+            raise AssertionError(f"第 {i + 1} 篇文章结构无效: {e}")
 
 
 def run_async_with_timeout(coro, timeout: float = 10.0):
@@ -299,7 +299,7 @@ class SixToolTestHelper:
                 "format_type": "json",
                 "output_path": None,
                 "include_metadata": True,
-            }
+            },
         }
 
     @staticmethod
@@ -309,33 +309,66 @@ class SixToolTestHelper:
             "researcher_review": {
                 "description": "研究者文献综述工作流程",
                 "steps": [
-                    {"tool": "search_literature", "params": {"keyword": "AI healthcare", "max_results": 50}},
-                    {"tool": "get_article_details", "params": {"identifier": "doi_from_search", "include_quality_metrics": True}},
-                    {"tool": "get_references", "params": {"identifier": "selected_articles", "max_results": 20}},
-                    {"tool": "get_journal_quality", "params": {"journals": "all_journals", "operation": "quality"}},
-                    {"tool": "export_batch_results", "params": {"format_type": "excel"}}
+                    {
+                        "tool": "search_literature",
+                        "params": {"keyword": "AI healthcare", "max_results": 50},
+                    },
+                    {
+                        "tool": "get_article_details",
+                        "params": {
+                            "identifier": "doi_from_search",
+                            "include_quality_metrics": True,
+                        },
+                    },
+                    {
+                        "tool": "get_references",
+                        "params": {"identifier": "selected_articles", "max_results": 20},
+                    },
+                    {
+                        "tool": "get_journal_quality",
+                        "params": {"journals": "all_journals", "operation": "quality"},
+                    },
+                    {"tool": "export_batch_results", "params": {"format_type": "excel"}},
                 ],
                 "expected_tools_used": 5,
             },
             "student_assignment": {
                 "description": "学生作业工作流程",
                 "steps": [
-                    {"tool": "search_literature", "params": {"keyword": "ethics AI", "max_results": 15}},
+                    {
+                        "tool": "search_literature",
+                        "params": {"keyword": "ethics AI", "max_results": 15},
+                    },
                     {"tool": "get_article_details", "params": {"identifier": "top_3_articles"}},
-                    {"tool": "export_batch_results", "params": {"format_type": "csv"}}
+                    {"tool": "export_batch_results", "params": {"format_type": "csv"}},
                 ],
                 "expected_tools_used": 3,
             },
             "clinical_evidence": {
                 "description": "临床证据搜索工作流程",
                 "steps": [
-                    {"tool": "search_literature", "params": {"keyword": "immunotherapy lung cancer", "sources": ["pubmed"]}},
-                    {"tool": "get_article_details", "params": {"identifier": "clinical_trials", "include_quality_metrics": True}},
-                    {"tool": "get_journal_quality", "params": {"journals": "relevant_journals", "operation": "ranking"}},
-                    {"tool": "export_batch_results", "params": {"format_type": "json", "include_metadata": True}}
+                    {
+                        "tool": "search_literature",
+                        "params": {"keyword": "immunotherapy lung cancer", "sources": ["pubmed"]},
+                    },
+                    {
+                        "tool": "get_article_details",
+                        "params": {
+                            "identifier": "clinical_trials",
+                            "include_quality_metrics": True,
+                        },
+                    },
+                    {
+                        "tool": "get_journal_quality",
+                        "params": {"journals": "relevant_journals", "operation": "ranking"},
+                    },
+                    {
+                        "tool": "export_batch_results",
+                        "params": {"format_type": "json", "include_metadata": True},
+                    },
                 ],
                 "expected_tools_used": 4,
-            }
+            },
         }
 
     @staticmethod
@@ -355,7 +388,7 @@ class SixToolTestHelper:
                 "json_export": {"expected_time": 0.5, "max_memory": 15},
                 "csv_export": {"expected_time": 1.0, "max_memory": 25},
                 "excel_export": {"expected_time": 2.0, "max_memory": 40},
-            }
+            },
         }
 
     @staticmethod
@@ -371,7 +404,9 @@ class SixToolTestHelper:
             if tool_name == "search_literature":
                 assert "merged_results" in response, f"{tool_name} 缺少 merged_results"
                 assert "total_count" in response, f"{tool_name} 缺少 total_count"
-                assert isinstance(response["merged_results"], list), f"{tool_name} merged_results 必须是列表"
+                assert isinstance(response["merged_results"], list), (
+                    f"{tool_name} merged_results 必须是列表"
+                )
 
             elif tool_name == "get_article_details":
                 assert "article" in response, f"{tool_name} 缺少 article"
@@ -404,7 +439,7 @@ class SixToolTestHelper:
             "error_type": error_type,
             "tool": tool_name,
             "timestamp": time.time(),
-            "suggestion": SixToolTestHelper._get_error_suggestion(error_type)
+            "suggestion": SixToolTestHelper._get_error_suggestion(error_type),
         }
 
     @staticmethod
@@ -445,20 +480,19 @@ class WorkflowTester:
                 # 模拟工具调用
                 mock_tool = mock_tools[tool_name]
                 result = mock_tool.return_value
-                results.append({
-                    "tool": tool_name,
-                    "params": params,
-                    "result": result,
-                    "success": True
-                })
+                results.append(
+                    {"tool": tool_name, "params": params, "result": result, "success": True}
+                )
             else:
-                results.append({
-                    "tool": tool_name,
-                    "params": params,
-                    "result": None,
-                    "success": False,
-                    "error": f"工具 {tool_name} 不可用"
-                })
+                results.append(
+                    {
+                        "tool": tool_name,
+                        "params": params,
+                        "result": None,
+                        "success": False,
+                        "error": f"工具 {tool_name} 不可用",
+                    }
+                )
 
         return {
             "scenario": scenario_name,
@@ -468,7 +502,7 @@ class WorkflowTester:
             "expected_tools": scenario["expected_tools_used"],
             "actual_tools_used": len([r for r in results if r["success"]]),
             "results": results,
-            "workflow_success": all(r["success"] for r in results)
+            "workflow_success": all(r["success"] for r in results),
         }
 
 
@@ -503,7 +537,9 @@ class PerformanceMonitor:
             raise AssertionError(f"测量 {name} 未完成")
 
         actual_time = measurement["duration"]
-        assert actual_time <= max_time, f"性能测试失败: {name} 耗时 {actual_time:.2f}s 超过限制 {max_time:.2f}s"
+        assert actual_time <= max_time, (
+            f"性能测试失败: {name} 耗时 {actual_time:.2f}s 超过限制 {max_time:.2f}s"
+        )
 
     def reset(self) -> None:
         """重置所有测量"""
@@ -581,5 +617,5 @@ def mock_six_tool_responses():
             "format_type": "json",
             "records_exported": 1,
             "file_size": "1.2KB",
-        }
+        },
     }

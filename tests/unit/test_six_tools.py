@@ -4,10 +4,9 @@
 测试新的6个核心MCP工具功能
 """
 
-import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -83,7 +82,7 @@ class TestSearchLiteratureTool:
             "keyword": "machine learning",
             "sources": ["europe_pmc", "pubmed"],
             "max_results": 10,
-            "search_type": "comprehensive"
+            "search_type": "comprehensive",
         }
 
         # 验证参数传递正确
@@ -131,7 +130,7 @@ class TestGetArticleDetailsTool:
                 "journal": "Test Journal",
                 "publication_date": "2023-01-01",
                 "abstract": "Test abstract",
-            }
+            },
         }
 
         with patch("article_mcp.tools.core.article_tools.register_article_tools") as mock_register:
@@ -180,15 +179,15 @@ class TestGetArticleDetailsTool:
                     "impact_factor": 42.5,
                     "quartile": "Q1",
                     "citations": 150,
-                }
-            }
+                },
+            },
         }
 
         # 验证质量指标参数处理
         params = {
             "identifier": doi,
             "include_quality_metrics": True,
-            "sources": ["crossref", "europe_pmc"]
+            "sources": ["crossref", "europe_pmc"],
         }
 
         assert params["include_quality_metrics"] is True
@@ -225,12 +224,14 @@ class TestGetReferencesTool:
                     "doi": "10.2222/ref2.2021",
                     "journal": "Journal Two",
                     "publication_date": "2021-06-15",
-                }
+                },
             ],
             "total_count": 2,
         }
 
-        with patch("article_mcp.tools.core.reference_tools.register_reference_tools") as mock_register:
+        with patch(
+            "article_mcp.tools.core.reference_tools.register_reference_tools"
+        ) as mock_register:
             mcp = create_mcp_server()
 
             # 验证服务注入
@@ -306,7 +307,9 @@ class TestGetLiteratureRelationsTool:
             "citing_articles": [{"title": "Citing 1", "doi": "10.3333/cite1"}],
         }
 
-        with patch("article_mcp.tools.core.relation_tools.register_relation_tools") as mock_register:
+        with patch(
+            "article_mcp.tools.core.relation_tools.register_relation_tools"
+        ) as mock_register:
             mcp = create_mcp_server()
 
             # 验证服务注册
@@ -324,7 +327,7 @@ class TestGetLiteratureRelationsTool:
             "identifiers": identifiers,
             "relation_types": ["references", "similar", "citing"],
             "max_results": 10,
-            "analysis_type": "comprehensive"
+            "analysis_type": "comprehensive",
         }
 
         assert isinstance(params["identifiers"], list)
@@ -347,7 +350,7 @@ class TestGetLiteratureRelationsTool:
             "clusters": {
                 "seed_papers": [0],
                 "references": [1],
-            }
+            },
         }
 
         # 验证网络数据结构
@@ -381,12 +384,9 @@ class TestGetJournalQualityTool:
                 "impact_factor": 69.504,
                 "quartile": "Q1",
                 "jci": 25.8,
-                "分区": "中科院一区"
+                "分区": "中科院一区",
             },
-            "ranking_info": {
-                "field_rank": 1,
-                "total_journals": 100
-            }
+            "ranking_info": {"field_rank": 1, "total_journals": 100},
         }
 
         with patch("article_mcp.tools.core.quality_tools.register_quality_tools") as mock_register:
@@ -407,7 +407,7 @@ class TestGetJournalQualityTool:
             "journals": journals,
             "operation": "quality",
             "evaluation_criteria": ["journal_quality", "citation_count", "open_access"],
-            "include_metrics": ["impact_factor", "quartile", "jci"]
+            "include_metrics": ["impact_factor", "quartile", "jci"],
         }
 
         assert isinstance(params["journals"], list)
@@ -425,7 +425,7 @@ class TestGetJournalQualityTool:
             "journals": field_name,  # 单个字符串作为期刊名传入
             "operation": "ranking",
             "evaluation_criteria": ["journal_impact"],
-            "include_metrics": ["impact_factor", "quartile"]
+            "include_metrics": ["impact_factor", "quartile"],
         }
 
         assert params["operation"] == "ranking"
@@ -461,7 +461,7 @@ class TestExportBatchResultsTool:
             "results": sample_search_results,
             "format_type": "json",
             "output_path": None,
-            "include_metadata": True
+            "include_metadata": True,
         }
 
         assert export_params["format_type"] == "json"
@@ -474,7 +474,7 @@ class TestExportBatchResultsTool:
             "results": sample_search_results,
             "format_type": "csv",
             "output_path": "/tmp/export.csv",
-            "include_metadata": False
+            "include_metadata": False,
         }
 
         assert export_params["format_type"] == "csv"
@@ -488,7 +488,7 @@ class TestExportBatchResultsTool:
             "results": sample_search_results,
             "format_type": "excel",
             "output_path": "/tmp/export.xlsx",
-            "include_metadata": True
+            "include_metadata": True,
         }
 
         assert export_params["format_type"] == "excel"
@@ -501,7 +501,7 @@ class TestExportBatchResultsTool:
             "results": sample_search_results,
             "format_type": "json",
             "output_path": None,  # 自动生成路径
-            "include_metadata": True
+            "include_metadata": True,
         }
 
         assert export_params["output_path"] is None
@@ -534,13 +534,26 @@ class TestSixToolIntegration:
             create_literature_relation_service=Mock(return_value=Mock()),
             create_arxiv_service=Mock(return_value=Mock()),
         ):
-            with patch("article_mcp.tools.core.search_tools.register_search_tools") as mock_search_tools, \
-                 patch("article_mcp.tools.core.article_tools.register_article_tools") as mock_article_tools, \
-                 patch("article_mcp.tools.core.reference_tools.register_reference_tools") as mock_reference_tools, \
-                 patch("article_mcp.tools.core.relation_tools.register_relation_tools") as mock_relation_tools, \
-                 patch("article_mcp.tools.core.quality_tools.register_quality_tools") as mock_quality_tools, \
-                 patch("article_mcp.tools.core.batch_tools.register_batch_tools") as mock_batch_tools:
-
+            with (
+                patch(
+                    "article_mcp.tools.core.search_tools.register_search_tools"
+                ) as mock_search_tools,
+                patch(
+                    "article_mcp.tools.core.article_tools.register_article_tools"
+                ) as mock_article_tools,
+                patch(
+                    "article_mcp.tools.core.reference_tools.register_reference_tools"
+                ) as mock_reference_tools,
+                patch(
+                    "article_mcp.tools.core.relation_tools.register_relation_tools"
+                ) as mock_relation_tools,
+                patch(
+                    "article_mcp.tools.core.quality_tools.register_quality_tools"
+                ) as mock_quality_tools,
+                patch(
+                    "article_mcp.tools.core.batch_tools.register_batch_tools"
+                ) as mock_batch_tools,
+            ):
                 mcp = create_mcp_server()
 
                 # 验证所有工具都被注册

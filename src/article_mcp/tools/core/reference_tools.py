@@ -87,7 +87,9 @@ def register_reference_tools(mcp, services, logger):
             for source in sources:
                 try:
                     if source == "europe_pmc" and _reference_services:
-                        result = _reference_services.get_references(identifier, id_type, max_results)
+                        result = _reference_services.get_references(
+                            identifier, id_type, max_results
+                        )
                         if result.get("success", False):
                             references = result.get("references", [])
                             references_by_source[source] = references
@@ -117,7 +119,9 @@ def register_reference_tools(mcp, services, logger):
                     continue
 
             # 合并和去重参考文献
-            merged_references = _merge_and_deduplicate_references(references_by_source, include_metadata, logger)
+            merged_references = _merge_and_deduplicate_references(
+                references_by_source, include_metadata, logger
+            )
 
             # 限制返回数量
             if len(merged_references) > max_results:
@@ -209,14 +213,16 @@ def _merge_and_deduplicate_references(
 
                     # 添加元数据
                     if include_metadata:
-                        std_ref.update({
-                            "abstract": ref.get("abstract", ""),
-                            "volume": ref.get("volume", ""),
-                            "issue": ref.get("issue", ""),
-                            "pages": ref.get("pages", ""),
-                            "issn": ref.get("issn", ""),
-                            "publisher": ref.get("publisher", ""),
-                        })
+                        std_ref.update(
+                            {
+                                "abstract": ref.get("abstract", ""),
+                                "volume": ref.get("volume", ""),
+                                "issue": ref.get("issue", ""),
+                                "pages": ref.get("pages", ""),
+                                "issn": ref.get("issn", ""),
+                                "publisher": ref.get("publisher", ""),
+                            }
+                        )
 
                     all_references.append(std_ref)
 

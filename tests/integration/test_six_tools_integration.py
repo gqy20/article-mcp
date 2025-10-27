@@ -78,7 +78,7 @@ class TestEndToEndWorkflow:
                     "abstract": "Deep learning techniques have revolutionized medical image analysis...",
                     "pmid": "37654321",
                     "source": "pubmed",
-                }
+                },
             ],
             "total_count": 2,
             "search_time": 1.23,
@@ -98,8 +98,8 @@ class TestEndToEndWorkflow:
                     "impact_factor": 8.5,
                     "quartile": "Q1",
                     "jci": 2.1,
-                }
-            }
+                },
+            },
         }
 
         # 3. 获取参考文献
@@ -148,7 +148,7 @@ class TestEndToEndWorkflow:
                 "rank": 25,
                 "total_journals": 150,
                 "percentile": 83.3,
-            }
+            },
         }
 
         # 5. 导出结果
@@ -165,16 +165,16 @@ class TestEndToEndWorkflow:
                     "export_time": "2023-12-07 10:30:00",
                     "total_records": len(search_results["merged_results"]),
                     "workflow": "search_to_export",
-                }
+                },
             }
 
             # 写入文件
-            with open(export_path, 'w', encoding='utf-8') as f:
+            with open(export_path, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2)
 
             # 验证导出结果
             assert export_path.exists()
-            with open(export_path, 'r', encoding='utf-8') as f:
+            with open(export_path, encoding="utf-8") as f:
                 loaded_data = json.load(f)
 
             assert "search_results" in loaded_data
@@ -223,14 +223,14 @@ class TestEndToEndWorkflow:
                         "journal": "Modern Journal",
                         "publication_date": "2023-11-01",
                     }
-                ]
+                ],
             },
             "statistics": {
                 "references_count": 1,
                 "similar_count": 1,
                 "citing_count": 1,
                 "total_relations": 3,
-            }
+            },
         }
 
         # 3. 构建网络分析
@@ -240,7 +240,11 @@ class TestEndToEndWorkflow:
                 "nodes": [
                     {"id": "10.1234/seed1.2023", "type": "seed", "label": "Seed Article 1"},
                     {"id": "10.5678/seed2.2023", "type": "seed", "label": "Seed Article 2"},
-                    {"id": "10.9999/common.ref.2020", "type": "reference", "label": "Common Reference"},
+                    {
+                        "id": "10.9999/common.ref.2020",
+                        "type": "reference",
+                        "label": "Common Reference",
+                    },
                     {"id": "10.8888/similar.2023", "type": "similar", "label": "Similar Research"},
                     {"id": "10.7777/citing.2023", "type": "citing", "label": "Citing Article"},
                 ],
@@ -255,7 +259,7 @@ class TestEndToEndWorkflow:
                     "references": [2],
                     "similar": [3],
                     "citing": [4],
-                }
+                },
             },
             "analysis_metrics": {
                 "total_nodes": 5,
@@ -263,7 +267,7 @@ class TestEndToEndWorkflow:
                 "average_degree": 1.6,
                 "network_density": 0.4,
                 "cluster_count": 4,
-            }
+            },
         }
 
         # 验证关系分析结果
@@ -299,7 +303,7 @@ class TestEndToEndWorkflow:
                 "journal": "New Journal",
                 "doi": "10.9999/emerging.2023",
                 "publication_date": "2023-06-10",
-            }
+            },
         ]
 
         # 2. 批量质量评估
@@ -339,7 +343,7 @@ class TestEndToEndWorkflow:
                         "分区": "中科院三区",
                     },
                     "quality_grade": "Fair",
-                }
+                },
             ],
             "quality_distribution": {
                 "excellent": 1,
@@ -373,13 +377,13 @@ class TestEndToEndWorkflow:
                     "impact_factor": 1.5,
                     "rank": 120,
                     "quartile": "Q3",
-                }
+                },
             ],
             "field_statistics": {
                 "total_journals": 200,
                 "average_impact_factor": 2.8,
                 "median_impact_factor": 1.9,
-            }
+            },
         }
 
         # 验证质量评估结果
@@ -495,6 +499,7 @@ class TestPerformanceIntegration:
     @pytest.mark.slow
     def test_concurrent_tool_execution(self):
         """测试并发工具执行"""
+
         async def simulate_concurrent_execution():
             with TestTimer() as timer:
                 # 模拟并发执行多个工具
@@ -523,8 +528,9 @@ class TestPerformanceIntegration:
     @pytest.mark.integration
     def test_memory_usage_optimization(self):
         """测试内存使用优化"""
-        import psutil
         import os
+
+        import psutil
 
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB

@@ -62,7 +62,6 @@ class PubMedService:
 
     # ------------------------ 核心解析逻辑 ------------------------ #
     def _process_article(self, article_xml):
-
         if article_xml is None:
             return None
         try:

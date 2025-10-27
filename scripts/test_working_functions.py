@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 只测试已知可以工作的功能
 """
 
-import sys
 import os
+import sys
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -22,6 +21,7 @@ def test_package_import():
     print("🔍 测试包导入...")
     try:
         from article_mcp.cli import create_mcp_server, show_info
+
         print("✅ 包导入成功")
         return True
     except ImportError as e:
@@ -33,11 +33,11 @@ def test_cli_show_info():
     """测试CLI show_info功能"""
     print("🔍 测试CLI show_info功能...")
     try:
-        from article_mcp.cli import show_info
-
         # 重定向输出避免显示长文本
         import io
         from contextlib import redirect_stdout
+
+        from article_mcp.cli import show_info
 
         f = io.StringIO()
         with redirect_stdout(f):
@@ -64,7 +64,7 @@ def test_package_structure():
             "src/article_mcp/cli.py",
             "src/article_mcp/__main__.py",
             "src/article_mcp/services/__init__.py",
-            "src/article_mcp/tools/__init__.py"
+            "src/article_mcp/tools/__init__.py",
         ]
 
         missing_files = []
@@ -95,9 +95,9 @@ def test_europe_pmc_service():
         service = EuropePMCService(mock_logger)
 
         # 验证基本属性
-        assert hasattr(service, 'base_url')
-        assert hasattr(service, 'cache')
-        assert hasattr(service, 'search_semaphore')
+        assert hasattr(service, "base_url")
+        assert hasattr(service, "cache")
+        assert hasattr(service, "search_semaphore")
 
         print("✅ Europe PMC服务正常")
         return True
@@ -111,24 +111,20 @@ def test_basic_cli_command():
     print("🔍 测试基本CLI命令...")
     try:
         import subprocess
+
         env = os.environ.copy()
-        env['PYTHONPATH'] = str(src_path)
+        env["PYTHONPATH"] = str(src_path)
 
         cmd = [sys.executable, "-m", "article_mcp", "info"]
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            env=env,
-            cwd=project_root
+            cmd, capture_output=True, text=True, timeout=10, env=env, cwd=project_root
         )
 
         if result.returncode == 0 and "Article MCP 文献搜索服务器" in result.stdout:
             print("✅ 基本CLI命令正常")
             return True
         else:
-            print(f"❌ 基本CLI命令失败")
+            print("❌ 基本CLI命令失败")
             return False
     except Exception as e:
         print(f"❌ 基本CLI命令测试失败: {e}")
@@ -140,6 +136,7 @@ def test_version_info():
     print("🔍 测试版本信息...")
     try:
         from article_mcp import __version__
+
         print(f"✅ 版本信息: {__version__}")
         return True
     except ImportError:
@@ -147,11 +144,11 @@ def test_version_info():
         try:
             pyproject_path = project_root / "pyproject.toml"
             if pyproject_path.exists():
-                with open(pyproject_path, 'r', encoding='utf-8') as f:
+                with open(pyproject_path, encoding="utf-8") as f:
                     content = f.read()
-                    for line in content.split('\n'):
-                        if line.strip().startswith('version ='):
-                            version = line.split('=')[1].strip().strip('"\'')
+                    for line in content.split("\n"):
+                        if line.strip().startswith("version ="):
+                            version = line.split("=")[1].strip().strip("\"'")
                             print(f"✅ 版本信息: {version}")
                             return True
 
@@ -173,7 +170,7 @@ def main():
         test_package_structure,
         test_europe_pmc_service,
         test_basic_cli_command,
-        test_version_info
+        test_version_info,
     ]
 
     passed = 0

@@ -2,7 +2,6 @@
 文献关系分析工具 - 核心工具4（统一关系分析工具）
 """
 
-import logging
 import time
 from typing import Any
 
@@ -119,7 +118,9 @@ def _single_literature_relations(
                     statistics["references_count"] = len(references)
 
                 elif relation_type == "similar":
-                    similar = _get_similar_articles(identifier, id_type, max_results, sources, logger)
+                    similar = _get_similar_articles(
+                        identifier, id_type, max_results, sources, logger
+                    )
                     relations["similar"] = similar
                     statistics["similar_count"] = len(similar)
 
@@ -136,7 +137,9 @@ def _single_literature_relations(
         # 计算总体统计
         total_relations = sum(statistics.values())
         statistics["total_relations"] = total_relations
-        statistics["relation_types_found"] = [rt for rt in relation_types if statistics.get(f"{rt}_count", 0) > 0]
+        statistics["relation_types_found"] = [
+            rt for rt in relation_types if statistics.get(f"{rt}_count", 0) > 0
+        ]
 
         processing_time = round(time.time() - start_time, 2)
 
@@ -270,9 +273,7 @@ def _analyze_literature_network(
 
         if analysis_type in ["comprehensive", "collaboration"]:
             # 合作网络分析（基于作者信息）
-            _build_collaboration_network(
-                identifiers, nodes, edges, node_map, max_results, logger
-            )
+            _build_collaboration_network(identifiers, nodes, edges, node_map, max_results, logger)
 
         # 网络聚类分析
         clusters = _detect_network_clusters(nodes, edges, logger)
@@ -437,7 +438,11 @@ def _build_citation_network(
                     node_index = len(nodes)
                     node = {
                         "id": ref_id,
-                        "label": ref.get("title", ref_id)[:50] + "..." if len(ref.get("title", ref_id)) > 50 else ref.get("title", ref_id),
+                        "label": (
+                            ref.get("title", ref_id)[:50] + "..."
+                            if len(ref.get("title", ref_id)) > 50
+                            else ref.get("title", ref_id)
+                        ),
                         "type": "reference",
                         "x": nodes[node_map[identifier]]["x"] + (len(edges) % 5 - 2) * 50,
                         "y": nodes[node_map[identifier]]["y"] + 100,
@@ -464,7 +469,11 @@ def _build_citation_network(
                     node_index = len(nodes)
                     node = {
                         "id": cite_id,
-                        "label": cite.get("title", cite_id)[:50] + "..." if len(cite.get("title", cite_id)) > 50 else cite.get("title", cite_id),
+                        "label": (
+                            cite.get("title", cite_id)[:50] + "..."
+                            if len(cite.get("title", cite_id)) > 50
+                            else cite.get("title", cite_id)
+                        ),
                         "type": "citing",
                         "x": nodes[node_map[identifier]]["x"] + (len(edges) % 5 - 2) * 50,
                         "y": nodes[node_map[identifier]]["y"] - 100,
@@ -534,7 +543,9 @@ def _calculate_network_metrics(
             "total_edges": len(edges),
             "average_degree": (2 * len(edges)) / len(nodes) if nodes else 0,
             "cluster_count": len([k for k, v in clusters.items() if v]),
-            "network_density": (2 * len(edges)) / (len(nodes) * (len(nodes) - 1)) if len(nodes) > 1 else 0,
+            "network_density": (
+                (2 * len(edges)) / (len(nodes) * (len(nodes) - 1)) if len(nodes) > 1 else 0
+            ),
         }
 
         # 计算聚类大小分布

@@ -4,7 +4,6 @@ CLI单元测试
 测试命令行接口功能
 """
 
-
 # 导入要测试的CLI模块
 import sys
 from pathlib import Path

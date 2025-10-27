@@ -6,7 +6,7 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -15,15 +15,6 @@ project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
-
-from article_mcp.tools.core import (
-    article_tools,
-    batch_tools,
-    quality_tools,
-    reference_tools,
-    relation_tools,
-    search_tools,
-)
 
 
 class TestSearchToolsCore:
@@ -47,7 +38,9 @@ class TestSearchToolsCore:
 
         for identifier, expected_type in test_cases:
             result = _extract_identifier_type(identifier)
-            assert result == expected_type, f"Failed for {identifier}: expected {expected_type}, got {result}"
+            assert result == expected_type, (
+                f"Failed for {identifier}: expected {expected_type}, got {result}"
+            )
 
     @pytest.mark.unit
     def test_search_results_merging(self):
@@ -79,8 +72,8 @@ class TestSearchToolsCore:
                     "doi": "10.5678/dl.apps.2023",
                     "journal": "Machine Learning Today",
                     "publication_date": "2023-05-20",
-                }
-            ]
+                },
+            ],
         }
 
         logger = Mock()
@@ -117,7 +110,7 @@ class TestSearchToolsCore:
                     "abstract": "This is the abstract",
                     "source": "europe_pmc",
                 }
-            ]
+            ],
         }
 
         logger = Mock()
@@ -154,7 +147,7 @@ class TestArticleToolsCore:
                 "publication_date": "2023-06-15",
                 "doi": "10.5678/test2.2023",
                 "abstract": "Test abstract",
-            }
+            },
         ]
 
         standardized = _standardize_article_data(raw_articles)
@@ -239,7 +232,7 @@ class TestReferenceToolsCore:
                     "pmid": "12345678",
                     "journal": "Journal Two",
                     "publication_date": "2021-06-15",
-                }
+                },
             ],
             "crossref": [
                 {
@@ -250,7 +243,7 @@ class TestReferenceToolsCore:
                     "publication_date": "2020-01-01",
                     "abstract": "Abstract from Crossref",
                 }
-            ]
+            ],
         }
 
         logger = Mock()
@@ -283,7 +276,7 @@ class TestReferenceToolsCore:
                 "doi": "",  # 缺少DOI
                 "journal": "",
                 "publication_date": "",
-            }
+            },
         ]
 
         completeness_scores = [_check_reference_completeness(ref) for ref in test_references]
@@ -423,7 +416,12 @@ class TestQualityToolsCore:
         normalized_scores = [_normalize_quartile(q) for q in quartile_cases]
 
         # 验证分区评分
-        assert normalized_scores[0] > normalized_scores[1] > normalized_scores[2] > normalized_scores[3]
+        assert (
+            normalized_scores[0]
+            > normalized_scores[1]
+            > normalized_scores[2]
+            > normalized_scores[3]
+        )
         assert normalized_scores[4] == 0  # 未知分区得分为0
 
     @pytest.mark.unit
@@ -452,10 +450,11 @@ class TestBatchToolsCore:
     @pytest.mark.unit
     def test_json_export_logic(self):
         """测试JSON导出逻辑"""
-        from article_mcp.tools.core.batch_tools import _export_to_json
-        from pathlib import Path
-        import tempfile
         import json
+        import tempfile
+        from pathlib import Path
+
+        from article_mcp.tools.core.batch_tools import _export_to_json
 
         test_results = {
             "success": True,
@@ -481,7 +480,7 @@ class TestBatchToolsCore:
             assert output_path.exists()
 
             # 验证JSON内容
-            with open(output_path, 'r', encoding='utf-8') as f:
+            with open(output_path, encoding="utf-8") as f:
                 exported_data = json.load(f)
 
             assert "export_metadata" in exported_data
@@ -491,10 +490,11 @@ class TestBatchToolsCore:
     @pytest.mark.unit
     def test_csv_export_logic(self):
         """测试CSV导出逻辑"""
-        from article_mcp.tools.core.batch_tools import _export_to_csv
-        from pathlib import Path
-        import tempfile
         import csv
+        import tempfile
+        from pathlib import Path
+
+        from article_mcp.tools.core.batch_tools import _export_to_csv
 
         test_results = {
             "success": True,
@@ -514,7 +514,7 @@ class TestBatchToolsCore:
                     "journal": "Another Journal",
                     "publication_date": "2023-06-15",
                     "abstract": "Test abstract 2",
-                }
+                },
             ],
             "total_count": 2,
         }
@@ -531,7 +531,7 @@ class TestBatchToolsCore:
             assert output_path.exists()
 
             # 验证CSV内容
-            with open(output_path, 'r', encoding='utf-8', newline='') as f:
+            with open(output_path, encoding="utf-8", newline="") as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
 
@@ -544,9 +544,10 @@ class TestBatchToolsCore:
     @pytest.mark.unit
     def test_export_path_generation(self):
         """测试导出路径生成逻辑"""
-        from article_mcp.tools.core.batch_tools import _generate_export_path
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from article_mcp.tools.core.batch_tools import _generate_export_path
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # 测试自动路径生成
@@ -562,12 +563,13 @@ class TestBatchToolsCore:
     @pytest.mark.unit
     def test_file_size_calculation(self):
         """测试文件大小计算逻辑"""
-        from article_mcp.tools.core.batch_tools import _calculate_file_size
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from article_mcp.tools.core.batch_tools import _calculate_file_size
 
         # 创建测试文件
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
             f.write("Test content for file size calculation")
             temp_path = Path(f.name)
 

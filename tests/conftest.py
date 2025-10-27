@@ -16,6 +16,7 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
+
 # 延迟导入，只在需要时导入
 def _import_services():
     try:
@@ -23,6 +24,7 @@ def _import_services():
         from article_mcp.services.europe_pmc import EuropePMCService
         from article_mcp.services.openalex_service import OpenAlexService
         from article_mcp.services.pubmed_search import PubMedService
+
         return CrossRefService, EuropePMCService, OpenAlexService, PubMedService
     except ImportError:
         # 测试环境下返回Mock类
@@ -268,7 +270,7 @@ def six_tool_services(logger):
             "pubmed": Mock(),
             "crossref": Mock(),
             "openalex": Mock(),
-        }
+        },
     }
 
 
@@ -307,7 +309,7 @@ def mock_mcp_tools():
             "journal": "Test Journal",
             "publication_date": "2023-01-01",
             "abstract": "Test abstract",
-        }
+        },
     }
 
     # 工具3: get_references
@@ -343,7 +345,7 @@ def mock_mcp_tools():
             "similar_count": 0,
             "citing_count": 0,
             "total_relations": 0,
-        }
+        },
     }
 
     # 工具5: get_journal_quality
@@ -355,7 +357,7 @@ def mock_mcp_tools():
             "impact_factor": 2.5,
             "quartile": "Q2",
             "jci": 1.0,
-        }
+        },
     }
 
     # 工具6: export_batch_results
@@ -396,7 +398,7 @@ def workflow_test_data():
                     "journal": "Medical Imaging Today",
                     "publication_date": "2023-04-20",
                     "pmid": "37654321",
-                }
+                },
             ],
             "total_count": 2,
         },
@@ -416,8 +418,8 @@ def workflow_test_data():
                     "impact_factor": 4.2,
                     "quartile": "Q1",
                     "jci": 1.8,
-                }
-            }
+                },
+            },
         },
         "references": {
             "success": True,
@@ -436,7 +438,7 @@ def workflow_test_data():
                     "doi": "10.2222/health.analytics.2021",
                     "journal": "Health Informatics",
                     "publication_date": "2021-03-15",
-                }
+                },
             ],
             "total_count": 25,
         },
@@ -464,14 +466,14 @@ def workflow_test_data():
                         "doi": "10.4444/recent.healthai.2023",
                         "publication_date": "2023-11-20",
                     }
-                ]
+                ],
             },
             "statistics": {
                 "references_count": 1,
                 "similar_count": 1,
                 "citing_count": 1,
                 "total_relations": 3,
-            }
+            },
         },
         "journal_quality": {
             "success": True,
@@ -488,7 +490,7 @@ def workflow_test_data():
                 "rank": 15,
                 "total_journals": 80,
                 "percentile": 81.25,
-            }
+            },
         },
         "export_data": {
             "success": True,
@@ -496,7 +498,7 @@ def workflow_test_data():
             "format_type": "json",
             "records_exported": 2,
             "file_size": "15.3KB",
-        }
+        },
     }
 
 
@@ -523,7 +525,7 @@ def performance_test_data():
             "tools_count": 6,
             "expected_parallel_time": 2.0,
             "expected_serial_time": 8.0,
-        }
+        },
     }
 
 
@@ -546,7 +548,7 @@ def error_scenarios():
                 "error_type": "DNSResolutionError",
                 "message": "Could not resolve hostname",
                 "retry_possible": False,
-            }
+            },
         ],
         "api_errors": [
             {
@@ -566,7 +568,7 @@ def error_scenarios():
                 "message": "Invalid request parameters",
                 "retry_possible": True,
                 "suggestion": "Validate request parameters",
-            }
+            },
         ],
         "data_errors": [
             {
@@ -585,8 +587,8 @@ def error_scenarios():
                 "message": "Data validation failed",
                 "retry_possible": False,
                 "suggestion": "Check input data format",
-            }
-        ]
+            },
+        ],
     }
 
 

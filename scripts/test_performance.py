@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 性能测试脚本
 测试系统的性能指标
 """
 
-import sys
-import os
-import time
 import asyncio
-import psutil
-import threading
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import psutil
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -70,7 +68,9 @@ class MemoryMonitor:
             "initial_mb": self.initial_memory / 1024 / 1024 if self.initial_memory else 0,
             "current_mb": current / 1024 / 1024,
             "peak_mb": self.peak_memory / 1024 / 1024,
-            "increase_mb": (current - self.initial_memory) / 1024 / 1024 if self.initial_memory else 0
+            "increase_mb": (
+                (current - self.initial_memory) / 1024 / 1024 if self.initial_memory else 0
+            ),
         }
 
 
@@ -81,14 +81,10 @@ def test_import_performance():
     # 测试多次导入的时间
     import_times = []
     for i in range(5):
-        with PerformanceTimer(f"导入 {i+1}"):
+        with PerformanceTimer(f"导入 {i + 1}"):
             # 刷新模块缓存
-            if 'article_mcp.cli' in sys.modules:
-                del sys.modules['article_mcp.cli']
-
-            from article_mcp.cli import create_mcp_server
-            import article_mcp.services.europe_pmc
-            import article_mcp.tools.core.search_tools
+            if "article_mcp.cli" in sys.modules:
+                del sys.modules["article_mcp.cli"]
 
         import_times.append(PerformanceTimer().elapsed())
 
@@ -111,9 +107,9 @@ def test_server_creation_performance():
     creation_times = []
 
     for i in range(3):
-        with PerformanceTimer(f"服务器创建 {i+1}"):
+        with PerformanceTimer(f"服务器创建 {i + 1}"):
             with patch.multiple(
-                'article_mcp.cli',
+                "article_mcp.cli",
                 create_europe_pmc_service=Mock(),
                 create_pubmed_service=Mock(),
                 CrossRefService=Mock(),
@@ -126,9 +122,10 @@ def test_server_creation_performance():
                 register_reference_tools=Mock(),
                 register_relation_tools=Mock(),
                 register_quality_tools=Mock(),
-                register_batch_tools=Mock()
+                register_batch_tools=Mock(),
             ):
                 from article_mcp.cli import create_mcp_server
+
                 server = create_mcp_server()
 
         creation_times.append(PerformanceTimer().elapsed())
@@ -157,7 +154,7 @@ def test_memory_usage():
     # 执行多个操作
     for i in range(10):
         with patch.multiple(
-            'article_mcp.cli',
+            "article_mcp.cli",
             create_europe_pmc_service=Mock(),
             create_pubmed_service=Mock(),
             CrossRefService=Mock(),
@@ -170,9 +167,10 @@ def test_memory_usage():
             register_reference_tools=Mock(),
             register_relation_tools=Mock(),
             register_quality_tools=Mock(),
-            register_batch_tools=Mock()
+            register_batch_tools=Mock(),
         ):
             from article_mcp.cli import create_mcp_server
+
             server = create_mcp_server()
 
         monitor.update()
@@ -185,7 +183,7 @@ def test_memory_usage():
     print(f"✓ 内存增长: {final_memory['increase_mb']:.2f} MB")
 
     # 内存增长应该小于50MB
-    if final_memory['increase_mb'] < 50:
+    if final_memory["increase_mb"] < 50:
         print("✓ 内存使用合理")
         return True
     else:
@@ -198,31 +196,31 @@ async def test_async_performance():
     print("🔍 测试异步性能...")
 
     try:
-        from article_mcp.services.europe_pmc import EuropePMCService
         from article_mcp.tools.core.search_tools import _search_literature
 
         # 创建模拟服务
         mock_logger = Mock()
         mock_service = Mock()
-        mock_service.search_articles = AsyncMock(return_value={
-            "articles": [
-                {"title": f"Test Article {i}", "doi": f"10.1000/test{i}"}
-                for i in range(100)
-            ],
-            "total_count": 100
-        })
+        mock_service.search_articles = AsyncMock(
+            return_value={
+                "articles": [
+                    {"title": f"Test Article {i}", "doi": f"10.1000/test{i}"} for i in range(100)
+                ],
+                "total_count": 100,
+            }
+        )
 
         # 测试异步调用性能
         async_times = []
 
         for i in range(5):
-            with PerformanceTimer(f"异步调用 {i+1}"):
-                with patch('article_mcp.tools.core.search_tools._search_services',
-                          {"europe_pmc": mock_service}):
+            with PerformanceTimer(f"异步调用 {i + 1}"):
+                with patch(
+                    "article_mcp.tools.core.search_tools._search_services",
+                    {"europe_pmc": mock_service},
+                ):
                     result = await _search_literature(
-                        keyword="test",
-                        sources=["europe_pmc"],
-                        max_results=100
+                        keyword="test", sources=["europe_pmc"], max_results=100
                     )
 
             async_times.append(PerformanceTimer().elapsed())
@@ -248,7 +246,7 @@ def test_concurrent_performance():
 
     def create_server():
         with patch.multiple(
-            'article_mcp.cli',
+            "article_mcp.cli",
             create_europe_pmc_service=Mock(),
             create_pubmed_service=Mock(),
             CrossRefService=Mock(),
@@ -261,9 +259,10 @@ def test_concurrent_performance():
             register_reference_tools=Mock(),
             register_relation_tools=Mock(),
             register_quality_tools=Mock(),
-            register_batch_tools=Mock()
+            register_batch_tools=Mock(),
         ):
             from article_mcp.cli import create_mcp_server
+
             return create_mcp_server()
 
     # 测试并发创建
@@ -312,7 +311,7 @@ def test_large_data_performance():
             result = {
                 "articles": large_dataset,
                 "total_count": len(large_dataset),
-                "processed_at": time.time()
+                "processed_at": time.time(),
             }
 
             # 模拟一些数据处理操作
@@ -351,11 +350,7 @@ def test_cache_performance():
         service = EuropePMCService(mock_logger)
 
         # 测试缓存命中率（模拟）
-        cache_stats = {
-            "hits": 0,
-            "misses": 0,
-            "total_requests": 0
-        }
+        cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
 
         # 模拟缓存操作
         with PerformanceTimer("缓存操作"):
@@ -399,12 +394,10 @@ def main():
         test_memory_usage,
         test_concurrent_performance,
         test_large_data_performance,
-        test_cache_performance
+        test_cache_performance,
     ]
 
-    async_tests = [
-        test_async_performance
-    ]
+    async_tests = [test_async_performance]
 
     passed = 0
     total = len(tests) + len(async_tests)

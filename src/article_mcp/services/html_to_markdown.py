@@ -346,7 +346,7 @@ if __name__ == "__main__":
     <body>
         <h1>研究背景</h1>
         <p>这是一个<strong>重要</strong>的学术研究，涉及<em>机器学习</em>和<a href="http://example.com">深度学习</a>技术。</p>
-        
+
         <h2>实验方法</h2>
         <p>我们使用了以下方法：</p>
         <ul>
@@ -354,7 +354,7 @@ if __name__ == "__main__":
             <li>模型训练</li>
             <li>结果评估</li>
         </ul>
-        
+
         <h2>实验结果</h2>
         <table>
             <thead>
@@ -374,7 +374,7 @@ if __name__ == "__main__":
                 </tr>
             </tbody>
         </table>
-        
+
         <blockquote>
             <p>这是一段重要的引用内容。</p>
         </blockquote>
