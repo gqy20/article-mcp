@@ -71,7 +71,13 @@ def create_mcp_server():
     register_article_tools(mcp, article_services, logger)
 
     # 工具3: 参考文献工具
-    register_reference_tools(mcp, reference_service, logger)
+    reference_services = {
+        "europe_pmc": europe_pmc_service,
+        "crossref": crossref_service,
+        "pubmed": pubmed_service,
+        "reference": reference_service,
+    }
+    register_reference_tools(mcp, reference_services, logger)
 
     # 工具4: 文献关系分析工具
     relation_services = {"europe_pmc": europe_pmc_service, "pubmed": pubmed_service}
