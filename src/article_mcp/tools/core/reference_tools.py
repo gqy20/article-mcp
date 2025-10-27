@@ -5,11 +5,13 @@
 import time
 from typing import Any
 
+from fastmcp import FastMCP
+
 # 全局服务实例
 _reference_services = None
 
 
-def register_reference_tools(mcp, services, logger):
+def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册参考文献工具"""
     global _reference_services
     _reference_services = services

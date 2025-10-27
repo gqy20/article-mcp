@@ -7,11 +7,13 @@ import time
 from pathlib import Path
 from typing import Any
 
+from fastmcp import FastMCP
+
 # 全局服务实例
 _quality_services = None
 
 
-def register_quality_tools(mcp, services, logger):
+def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册期刊质量评估工具"""
     global _quality_services
     _quality_services = services
@@ -622,8 +624,8 @@ def _calculate_quality_distribution(scores: list[float]) -> dict[str, Any]:
 
         return distribution
 
-    except Exception as e:
-        logger.error(f"计算质量分布失败: {e}")
+    except Exception:
+        # 由于这是内部函数，我们不使用logger，而是静默处理异常
         return {}
 
 

@@ -7,11 +7,13 @@ import time
 from pathlib import Path
 from typing import Any
 
+from fastmcp import FastMCP
+
 # 全局服务实例
 _batch_services = None
 
 
-def register_batch_tools(mcp, services, logger):
+def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册批量处理工具"""
     global _batch_services
     _batch_services = services

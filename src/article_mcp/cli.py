@@ -19,7 +19,8 @@ def create_mcp_server():
 
     # 导入新架构服务（使用新的包结构）
     from .services.europe_pmc import create_europe_pmc_service
-    from .services.literature_relation_service import create_literature_relation_service
+
+    # from .services.literature_relation_service import create_literature_relation_service
     from .services.openalex_service import OpenAlexService
     from .services.pubmed_search import create_pubmed_service
     from .services.reference_service import create_reference_service
@@ -46,7 +47,7 @@ def create_mcp_server():
     openalex_service = OpenAlexService(logger)
     arxiv_service = create_arxiv_service(logger)
     reference_service = create_reference_service(logger)
-    literature_relation_service = create_literature_relation_service(logger)
+    # literature_relation_service 在关系工具中使用，不需要单独创建
 
     # 注册新架构核心工具
     # 工具1: 统一搜索工具
@@ -169,14 +170,14 @@ async def run_test():
 
     try:
         # 简单测试：验证MCP服务器创建和工具注册
-        mcp = create_mcp_server()
+        create_mcp_server()
         print("✓ MCP 服务器创建成功")
 
         # 测试工具函数直接调用
         print("✓ 开始测试搜索功能...")
 
-        # 创建测试参数
-        test_args = {"keyword": "machine learning", "max_results": 3}
+        # 创建测试参数（用于测试验证）
+        test_params = {"keyword": "machine learning", "max_results": 3}
 
         # 这里我们不能直接调用工具，因为需要MCP客户端
         # 但我们可以测试服务器是否正确创建
@@ -302,10 +303,10 @@ def main():
     )
 
     # 测试命令
-    test_parser = subparsers.add_parser("test", help="运行测试")
+    subparsers.add_parser("test", help="运行测试")
 
     # 信息命令
-    info_parser = subparsers.add_parser("info", help="显示项目信息")
+    subparsers.add_parser("info", help="显示项目信息")
 
     args = parser.parse_args()
 

@@ -15,7 +15,6 @@ class CrossRefService:
         self.base_url = "https://api.crossref.org"
         self.api_client = get_api_client(logger)
 
-    @lru_cache(maxsize=5000)
     def search_works(self, query: str, max_results: int = 10) -> dict[str, Any]:
         """搜索CrossRef学术文献"""
         try:
@@ -49,7 +48,6 @@ class CrossRefService:
                 "error": str(e),
             }
 
-    @lru_cache(maxsize=500)
     def get_work_by_doi(self, doi: str) -> dict[str, Any]:
         """通过DOI获取文献详情"""
         try:

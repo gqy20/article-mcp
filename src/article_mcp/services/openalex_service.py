@@ -15,7 +15,6 @@ class OpenAlexService:
         self.base_url = "https://api.openalex.org"
         self.api_client = get_api_client(logger)
 
-    @lru_cache(maxsize=5000)
     def search_works(
         self, query: str, max_results: int = 10, filters: dict = None
     ) -> dict[str, Any]:
@@ -54,7 +53,6 @@ class OpenAlexService:
                 "error": str(e),
             }
 
-    @lru_cache(maxsize=500)
     def get_work_by_doi(self, doi: str) -> dict[str, Any]:
         """通过DOI获取文献详情"""
         try:

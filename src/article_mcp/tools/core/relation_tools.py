@@ -5,11 +5,13 @@
 import time
 from typing import Any
 
+from fastmcp import FastMCP
+
 # 全局服务实例
 _relation_services = None
 
 
-def register_relation_tools(mcp, services, logger):
+def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册文献关系分析工具"""
     global _relation_services
     _relation_services = services

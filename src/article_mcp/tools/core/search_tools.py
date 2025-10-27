@@ -5,11 +5,13 @@
 import time
 from typing import Any
 
+from fastmcp import FastMCP
+
 # 全局服务实例
 _search_services = None
 
 
-def register_search_tools(mcp, services, logger):
+def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册搜索工具"""
     global _search_services
     _search_services = services
