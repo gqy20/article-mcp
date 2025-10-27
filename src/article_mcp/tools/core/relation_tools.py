@@ -18,7 +18,8 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
 
     @mcp.tool()
     def get_literature_relations(
-        identifiers: str | list[str],
+        identifier: str | list[str] | None = None,
+        identifiers: str | list[str] | None = None,
         id_type: str = "auto",
         relation_types: list[str] | None = None,
         max_results: int = 20,
@@ -29,7 +30,8 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
         """文献关系分析工具。分析文献间的引用关系、相似性和合作网络。
 
         Args:
-            identifiers: 文献标识符（单个或列表）
+            identifier: 文献标识符（单个）- 向后兼容参数
+            identifiers: 文献标识符（单个或列表）- 主要参数
             id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
             relation_types: 关系类型 ["references", "similar", "citing"]
             max_results: 每种关系类型最大结果数
@@ -41,6 +43,18 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
             包含文献关系网络的字典，支持引用链和相似文献分析
         """
         try:
+            # 参数优先级：identifier > identifiers
+            if identifier is not None:
+                final_identifiers = identifier
+            elif identifiers is not None:
+                final_identifiers = identifiers
+            else:
+                return {
+                    "success": False,
+                    "error": "必须提供 identifier 或 identifiers 参数",
+                    "relations": {},
+                }
+
             # 处理None值的参数
             if relation_types is None:
                 relation_types = ["references", "similar", "citing"]
@@ -48,27 +62,27 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
                 sources = ["europe_pmc", "crossref", "openalex", "pubmed"]
 
             # 根据输入类型判断操作模式
-            if isinstance(identifiers, str):
+            if isinstance(final_identifiers, str):
                 # 单个文献的基本关系分析
                 return _single_literature_relations(
-                    identifiers, id_type, relation_types, max_results, sources, logger
+                    final_identifiers, id_type, relation_types, max_results, sources, logger
                 )
-            elif isinstance(identifiers, list):
+            elif isinstance(final_identifiers, list):
                 if analysis_type == "basic":
                     # 多个文献的基本关系分析（批量处理）
                     return _batch_literature_relations(
-                        identifiers, id_type, relation_types, max_results, sources, logger
+                        final_identifiers, id_type, relation_types, max_results, sources, logger
                     )
                 else:
                     # 文献网络分析
                     return _analyze_literature_network(
-                        identifiers, analysis_type, max_depth, max_results, logger
+                        final_identifiers, analysis_type, max_depth, max_results, logger
                     )
             else:
                 return {
                     "success": False,
-                    "error": "identifiers参数必须是字符串或字符串列表",
-                    "identifier": identifiers,
+                    "error": "identifier/identifiers参数必须是字符串或字符串列表",
+                    "identifier": final_identifiers,
                     "relations": {},
                 }
 
@@ -77,7 +91,7 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
             return {
                 "success": False,
                 "error": str(e),
-                "identifier": identifiers,
+                "identifier": final_identifiers,
                 "relations": {},
             }
 
