@@ -11,16 +11,16 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
-
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from article_mcp.cli import create_mcp_server
-from tests.utils.test_helpers import TestTimer
+import pytest  # noqa: E402
+
+from article_mcp.cli import create_mcp_server  # noqa: E402
+from tests.utils.test_helpers import TestTimer  # noqa: E402
 
 
 class TestEndToEndWorkflow:

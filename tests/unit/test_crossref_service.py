@@ -2,9 +2,9 @@
 CrossRef 服务单元测试
 """
 
+import pytest
 from unittest.mock import Mock, patch
 
-import pytest
 from src.crossref_service import CrossRefService
 
 

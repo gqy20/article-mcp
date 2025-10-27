@@ -126,7 +126,7 @@ def test_server_creation_performance():
             ):
                 from article_mcp.cli import create_mcp_server
 
-                server = create_mcp_server()
+                create_mcp_server()
 
         creation_times.append(PerformanceTimer().elapsed())
 
@@ -152,7 +152,7 @@ def test_memory_usage():
     initial_memory = monitor.get_memory_usage()
 
     # 执行多个操作
-    for i in range(10):
+    for _i in range(10):
         with patch.multiple(
             "article_mcp.cli",
             create_europe_pmc_service=Mock(),
@@ -171,7 +171,7 @@ def test_memory_usage():
         ):
             from article_mcp.cli import create_mcp_server
 
-            server = create_mcp_server()
+            create_mcp_server()
 
         monitor.update()
 
@@ -199,7 +199,7 @@ async def test_async_performance():
         from article_mcp.tools.core.search_tools import _search_literature
 
         # 创建模拟服务
-        mock_logger = Mock()
+        Mock()
         mock_service = Mock()
         mock_service.search_articles = AsyncMock(
             return_value={
@@ -219,7 +219,7 @@ async def test_async_performance():
                     "article_mcp.tools.core.search_tools._search_services",
                     {"europe_pmc": mock_service},
                 ):
-                    result = await _search_literature(
+                    await _search_literature(
                         keyword="test", sources=["europe_pmc"], max_results=100
                     )
 
@@ -273,7 +273,7 @@ def test_concurrent_performance():
         with PerformanceTimer(f"{thread_count} 线程并发"):
             with ThreadPoolExecutor(max_workers=thread_count) as executor:
                 futures = [executor.submit(create_server) for _ in range(thread_count)]
-                servers = [future.result() for future in futures]
+                [future.result() for future in futures]
 
         elapsed_time = PerformanceTimer().elapsed()
         results[thread_count] = elapsed_time

@@ -20,9 +20,9 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
     def get_literature_relations(
         identifiers: str | list[str],
         id_type: str = "auto",
-        relation_types: list[str] = ["references", "similar", "citing"],
+        relation_types: list[str] | None = None,
         max_results: int = 20,
-        sources: list[str] = ["europe_pmc", "pubmed"],
+        sources: list[str] | None = None,
         analysis_type: str = "basic",
         max_depth: int = 1,
     ) -> dict[str, Any]:
@@ -47,6 +47,12 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
         comprehensive操作: {"success": true, "network_data": {...}, "analysis_metrics": {...}}
         """
         try:
+            # 处理None值的参数
+            if relation_types is None:
+                relation_types = ["references", "similar", "citing"]
+            if sources is None:
+                sources = ["europe_pmc", "pubmed"]
+
             # 根据输入类型判断操作模式
             if isinstance(identifiers, str):
                 # 单个文献的基本关系分析

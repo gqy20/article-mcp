@@ -490,7 +490,6 @@ class PubMedService:
                     ss_paper_id = paper.get("paperId")
 
                     # 构建各种链接
-                    pmid_link = None
                     doi_link = f"https://doi.org/{doi}" if doi else None
                     arxiv_link = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else None
                     ss_link = (
@@ -502,28 +501,25 @@ class PubMedService:
                     # 优先级：DOI > ArXiv > Semantic Scholar
                     primary_link = doi_link or arxiv_link or ss_link
 
-                    interim_articles.append(
-                        {
-                            "pmid": None,
-                            "pmid_link": primary_link,
-                            "title": paper.get("title"),
-                            "authors": (
-                                [a.get("name") for a in paper.get("authors", [])]
-                                if paper.get("authors")
-                                else None
-                            ),
-                            "journal_name": paper.get("venue"),
-                            "publication_date": paper.get("publicationDate")
-                            or str(paper.get("year")),
-                            "abstract": None,
-                            "doi": doi,
-                            "doi_link": doi_link,
-                            "arxiv_id": arxiv_id,
-                            "arxiv_link": arxiv_link,
-                            "semantic_scholar_id": ss_paper_id,
-                            "semantic_scholar_link": ss_link,
-                        }
-                    )
+                    interim_articles.append({
+                        "pmid": None,
+                        "pmid_link": primary_link,
+                        "title": paper.get("title"),
+                        "authors": (
+                            [a.get("name") for a in paper.get("authors", [])]
+                            if paper.get("authors")
+                            else None
+                        ),
+                        "journal_name": paper.get("venue"),
+                        "publication_date": paper.get("publicationDate") or str(paper.get("year")),
+                        "abstract": None,
+                        "doi": doi,
+                        "doi_link": doi_link,
+                        "arxiv_id": arxiv_id,
+                        "arxiv_link": arxiv_link,
+                        "semantic_scholar_id": ss_paper_id,
+                        "semantic_scholar_link": ss_link,
+                    })
 
             # 2. 使用 PubMed EFetch 批量补全
             citing_articles = []

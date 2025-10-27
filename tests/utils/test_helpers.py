@@ -183,7 +183,7 @@ def assert_valid_search_results(results: dict[str, Any]) -> None:
         try:
             assert_valid_article_structure(article)
         except AssertionError as e:
-            raise AssertionError(f"第 {i + 1} 篇文章结构无效: {e}")
+            raise AssertionError(f"第 {i + 1} 篇文章结构无效: {e}") from e
 
 
 def run_async_with_timeout(coro, timeout: float = 10.0):
@@ -197,7 +197,7 @@ def run_async_with_timeout(coro, timeout: float = 10.0):
     try:
         return loop.run_until_complete(asyncio.wait_for(coro, timeout=timeout))
     except asyncio.TimeoutError:
-        raise TimeoutError(f"操作在 {timeout} 秒后超时")
+        raise TimeoutError(f"操作在 {timeout} 秒后超时") from None
     finally:
         if not loop.is_running():
             loop.close()
@@ -480,19 +480,20 @@ class WorkflowTester:
                 # 模拟工具调用
                 mock_tool = mock_tools[tool_name]
                 result = mock_tool.return_value
-                results.append(
-                    {"tool": tool_name, "params": params, "result": result, "success": True}
-                )
+                results.append({
+                    "tool": tool_name,
+                    "params": params,
+                    "result": result,
+                    "success": True,
+                })
             else:
-                results.append(
-                    {
-                        "tool": tool_name,
-                        "params": params,
-                        "result": None,
-                        "success": False,
-                        "error": f"工具 {tool_name} 不可用",
-                    }
-                )
+                results.append({
+                    "tool": tool_name,
+                    "params": params,
+                    "result": None,
+                    "success": False,
+                    "error": f"工具 {tool_name} 不可用",
+                })
 
         return {
             "scenario": scenario_name,

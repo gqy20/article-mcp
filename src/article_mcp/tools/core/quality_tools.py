@@ -22,8 +22,8 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     def get_journal_quality(
         journals: str | list[str],
         operation: str = "quality",
-        evaluation_criteria: list[str] = ["journal_quality", "citation_count", "open_access"],
-        include_metrics: list[str] = ["impact_factor", "quartile", "jci"],
+        evaluation_criteria: list[str] | None = None,
+        include_metrics: list[str] | None = None,
         use_cache: bool = True,
         weight_config: dict[str, float] | None = None,
         ranking_type: str = "journal_impact",
@@ -120,6 +120,10 @@ def _single_journal_quality(
                 "ranking_info": {},
                 "data_source": None,
             }
+
+        # 处理None值的include_metrics参数
+        if include_metrics is None:
+            include_metrics = ["impact_factor", "quartile", "jci"]
 
         start_time = time.time()
 
@@ -283,27 +287,23 @@ def _batch_articles_quality_evaluation(
                 )
                 quality_score = quality_evaluation.get("overall_score", 0)
 
-                evaluated_articles.append(
-                    {
-                        "index": i,
-                        "article": article,
-                        "quality_evaluation": quality_evaluation,
-                    }
-                )
+                evaluated_articles.append({
+                    "index": i,
+                    "article": article,
+                    "quality_evaluation": quality_evaluation,
+                })
                 quality_scores.append(quality_score)
 
             except Exception as e:
                 logger.error(f"评估第 {i + 1} 篇文献失败: {e}")
-                evaluated_articles.append(
-                    {
-                        "index": i,
-                        "article": article,
-                        "quality_evaluation": {
-                            "overall_score": 0,
-                            "evaluated_criteria": [],
-                        },
-                    }
-                )
+                evaluated_articles.append({
+                    "index": i,
+                    "article": article,
+                    "quality_evaluation": {
+                        "overall_score": 0,
+                        "evaluated_criteria": [],
+                    },
+                })
 
         # 计算质量分布
         quality_distribution = _calculate_quality_distribution(quality_scores)

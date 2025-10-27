@@ -9,17 +9,16 @@ import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
-
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
+import pytest  # noqa: E402
 
-from article_mcp.cli import create_mcp_server, main, run_test, show_info, start_server
-from tests.utils.test_helpers import TestTimer
+from article_mcp.cli import create_mcp_server, main, run_test, show_info, start_server  # noqa: E402
+from tests.utils.test_helpers import TestTimer  # noqa: E402
 
 
 class TestCLIBasics:
@@ -211,7 +210,7 @@ class TestArgumentParsing:
         with patch("sys.argv", ["article_mcp"]):
             main()
 
-        captured = capsys.readouterr()
+        capsys.readouterr()
         # 应该显示帮助信息
 
 
@@ -304,7 +303,7 @@ class TestCLIIntegration:
                 create_mcp_server()
 
             # 验证所有服务都被创建
-            for service_name, service_mock in mock_services.items():
+            for _service_name, service_mock in mock_services.items():
                 if callable(service_mock):
                     service_mock.assert_called()
 

@@ -3,7 +3,6 @@ OpenAlex API服务 - 使用统一API调用
 """
 
 import logging
-from functools import lru_cache
 from typing import Any
 
 from .api_utils import get_api_client

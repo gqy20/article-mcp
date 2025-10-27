@@ -147,16 +147,14 @@ class UnifiedReferenceService:
                 if author_raw:
                     authors = [a.strip() for a in re.split("[;,]", author_raw) if a.strip()]
 
-                references.append(
-                    {
-                        "title": ref.get("article-title") or ref.get("title"),
-                        "authors": authors,
-                        "journal": ref.get("journal-title") or ref.get("journal"),
-                        "year": ref.get("year"),
-                        "doi": ref.get("DOI") or ref.get("doi"),
-                        "source": "crossref",
-                    }
-                )
+                references.append({
+                    "title": ref.get("article-title") or ref.get("title"),
+                    "authors": authors,
+                    "journal": ref.get("journal-title") or ref.get("journal"),
+                    "year": ref.get("year"),
+                    "doi": ref.get("DOI") or ref.get("doi"),
+                    "source": "crossref",
+                })
 
             self.logger.info(f"Crossref 获取到 {len(references)} 条参考文献")
             return references
@@ -255,9 +253,9 @@ class UnifiedReferenceService:
                 "message": f"成功获取 {len(final_references)} 条参考文献 (同步版本)",
                 "error": None,
                 "total_count": len(final_references),
-                "enriched_count": len(
-                    [r for r in final_references if r.get("source") == "europe_pmc"]
-                ),
+                "enriched_count": len([
+                    r for r in final_references if r.get("source") == "europe_pmc"
+                ]),
                 "processing_time": round(processing_time, 2),
             }
 

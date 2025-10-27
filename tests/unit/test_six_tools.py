@@ -8,16 +8,16 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
-
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from article_mcp.cli import create_mcp_server
-from tests.utils.test_helpers import TestTimer
+import pytest  # noqa: E402
+
+from article_mcp.cli import create_mcp_server  # noqa: E402
+from tests.utils.test_helpers import TestTimer  # noqa: E402
 
 
 class TestSearchLiteratureTool:
@@ -97,7 +97,7 @@ class TestSearchLiteratureTool:
         mock_services["europe_pmc"].search.side_effect = Exception("API Error")
 
         # 验证错误处理逻辑
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="API Error"):
             mock_services["europe_pmc"].search(keyword="test")
 
 
@@ -134,7 +134,7 @@ class TestGetArticleDetailsTool:
         }
 
         with patch("article_mcp.tools.core.article_tools.register_article_tools") as mock_register:
-            mcp = create_mcp_server()
+            create_mcp_server()
 
             # 验证工具注册和服务注入
             mock_register.assert_called_once()
@@ -205,7 +205,6 @@ class TestGetReferencesTool:
     @pytest.mark.unit
     def test_get_references_by_doi(self, mock_reference_service):
         """测试通过DOI获取参考文献"""
-        doi = "10.1234/test.article.2023"
 
         # 模拟参考文献响应
         mock_reference_service.get_references.return_value = {
@@ -232,7 +231,7 @@ class TestGetReferencesTool:
         with patch(
             "article_mcp.tools.core.reference_tools.register_reference_tools"
         ) as mock_register:
-            mcp = create_mcp_server()
+            create_mcp_server()
 
             # 验证服务注入
             mock_register.assert_called_once()
@@ -295,7 +294,6 @@ class TestGetLiteratureRelationsTool:
     @pytest.mark.unit
     def test_literature_relations_single_article(self, mock_relation_services):
         """测试单篇文章关系分析"""
-        identifier = "10.1234/test.article.2023"
 
         # 模拟关系分析响应
         mock_relation_services["europe_pmc"].get_references.return_value = {
@@ -310,7 +308,7 @@ class TestGetLiteratureRelationsTool:
         with patch(
             "article_mcp.tools.core.relation_tools.register_relation_tools"
         ) as mock_register:
-            mcp = create_mcp_server()
+            create_mcp_server()
 
             # 验证服务注册
             mock_register.assert_called_once()
@@ -374,23 +372,11 @@ class TestGetJournalQualityTool:
     @pytest.mark.unit
     def test_get_journal_quality_single(self, mock_quality_services):
         """测试单个期刊质量评估"""
-        journal_name = "Nature"
 
         # 模拟期刊质量响应
-        mock_quality_response = {
-            "success": True,
-            "journal_name": journal_name,
-            "quality_metrics": {
-                "impact_factor": 69.504,
-                "quartile": "Q1",
-                "jci": 25.8,
-                "分区": "中科院一区",
-            },
-            "ranking_info": {"field_rank": 1, "total_journals": 100},
-        }
 
         with patch("article_mcp.tools.core.quality_tools.register_quality_tools") as mock_register:
-            mcp = create_mcp_server()
+            create_mcp_server()
 
             # 验证服务注册
             mock_register.assert_called_once()
@@ -449,7 +435,7 @@ class TestExportBatchResultsTool:
     def test_export_batch_results_json(self, mock_batch_services, sample_search_results):
         """测试JSON格式导出"""
         with patch("article_mcp.tools.core.batch_tools.register_batch_tools") as mock_register:
-            mcp = create_mcp_server()
+            create_mcp_server()
 
             # 验证服务注册
             mock_register.assert_called_once()
@@ -554,7 +540,7 @@ class TestSixToolIntegration:
                     "article_mcp.tools.core.batch_tools.register_batch_tools"
                 ) as mock_batch_tools,
             ):
-                mcp = create_mcp_server()
+                create_mcp_server()
 
                 # 验证所有工具都被注册
                 mock_search_tools.assert_called_once()
@@ -605,7 +591,7 @@ class TestSixToolIntegration:
     def test_performance_benchmarks(self):
         """测试性能基准"""
         with TestTimer() as timer:
-            mcp = create_mcp_server()
+            create_mcp_server()
 
         # 验证创建时间
         creation_time = timer.stop()

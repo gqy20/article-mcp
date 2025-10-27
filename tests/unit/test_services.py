@@ -5,13 +5,9 @@
 """
 
 import asyncio
-
-# 导入要测试的服务
 import sys
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -19,12 +15,14 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from article_mcp.services.arxiv_search import create_arxiv_service
-from article_mcp.services.crossref_service import CrossRefService
-from article_mcp.services.europe_pmc import EuropePMCService
-from article_mcp.services.openalex_service import OpenAlexService
-from article_mcp.services.reference_service import create_reference_service
-from tests.utils.test_helpers import (
+import pytest  # noqa: E402
+
+from article_mcp.services.arxiv_search import create_arxiv_service  # noqa: E402
+from article_mcp.services.crossref_service import CrossRefService  # noqa: E402
+from article_mcp.services.europe_pmc import EuropePMCService  # noqa: E402
+from article_mcp.services.openalex_service import OpenAlexService  # noqa: E402
+from article_mcp.services.reference_service import create_reference_service  # noqa: E402
+from tests.utils.test_helpers import (  # noqa: E402
     MockDataGenerator,
     TestTimer,
     assert_valid_article_structure,
@@ -85,7 +83,7 @@ class TestEuropePMCService:
         with patch.object(service, "fetch") as mock_fetch:
             mock_fetch.side_effect = Exception("Network error")
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception, match="Network error"):
                 await service.search_async("test query")
 
     @pytest.mark.unit

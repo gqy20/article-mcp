@@ -3,7 +3,6 @@ CrossRef API服务 - 使用统一API调用
 """
 
 import logging
-from functools import lru_cache
 from typing import Any
 
 from .api_utils import get_api_client
@@ -127,15 +126,13 @@ class CrossRefService:
         """格式化参考文献"""
         formatted_refs = []
         for ref in references:
-            formatted_refs.append(
-                {
-                    "doi": ref.get("DOI"),
-                    "title": self._extract_title(ref.get("title") or []),
-                    "authors": self._extract_authors(ref.get("author") or []),
-                    "year": (ref.get("created") or {}).get("date-parts", [[None]])[0][0],
-                    "source": "crossref",
-                }
-            )
+            formatted_refs.append({
+                "doi": ref.get("DOI"),
+                "title": self._extract_title(ref.get("title") or []),
+                "authors": self._extract_authors(ref.get("author") or []),
+                "year": (ref.get("created") or {}).get("date-parts", [[None]])[0][0],
+                "source": "crossref",
+            })
         return formatted_refs
 
     def _extract_title(self, title_list: list) -> str:

@@ -176,9 +176,6 @@ async def run_test():
         # 测试工具函数直接调用
         print("✓ 开始测试搜索功能...")
 
-        # 创建测试参数（用于测试验证）
-        test_params = {"keyword": "machine learning", "max_results": 3}
-
         # 这里我们不能直接调用工具，因为需要MCP客户端
         # 但我们可以测试服务器是否正确创建
         print("✓ 测试参数准备完成")

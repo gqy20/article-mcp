@@ -6,14 +6,9 @@ MCP集成测试
 
 import asyncio
 import os
-
-# 导入要测试的模块
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
-
-import pytest
-from fastmcp import FastMCP
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -21,11 +16,14 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from article_mcp.cli import create_mcp_server
-from article_mcp.tools.core.article_tools import register_article_tools
-from article_mcp.tools.core.reference_tools import register_reference_tools
-from article_mcp.tools.core.search_tools import register_search_tools
-from tests.utils.test_helpers import MockDataGenerator, TestTimer
+import pytest  # noqa: E402
+from fastmcp import FastMCP  # noqa: E402
+
+from article_mcp.cli import create_mcp_server  # noqa: E402
+from article_mcp.tools.core.article_tools import register_article_tools  # noqa: E402
+from article_mcp.tools.core.reference_tools import register_reference_tools  # noqa: E402
+from article_mcp.tools.core.search_tools import register_search_tools  # noqa: E402
+from tests.utils.test_helpers import MockDataGenerator, TestTimer  # noqa: E402
 
 
 class TestMCPServerIntegration:
@@ -144,7 +142,7 @@ class TestMCPServerIntegration:
     async def test_reference_workflow_integration(self):
         """测试参考文献工作流集成"""
         # 模拟文章和参考文献
-        mock_article = MockDataGenerator.create_article(doi="10.1000/test-article")
+        MockDataGenerator.create_article(doi="10.1000/test-article")
         mock_references = MockDataGenerator.create_reference_list(15)
 
         # 创建模拟服务
@@ -255,7 +253,7 @@ class TestPerformanceIntegration:
 
         # 创建多个模拟服务
         services = []
-        for i in range(3):
+        for _i in range(3):
             service = Mock()
             service.search_articles = AsyncMock(return_value=large_results)
             services.append(service)

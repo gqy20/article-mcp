@@ -22,7 +22,7 @@ def merge_articles_by_doi(articles_by_source: dict[str, list[dict]]) -> list[dic
 
     # 合并同一DOI的多源文章
     merged_articles = []
-    for doi, articles in doi_to_articles.items():
+    for articles in doi_to_articles.values():
         merged = merge_same_doi_articles(articles)
         merged_articles.append(merged)
 

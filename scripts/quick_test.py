@@ -22,7 +22,11 @@ def test_package_import():
     """测试包导入"""
     print("🔍 测试包导入...")
     try:
-        from article_mcp.cli import create_mcp_server, show_info
+        import importlib.util
+
+        spec = importlib.util.find_spec("article_mcp.cli")
+        if spec is None:
+            raise ImportError("article_mcp.cli not found")
 
         print("✅ 包导入成功")
         return True
@@ -79,7 +83,7 @@ def test_server_creation():
                                                                 create_mcp_server,
                                                             )
 
-                                                            server = create_mcp_server()
+                                                            create_mcp_server()
         print("✅ 服务器创建成功")
         return True
     except Exception as e:

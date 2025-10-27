@@ -20,7 +20,7 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
     def get_references(
         identifier: str,
         id_type: str = "doi",
-        sources: list[str] = ["europe_pmc", "crossref"],
+        sources: list[str] | None = None,
         max_results: int = 20,
         include_metadata: bool = True,
     ) -> dict[str, Any]:
@@ -74,6 +74,10 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
                     "total_count": 0,
                     "processing_time": 0,
                 }
+
+            # 处理None值的sources参数
+            if sources is None:
+                sources = ["europe_pmc", "crossref"]
 
             start_time = time.time()
             identifier = identifier.strip()
@@ -215,16 +219,14 @@ def _merge_and_deduplicate_references(
 
                     # 添加元数据
                     if include_metadata:
-                        std_ref.update(
-                            {
-                                "abstract": ref.get("abstract", ""),
-                                "volume": ref.get("volume", ""),
-                                "issue": ref.get("issue", ""),
-                                "pages": ref.get("pages", ""),
-                                "issn": ref.get("issn", ""),
-                                "publisher": ref.get("publisher", ""),
-                            }
-                        )
+                        std_ref.update({
+                            "abstract": ref.get("abstract", ""),
+                            "volume": ref.get("volume", ""),
+                            "issue": ref.get("issue", ""),
+                            "pages": ref.get("pages", ""),
+                            "issn": ref.get("issn", ""),
+                            "publisher": ref.get("publisher", ""),
+                        })
 
                     all_references.append(std_ref)
 

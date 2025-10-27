@@ -267,7 +267,6 @@ class TestAPIReliability:
 
             # 测试重试机制（通过观察日志或行为）
             retry_count = 0
-            original_method = service._make_request
 
             async def counting_request(*args, **kwargs):
                 nonlocal retry_count
@@ -319,7 +318,6 @@ class TestAPIReliability:
             service = EuropePMCService(logger)
 
             # 模拟超时
-            original_method = service._make_request
 
             async def slow_request(*args, **kwargs):
                 await asyncio.sleep(35)  # 超过通常的超时时间

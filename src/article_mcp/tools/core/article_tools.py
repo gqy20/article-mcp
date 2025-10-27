@@ -20,7 +20,7 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     def get_article_details(
         identifier: str,
         id_type: str = "auto",
-        sources: list[str] = ["europe_pmc", "crossref"],
+        sources: list[str] | None = None,
         include_quality_metrics: bool = False,
     ) -> dict[str, Any]:
         """获取文献详情工具
@@ -71,6 +71,10 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             start_time = time.time()
             details_by_source = {}
             sources_found = []
+
+            # 处理None值的sources参数
+            if sources is None:
+                sources = ["europe_pmc", "crossref"]
 
             # 自动识别标识符类型
             if id_type == "auto":

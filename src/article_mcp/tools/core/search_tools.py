@@ -19,7 +19,7 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
     @mcp.tool()
     def search_literature(
         keyword: str,
-        sources: list[str] = ["europe_pmc", "pubmed"],
+        sources: list[str] | None = None,
         max_results: int = 10,
         search_type: str = "comprehensive",
     ) -> dict[str, Any]:
@@ -90,6 +90,10 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
             start_time = time.time()
             results_by_source = {}
             sources_used = []
+
+            # 处理None值的sources参数
+            if sources is None:
+                sources = ["europe_pmc", "pubmed"]
 
             # 搜索每个指定的数据源
             for source in sources:
