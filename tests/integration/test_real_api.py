@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 真实API集成测试
 测试与真实外部API的集成
 注意：这些测试需要网络连接，可能会比较慢
 """
 
-import pytest
 import asyncio
 import os
-from typing import Dict, Any
 
+import pytest
 from article_mcp.tests.test_helpers import (
     TestTimer,
-    assert_valid_article_structure,
     assert_valid_search_results,
-    run_async_with_timeout
+    run_async_with_timeout,
 )
-
 
 # 跳过网络测试的环境变量标记
 SKIP_NETWORK_TESTS = os.getenv("SKIP_NETWORK_TESTS", "false").lower() == "true"
@@ -40,8 +36,9 @@ class TestRealAPIIntegration:
         """测试Europe PMC真实搜索"""
         try:
             # 导入真实服务
-            from article_mcp.services.europe_pmc import EuropePMCService
             import logging
+
+            from article_mcp.services.europe_pmc import EuropePMCService
 
             # 创建日志记录器
             logger = logging.getLogger(__name__)
@@ -51,10 +48,7 @@ class TestRealAPIIntegration:
 
             # 执行搜索
             with TestTimer() as timer:
-                result = await service.search_articles(
-                    keyword="machine learning",
-                    max_results=5
-                )
+                result = await service.search_articles(keyword="machine learning", max_results=5)
 
             # 验证结果
             assert timer.stop() < 30.0  # 应该在30秒内完成
@@ -81,8 +75,9 @@ class TestRealAPIIntegration:
         """测试arXiv真实搜索"""
         try:
             # 导入真实服务
-            from article_mcp.services.arxiv_search import create_arxiv_service
             import logging
+
+            from article_mcp.services.arxiv_search import create_arxiv_service
 
             # 创建日志记录器
             logger = logging.getLogger(__name__)
@@ -93,8 +88,7 @@ class TestRealAPIIntegration:
             # 执行搜索
             with TestTimer() as timer:
                 result = await service.search_papers(
-                    keyword="artificial intelligence",
-                    max_results=3
+                    keyword="artificial intelligence", max_results=3
                 )
 
             # 验证结果
@@ -122,8 +116,9 @@ class TestRealAPIIntegration:
         """测试CrossRef真实DOI解析"""
         try:
             # 导入真实服务
-            from article_mcp.services.crossref_service import CrossRefService
             import logging
+
+            from article_mcp.services.crossref_service import CrossRefService
 
             # 创建日志记录器
             logger = logging.getLogger(__name__)
@@ -169,9 +164,10 @@ class TestAPIPerformance:
     async def test_concurrent_api_calls(self):
         """测试并发API调用性能"""
         try:
-            from article_mcp.services.europe_pmc import EuropePMCService
-            from article_mcp.services.arxiv_search import create_arxiv_service
             import logging
+
+            from article_mcp.services.arxiv_search import create_arxiv_service
+            from article_mcp.services.europe_pmc import EuropePMCService
 
             logger = logging.getLogger(__name__)
 
@@ -184,7 +180,7 @@ class TestAPIPerformance:
                 tasks = [
                     europe_pmc_service.search_articles("machine learning", max_results=3),
                     arxiv_service.search_papers("deep learning", max_results=3),
-                    europe_pmc_service.search_articles("neural networks", max_results=3)
+                    europe_pmc_service.search_articles("neural networks", max_results=3),
                 ]
 
                 results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -209,8 +205,9 @@ class TestAPIPerformance:
     async def test_api_rate_limiting(self):
         """测试API速率限制"""
         try:
-            from article_mcp.services.europe_pmc import EuropePMCService
             import logging
+
+            from article_mcp.services.europe_pmc import EuropePMCService
 
             logger = logging.getLogger(__name__)
             service = EuropePMCService(logger)
@@ -234,6 +231,7 @@ class TestAPIPerformance:
             # 如果有多个调用，后面的调用应该因为速率限制而更慢
             if len(call_times) > 1:
                 # 不强制要求，但可以观察到速率限制的影响
+                pass
 
         except ImportError:
             pytest.skip("Europe PMC服务不可用")
@@ -260,8 +258,9 @@ class TestAPIReliability:
     async def test_api_retry_mechanism(self):
         """测试API重试机制"""
         try:
-            from article_mcp.services.europe_pmc import EuropePMCService
             import logging
+
+            from article_mcp.services.europe_pmc import EuropePMCService
 
             logger = logging.getLogger(__name__)
             service = EuropePMCService(logger)
@@ -283,10 +282,10 @@ class TestAPIReliability:
                             "title": "Test Article",
                             "authors": ["Test Author"],
                             "year": "2023",
-                            "abstract": "Test abstract"
+                            "abstract": "Test abstract",
                         }
                     ],
-                    "total_count": 1
+                    "total_count": 1,
                 }
 
             # 替换请求方法
@@ -312,8 +311,9 @@ class TestAPIReliability:
     async def test_api_timeout_handling(self):
         """测试API超时处理"""
         try:
-            from article_mcp.services.europe_pmc import EuropePMCService
             import logging
+
+            from article_mcp.services.europe_pmc import EuropePMCService
 
             logger = logging.getLogger(__name__)
             service = EuropePMCService(logger)
@@ -330,8 +330,7 @@ class TestAPIReliability:
             # 测试超时处理
             with pytest.raises((asyncio.TimeoutError, Exception)):
                 await run_async_with_timeout(
-                    service.search_articles("test query", max_results=1),
-                    timeout=30.0
+                    service.search_articles("test query", max_results=1), timeout=30.0
                 )
 
         except ImportError:
@@ -374,6 +373,7 @@ class TestAPIConfiguration:
 def check_network_connectivity():
     """检查网络连接"""
     import socket
+
     try:
         # 尝试连接到Google的DNS服务器
         socket.create_connection(("8.8.8.8", 53), timeout=3)
