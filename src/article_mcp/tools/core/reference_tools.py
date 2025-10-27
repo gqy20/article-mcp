@@ -68,28 +68,29 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
             # 从多个数据源获取参考文献
             for source in sources:
                 try:
-                    if source == "europe_pmc" and _reference_services:
-                        result = _reference_services.get_references(
-                            identifier, id_type, max_results
-                        )
+                    if source == "europe_pmc" and "europe_pmc" in _reference_services:
+                        service = _reference_services["europe_pmc"]
+                        result = service.get_references(identifier, id_type, max_results)
                         if result.get("success", False):
                             references = result.get("references", [])
                             references_by_source[source] = references
                             sources_used.append(source)
                             logger.info(f"从Europe PMC获取到 {len(references)} 条参考文献")
 
-                    elif source == "crossref" and _reference_services:
+                    elif source == "crossref" and "crossref" in _reference_services:
                         # Crossref参考文献获取逻辑
-                        result = _reference_services.get_work_references(identifier, max_results)
+                        service = _reference_services["crossref"]
+                        result = service.get_work_references(identifier, max_results)
                         if result.get("success", False):
                             references = result.get("references", [])
                             references_by_source[source] = references
                             sources_used.append(source)
                             logger.info(f"从Crossref获取到 {len(references)} 条参考文献")
 
-                    elif source == "pubmed" and _reference_services:
+                    elif source == "pubmed" and "pubmed" in _reference_services:
                         # PubMed参考文献获取逻辑
-                        result = _reference_services.get_pubmed_references(identifier, max_results)
+                        service = _reference_services["pubmed"]
+                        result = service.get_pubmed_references(identifier, max_results)
                         if result.get("success", False):
                             references = result.get("references", [])
                             references_by_source[source] = references
