@@ -85,7 +85,8 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                     "total_count": 0,
                 }
 
-            from ..services.merged_results import merge_articles_by_doi, simple_rank_articles
+            from ..services.merged_results import merge_articles_by_doi
+            from ..services.merged_results import simple_rank_articles
 
             start_time = time.time()
             results_by_source = {}

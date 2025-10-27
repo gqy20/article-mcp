@@ -287,23 +287,27 @@ def _batch_articles_quality_evaluation(
                 )
                 quality_score = quality_evaluation.get("overall_score", 0)
 
-                evaluated_articles.append({
-                    "index": i,
-                    "article": article,
-                    "quality_evaluation": quality_evaluation,
-                })
+                evaluated_articles.append(
+                    {
+                        "index": i,
+                        "article": article,
+                        "quality_evaluation": quality_evaluation,
+                    }
+                )
                 quality_scores.append(quality_score)
 
             except Exception as e:
                 logger.error(f"评估第 {i + 1} 篇文献失败: {e}")
-                evaluated_articles.append({
-                    "index": i,
-                    "article": article,
-                    "quality_evaluation": {
-                        "overall_score": 0,
-                        "evaluated_criteria": [],
-                    },
-                })
+                evaluated_articles.append(
+                    {
+                        "index": i,
+                        "article": article,
+                        "quality_evaluation": {
+                            "overall_score": 0,
+                            "evaluated_criteria": [],
+                        },
+                    }
+                )
 
         # 计算质量分布
         quality_distribution = _calculate_quality_distribution(quality_scores)

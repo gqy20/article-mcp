@@ -66,7 +66,8 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             if not identifier or not identifier.strip():
                 return {"success": False, "error": "文献标识符不能为空", "identifier": identifier}
 
-            from ..services.merged_results import extract_identifier_type, merge_same_doi_articles
+            from ..services.merged_results import extract_identifier_type
+            from ..services.merged_results import merge_same_doi_articles
 
             start_time = time.time()
             details_by_source = {}

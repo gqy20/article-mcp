@@ -2,15 +2,13 @@
 合并结果工具单元测试
 """
 
-from src.merged_results import (
-    deduplicate_articles,
-    extract_identifier_type,
-    merge_articles_by_doi,
-    merge_citation_results,
-    merge_reference_results,
-    merge_same_doi_articles,
-    simple_rank_articles,
-)
+from src.merged_results import deduplicate_articles
+from src.merged_results import extract_identifier_type
+from src.merged_results import merge_articles_by_doi
+from src.merged_results import merge_citation_results
+from src.merged_results import merge_reference_results
+from src.merged_results import merge_same_doi_articles
+from src.merged_results import simple_rank_articles
 
 
 class TestMergeResults:

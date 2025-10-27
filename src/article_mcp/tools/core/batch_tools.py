@@ -186,9 +186,9 @@ def _export_to_csv(
             for article in articles:
                 row = {
                     "title": article.get("title", ""),
-                    "authors": "; ".join([
-                        author.get("name", "") for author in article.get("authors", [])
-                    ]),
+                    "authors": "; ".join(
+                        [author.get("name", "") for author in article.get("authors", [])]
+                    ),
                     "journal": article.get("journal", ""),
                     "publication_date": article.get("publication_date", ""),
                     "doi": article.get("doi", ""),

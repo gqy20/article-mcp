@@ -7,7 +7,9 @@ CLI单元测试
 # 导入要测试的CLI模块
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -17,7 +19,11 @@ if str(src_path) not in sys.path:
 
 import pytest  # noqa: E402
 
-from article_mcp.cli import create_mcp_server, main, run_test, show_info, start_server  # noqa: E402
+from article_mcp.cli import create_mcp_server  # noqa: E402
+from article_mcp.cli import main
+from article_mcp.cli import run_test
+from article_mcp.cli import show_info
+from article_mcp.cli import start_server
 from tests.utils.test_helpers import TestTimer  # noqa: E402
 
 

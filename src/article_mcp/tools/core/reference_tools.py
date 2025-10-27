@@ -219,14 +219,16 @@ def _merge_and_deduplicate_references(
 
                     # 添加元数据
                     if include_metadata:
-                        std_ref.update({
-                            "abstract": ref.get("abstract", ""),
-                            "volume": ref.get("volume", ""),
-                            "issue": ref.get("issue", ""),
-                            "pages": ref.get("pages", ""),
-                            "issn": ref.get("issn", ""),
-                            "publisher": ref.get("publisher", ""),
-                        })
+                        std_ref.update(
+                            {
+                                "abstract": ref.get("abstract", ""),
+                                "volume": ref.get("volume", ""),
+                                "issue": ref.get("issue", ""),
+                                "pages": ref.get("pages", ""),
+                                "issn": ref.get("issn", ""),
+                                "publisher": ref.get("publisher", ""),
+                            }
+                        )
 
                     all_references.append(std_ref)
 

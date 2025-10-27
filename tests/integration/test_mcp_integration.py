@@ -8,7 +8,9 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -23,7 +25,8 @@ from article_mcp.cli import create_mcp_server  # noqa: E402
 from article_mcp.tools.core.article_tools import register_article_tools  # noqa: E402
 from article_mcp.tools.core.reference_tools import register_reference_tools  # noqa: E402
 from article_mcp.tools.core.search_tools import register_search_tools  # noqa: E402
-from tests.utils.test_helpers import MockDataGenerator, TestTimer  # noqa: E402
+from tests.utils.test_helpers import MockDataGenerator  # noqa: E402
+from tests.utils.test_helpers import TestTimer
 
 
 class TestMCPServerIntegration:

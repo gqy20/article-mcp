@@ -9,7 +9,8 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent

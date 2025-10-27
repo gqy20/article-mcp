@@ -404,9 +404,9 @@ class SixToolTestHelper:
             if tool_name == "search_literature":
                 assert "merged_results" in response, f"{tool_name} 缺少 merged_results"
                 assert "total_count" in response, f"{tool_name} 缺少 total_count"
-                assert isinstance(response["merged_results"], list), (
-                    f"{tool_name} merged_results 必须是列表"
-                )
+                assert isinstance(
+                    response["merged_results"], list
+                ), f"{tool_name} merged_results 必须是列表"
 
             elif tool_name == "get_article_details":
                 assert "article" in response, f"{tool_name} 缺少 article"
@@ -480,20 +480,24 @@ class WorkflowTester:
                 # 模拟工具调用
                 mock_tool = mock_tools[tool_name]
                 result = mock_tool.return_value
-                results.append({
-                    "tool": tool_name,
-                    "params": params,
-                    "result": result,
-                    "success": True,
-                })
+                results.append(
+                    {
+                        "tool": tool_name,
+                        "params": params,
+                        "result": result,
+                        "success": True,
+                    }
+                )
             else:
-                results.append({
-                    "tool": tool_name,
-                    "params": params,
-                    "result": None,
-                    "success": False,
-                    "error": f"工具 {tool_name} 不可用",
-                })
+                results.append(
+                    {
+                        "tool": tool_name,
+                        "params": params,
+                        "result": None,
+                        "success": False,
+                        "error": f"工具 {tool_name} 不可用",
+                    }
+                )
 
         return {
             "scenario": scenario_name,
@@ -538,9 +542,9 @@ class PerformanceMonitor:
             raise AssertionError(f"测量 {name} 未完成")
 
         actual_time = measurement["duration"]
-        assert actual_time <= max_time, (
-            f"性能测试失败: {name} 耗时 {actual_time:.2f}s 超过限制 {max_time:.2f}s"
-        )
+        assert (
+            actual_time <= max_time
+        ), f"性能测试失败: {name} 耗时 {actual_time:.2f}s 超过限制 {max_time:.2f}s"
 
     def reset(self) -> None:
         """重置所有测量"""

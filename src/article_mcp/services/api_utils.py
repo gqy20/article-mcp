@@ -36,11 +36,13 @@ class UnifiedAPIClient:
         session.mount("https://", adapter)
 
         # 统一的请求头
-        session.headers.update({
-            "User-Agent": "Article-MCP/2.0",
-            "Accept": "application/json",
-            "Accept-Encoding": "gzip, deflate",
-        })
+        session.headers.update(
+            {
+                "User-Agent": "Article-MCP/2.0",
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip, deflate",
+            }
+        )
 
         return session
 
