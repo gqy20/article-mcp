@@ -80,7 +80,7 @@ def create_mcp_server():
     quality_services = {"pubmed": pubmed_service}
     register_quality_tools(mcp, quality_services, logger)
 
-    # 工具6: 批量处理工具
+    # 工具6: 通用导出工具
     batch_services = {
         "europe_pmc": europe_pmc_service,
         "pubmed": pubmed_service,
@@ -130,11 +130,11 @@ def start_server(
     print("   - 特点: EasyScholar集成、本地缓存、批量评估")
     print("   - 参数: journal_name, include_metrics, evaluation_criteria")
     print()
-    print("⚡ 工具6: batch_search_literature")
-    print("   - 批量处理工具集合")
-    print("   - 支持: 批量搜索、批量详情获取、结果导出")
-    print("   - 特点: 并发处理、多格式导出、性能优化")
-    print("   - 参数: queries/identifiers, parallel, export_format")
+    print("⚡ 工具6: export_batch_results")
+    print("   - 通用结果导出工具")
+    print("   - 支持: JSON、CSV、Excel等格式导出")
+    print("   - 特点: 多格式支持、元数据包含、自动路径生成")
+    print("   - 参数: results, format_type, output_path, include_metadata")
     print()
     print("🔧 技术特性:")
     print("   - FastMCP 2.13.0 框架")

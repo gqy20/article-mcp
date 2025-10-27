@@ -3,7 +3,6 @@
 """
 
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 # 全局服务实例
@@ -50,15 +49,15 @@ def register_reference_tools(mcp, services, logger):
         📊 返回格式：
         {
             "success": true,
-            "identifier": "查询的文献标识符",
-            "id_type": "识别出的标识符类型",
-            "sources_used": ["成功查询的数据源"],
+            "identifier": "10.1038/s41586-021-03819-2",
+            "id_type": "doi",
+            "sources_used": ["europe_pmc"],
             "references_by_source": {
-                "数据源名称": [参考文献列表]
+                "europe_pmc": [...]
             },
-            "merged_references": [去重合并后的参考文献],
-            "total_count": 总参考文献数量,
-            "processing_time": 处理耗时(秒)
+            "merged_references": [...],
+            "total_count": 25,
+            "processing_time": 2.34
         }
         """
         try:
@@ -71,68 +70,70 @@ def register_reference_tools(mcp, services, logger):
                     "references_by_source": {},
                     "merged_references": [],
                     "total_count": 0,
+                    "processing_time": 0,
                 }
 
-            from ..services.merged_results import merge_reference_results
-
             start_time = time.time()
-            reference_results = {}
+            identifier = identifier.strip()
 
-            # 并行获取参考文献
-            with ThreadPoolExecutor(max_workers=3) as executor:
-                future_to_source = {}
+            # 自动识别标识符类型
+            if id_type == "auto":
+                id_type = _extract_identifier_type(identifier)
 
-                for source in sources:
-                    if source not in _reference_services:
-                        continue
+            references_by_source = {}
+            sources_used = []
 
-                    try:
-                        service = _reference_services[source]
-                        if source == "europe_pmc":
-                            # Europe PMC需要从文献详情中获取参考文献
-                            detail_result = service.fetch(identifier.strip(), id_type=id_type)
-                            if detail_result.get("success", False):
-                                article = detail_result.get("article", {})
-                                references = article.get("references", [])
-                                reference_results[source] = {
-                                    "success": True,
-                                    "references": references,
-                                    "total_count": len(references),
-                                    "source": source,
-                                }
-                        elif source == "crossref":
-                            ref_result = service.get_references(identifier.strip(), max_results)
-                            reference_results[source] = ref_result
-                        elif source == "openalex":
-                            # OpenAlex暂时没有直接的参考文献API
-                            reference_results[source] = {
-                                "success": False,
-                                "references": [],
-                                "total_count": 0,
-                                "source": source,
-                                "error": "OpenAlex暂不支持参考文献查询",
-                            }
+            # 从多个数据源获取参考文献
+            for source in sources:
+                try:
+                    if source == "europe_pmc" and _reference_services:
+                        result = _reference_services.get_references(identifier, id_type, max_results)
+                        if result.get("success", False):
+                            references = result.get("references", [])
+                            references_by_source[source] = references
+                            sources_used.append(source)
+                            logger.info(f"从Europe PMC获取到 {len(references)} 条参考文献")
 
-                    except Exception as e:
-                        logger.error(f"{source} 获取参考文献异常: {e}")
-                        reference_results[source] = {
-                            "success": False,
-                            "references": [],
-                            "total_count": 0,
-                            "source": source,
-                            "error": str(e),
-                        }
+                    elif source == "crossref" and _reference_services:
+                        # Crossref参考文献获取逻辑
+                        result = _reference_services.get_work_references(identifier, max_results)
+                        if result.get("success", False):
+                            references = result.get("references", [])
+                            references_by_source[source] = references
+                            sources_used.append(source)
+                            logger.info(f"从Crossref获取到 {len(references)} 条参考文献")
 
-            # 合并参考文献
-            merged_result = merge_reference_results(reference_results)
+                    elif source == "pubmed" and _reference_services:
+                        # PubMed参考文献获取逻辑
+                        result = _reference_services.get_pubmed_references(identifier, max_results)
+                        if result.get("success", False):
+                            references = result.get("references", [])
+                            references_by_source[source] = references
+                            sources_used.append(source)
+                            logger.info(f"从PubMed获取到 {len(references)} 条参考文献")
+
+                except Exception as e:
+                    logger.error(f"从 {source} 获取参考文献失败: {e}")
+                    continue
+
+            # 合并和去重参考文献
+            merged_references = _merge_and_deduplicate_references(references_by_source, include_metadata, logger)
+
+            # 限制返回数量
+            if len(merged_references) > max_results:
+                merged_references = merged_references[:max_results]
+
             processing_time = round(time.time() - start_time, 2)
 
             return {
-                **merged_result,
-                "identifier": identifier.strip(),
+                "success": len(merged_references) > 0,
+                "identifier": identifier,
                 "id_type": id_type,
+                "sources_used": sources_used,
+                "references_by_source": references_by_source,
+                "merged_references": merged_references,
+                "total_count": len(merged_references),
                 "processing_time": processing_time,
-                "include_metadata": include_metadata,
             }
 
         except Exception as e:
@@ -148,244 +149,83 @@ def register_reference_tools(mcp, services, logger):
                 "processing_time": 0,
             }
 
-    @mcp.tool()
-    def batch_process_articles(
-        identifiers: list[str],
-        operations: list[str] = ["details", "quality"],
-        parallel: bool = True,
-        max_concurrent: int = 10,
-    ) -> dict[str, Any]:
-        """批量处理文献工具
+    return [get_references]
 
-        功能说明：
-        - 批量处理多个文献标识符
-        - 支持多种操作类型
-        - 可选择并行或串行处理
 
-        参数说明：
-        - identifiers: 文献标识符列表
-        - operations: 操作类型列表 ["details", "quality", "relations", "references"]
-        - parallel: 是否并行处理
-        - max_concurrent: 最大并发数
+def _extract_identifier_type(identifier: str) -> str:
+    """提取标识符类型"""
+    identifier = identifier.strip().upper()
 
-        返回格式：
-        {
-            "success": true,
-            "processed_count": 5,
-            "total_count": 5,
-            "results": {...},
-            "processing_time": 3.45
-        }
-        """
-        try:
-            if not identifiers:
-                return {
-                    "success": False,
-                    "error": "文献标识符列表不能为空",
-                    "processed_count": 0,
-                    "total_count": 0,
-                    "results": {},
-                    "processing_time": 0,
+    if identifier.startswith("DOI:") or "//" in identifier or identifier.startswith("10."):
+        return "doi"
+    elif identifier.startswith("PMCID:") or identifier.startswith("PMC"):
+        return "pmcid"
+    elif identifier.isdigit() or identifier.startswith("PMID:"):
+        return "pmid"
+    elif identifier.startswith("ARXIV:"):
+        return "arxiv_id"
+    else:
+        return "doi"  # 默认当作DOI处理
+
+
+def _merge_and_deduplicate_references(
+    references_by_source: dict[str, list[dict[str, Any]]], include_metadata: bool, logger
+) -> list[dict[str, Any]]:
+    """合并和去重参考文献"""
+    try:
+        all_references = []
+        seen_dois = set()
+        seen_titles = set()
+
+        for source, references in references_by_source.items():
+            for ref in references:
+                # 创建标准化的参考文献记录
+                std_ref = {
+                    "title": ref.get("title", ""),
+                    "authors": ref.get("authors", []),
+                    "journal": ref.get("journal", ""),
+                    "publication_date": ref.get("publication_date", ""),
+                    "doi": ref.get("doi", ""),
+                    "pmid": ref.get("pmid", ""),
+                    "pmcid": ref.get("pmcid", ""),
+                    "source": source,
                 }
 
-            from tool_modules.core.article_tools import _article_services
-            from tool_modules.core.search_tools import _search_services
+                # 去重逻辑
+                doi = std_ref["doi"]
+                title = std_ref["title"]
+                is_duplicate = False
 
-            start_time = time.time()
-            results = {}
+                if doi and doi in seen_dois:
+                    is_duplicate = True
+                elif title and title.lower() in seen_titles:
+                    is_duplicate = True
 
-            if parallel:
-                # 并行处理
-                with ThreadPoolExecutor(max_workers=max_concurrent) as executor:
-                    future_to_identifier = {}
+                if not is_duplicate:
+                    if doi:
+                        seen_dois.add(doi)
+                    if title:
+                        seen_titles.add(title.lower())
 
-                    for identifier in identifiers:
-                        for operation in operations:
-                            future = executor.submit(
-                                _process_single_article,
-                                identifier.strip(),
-                                operation,
-                                _search_services,
-                                _article_services,
-                                logger,
-                            )
-                            future_to_identifier[future] = (identifier, operation)
+                    # 添加元数据
+                    if include_metadata:
+                        std_ref.update({
+                            "abstract": ref.get("abstract", ""),
+                            "volume": ref.get("volume", ""),
+                            "issue": ref.get("issue", ""),
+                            "pages": ref.get("pages", ""),
+                            "issn": ref.get("issn", ""),
+                            "publisher": ref.get("publisher", ""),
+                        })
 
-                    for future in as_completed(future_to_identifier):
-                        identifier, operation = future_to_identifier[future]
-                        try:
-                            result = future.result()
-                            if identifier not in results:
-                                results[identifier] = {}
-                            results[identifier][operation] = result
-                        except Exception as e:
-                            logger.error(f"处理 {identifier} 的 {operation} 操作失败: {e}")
-                            if identifier not in results:
-                                results[identifier] = {}
-                            results[identifier][operation] = {"success": False, "error": str(e)}
-            else:
-                # 串行处理
-                for identifier in identifiers:
-                    identifier_results = {}
-                    for operation in operations:
-                        try:
-                            result = _process_single_article(
-                                identifier.strip(),
-                                operation,
-                                _search_services,
-                                _article_services,
-                                logger,
-                            )
-                            identifier_results[operation] = result
-                        except Exception as e:
-                            logger.error(f"处理 {identifier} 的 {operation} 操作失败: {e}")
-                            identifier_results[operation] = {"success": False, "error": str(e)}
-                    results[identifier] = identifier_results
+                    all_references.append(std_ref)
 
-            processing_time = round(time.time() - start_time, 2)
-            processed_count = len(results)
-            successful_count = sum(
-                1 for r in results.values() if any(op.get("success", False) for op in r.values())
-            )
+        # 按相关性排序（这里简单按来源排序）
+        source_priority = {"europe_pmc": 1, "pubmed": 2, "crossref": 3}
+        all_references.sort(key=lambda x: source_priority.get(x.get("source", ""), 4))
 
-            return {
-                "success": successful_count > 0,
-                "processed_count": processed_count,
-                "total_count": len(identifiers),
-                "successful_count": successful_count,
-                "results": results,
-                "processing_time": processing_time,
-                "operations": operations,
-                "parallel": parallel,
-            }
-
-        except Exception as e:
-            from ..services.error_utils import format_error
-
-            logger.error(f"批量处理文献异常: {e}")
-            return format_error(
-                "batch_process_articles",
-                e,
-                {
-                    "processed_count": 0,
-                    "total_count": len(identifiers) if identifiers else 0,
-                    "successful_count": 0,
-                    "results": {},
-                    "processing_time": 0,
-                },
-            )
-
-    return [get_references, batch_process_articles]
-
-
-def _process_single_article(
-    identifier: str, operation: str, search_services, article_services, logger
-) -> dict[str, Any]:
-    """处理单个文献的操作"""
-    try:
-        if operation == "details":
-            # 使用article_services获取详情
-            if article_services:
-                sources = ["europe_pmc", "crossref", "openalex"]
-                details_result = _get_article_details_internal(
-                    identifier, "auto", sources, article_services, logger
-                )
-                return details_result
-        elif operation == "quality":
-            # 获取质量指标
-            return {
-                "success": True,
-                "identifier": identifier,
-                "operation": operation,
-                "message": "质量评估功能待实现",
-            }
-        elif operation == "relations":
-            # 获取文献关联信息
-            return {
-                "success": True,
-                "identifier": identifier,
-                "operation": operation,
-                "message": "关系分析功能待实现",
-            }
-        elif operation == "references":
-            # 获取参考文献
-            # 这里不能直接调用get_references，因为它在工具注册后才定义
-            # 返回一个简化的结果
-            return {
-                "success": True,
-                "identifier": identifier,
-                "operation": operation,
-                "message": "参考文献获取功能已集成到get_references工具中",
-                "references": [],
-            }
-        else:
-            return {
-                "success": False,
-                "error": f"不支持的操作类型: {operation}",
-                "identifier": identifier,
-                "operation": operation,
-            }
+        return all_references
 
     except Exception as e:
-        logger.error(f"处理文献 {identifier} 的 {operation} 操作异常: {e}")
-        return {"success": False, "error": str(e), "identifier": identifier, "operation": operation}
-
-
-def _get_article_details_internal(
-    identifier: str, id_type: str, sources: list[str], article_services, logger
-) -> dict[str, Any]:
-    """内部文章详情获取函数"""
-    if not article_services:
-        return {"success": False, "error": "服务未初始化"}
-
-    from ..services.merged_results import extract_identifier_type, merge_same_doi_articles
-
-    details_by_source = {}
-    sources_found = []
-
-    # 自动识别标识符类型
-    if id_type == "auto":
-        id_type = extract_identifier_type(identifier.strip())
-
-    for source in sources:
-        if source not in article_services:
-            continue
-
-        try:
-            service = article_services[source]
-            if source == "europe_pmc":
-                result = service.fetch(identifier.strip(), id_type=id_type)
-            elif source == "crossref":
-                if id_type == "doi":
-                    result = service.get_work_by_doi(identifier.strip())
-                else:
-                    continue
-            elif source == "openalex":
-                if id_type == "doi":
-                    result = service.get_work_by_doi(identifier.strip())
-                else:
-                    continue
-            else:
-                continue
-
-            if result.get("success", False) and result.get("article"):
-                details_by_source[source] = result["article"]
-                sources_found.append(source)
-
-        except Exception as e:
-            logger.error(f"{source} 获取详情异常: {e}")
-            continue
-
-    merged_detail = None
-    if details_by_source:
-        articles = [details_by_source[source] for source in sources_found]
-        merged_detail = merge_same_doi_articles(articles)
-
-    return {
-        "success": len(details_by_source) > 0,
-        "identifier": identifier.strip(),
-        "id_type": id_type,
-        "sources_found": sources_found,
-        "details_by_source": details_by_source,
-        "merged_detail": merged_detail,
-    }
+        logger.error(f"合并和去重参考文献失败: {e}")
+        return []
