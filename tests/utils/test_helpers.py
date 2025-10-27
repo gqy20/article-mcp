@@ -249,3 +249,337 @@ def mock_article_details():
 def mock_reference_list():
     """模拟参考文献列表fixture"""
     return MockDataGenerator.create_reference_list(10)
+
+
+class SixToolTestHelper:
+    """6工具架构专用测试辅助工具"""
+
+    @staticmethod
+    def create_six_tool_test_data() -> dict[str, Any]:
+        """创建完整的6工具测试数据"""
+        return {
+            # 工具1搜索数据
+            "search_data": {
+                "keyword": "machine learning healthcare",
+                "sources": ["europe_pmc", "pubmed", "arxiv"],
+                "max_results": 20,
+                "search_type": "comprehensive",
+            },
+            # 工具2文章详情数据
+            "article_details_data": {
+                "identifier": "10.1234/ml.health.2023",
+                "id_type": "doi",
+                "sources": ["crossref", "europe_pmc"],
+                "include_quality_metrics": True,
+            },
+            # 工具3参考文献数据
+            "references_data": {
+                "identifier": "10.1234/ml.health.2023",
+                "id_type": "doi",
+                "sources": ["europe_pmc"],
+                "max_results": 25,
+                "include_metadata": True,
+            },
+            # 工具4关系分析数据
+            "relations_data": {
+                "identifiers": ["10.1234/ml.health.2023"],
+                "relation_types": ["references", "similar", "citing"],
+                "max_depth": 2,
+                "max_results": 15,
+            },
+            # 工具5质量评估数据
+            "quality_data": {
+                "journals": ["Nature", "Science", "Cell"],
+                "operation": "quality",
+                "evaluation_criteria": ["journal_quality", "citation_count"],
+                "include_metrics": ["impact_factor", "quartile", "jci"],
+            },
+            # 工具6导出数据
+            "export_data": {
+                "format_type": "json",
+                "output_path": None,
+                "include_metadata": True,
+            }
+        }
+
+    @staticmethod
+    def create_workflow_scenarios() -> dict[str, dict[str, Any]]:
+        """创建真实工作流程场景"""
+        return {
+            "researcher_review": {
+                "description": "研究者文献综述工作流程",
+                "steps": [
+                    {"tool": "search_literature", "params": {"keyword": "AI healthcare", "max_results": 50}},
+                    {"tool": "get_article_details", "params": {"identifier": "doi_from_search", "include_quality_metrics": True}},
+                    {"tool": "get_references", "params": {"identifier": "selected_articles", "max_results": 20}},
+                    {"tool": "get_journal_quality", "params": {"journals": "all_journals", "operation": "quality"}},
+                    {"tool": "export_batch_results", "params": {"format_type": "excel"}}
+                ],
+                "expected_tools_used": 5,
+            },
+            "student_assignment": {
+                "description": "学生作业工作流程",
+                "steps": [
+                    {"tool": "search_literature", "params": {"keyword": "ethics AI", "max_results": 15}},
+                    {"tool": "get_article_details", "params": {"identifier": "top_3_articles"}},
+                    {"tool": "export_batch_results", "params": {"format_type": "csv"}}
+                ],
+                "expected_tools_used": 3,
+            },
+            "clinical_evidence": {
+                "description": "临床证据搜索工作流程",
+                "steps": [
+                    {"tool": "search_literature", "params": {"keyword": "immunotherapy lung cancer", "sources": ["pubmed"]}},
+                    {"tool": "get_article_details", "params": {"identifier": "clinical_trials", "include_quality_metrics": True}},
+                    {"tool": "get_journal_quality", "params": {"journals": "relevant_journals", "operation": "ranking"}},
+                    {"tool": "export_batch_results", "params": {"format_type": "json", "include_metadata": True}}
+                ],
+                "expected_tools_used": 4,
+            }
+        }
+
+    @staticmethod
+    def create_performance_benchmarks() -> dict[str, dict[str, Any]]:
+        """创建性能基准测试数据"""
+        return {
+            "search_performance": {
+                "small_query": {"expected_time": 2.0, "max_memory": 20},
+                "medium_query": {"expected_time": 5.0, "max_memory": 50},
+                "large_query": {"expected_time": 15.0, "max_memory": 100},
+            },
+            "details_performance": {
+                "single_article": {"expected_time": 1.0, "max_memory": 10},
+                "batch_articles": {"expected_time": 8.0, "max_memory": 80},
+            },
+            "export_performance": {
+                "json_export": {"expected_time": 0.5, "max_memory": 15},
+                "csv_export": {"expected_time": 1.0, "max_memory": 25},
+                "excel_export": {"expected_time": 2.0, "max_memory": 40},
+            }
+        }
+
+    @staticmethod
+    def assert_valid_six_tool_response(tool_name: str, response: dict[str, Any]) -> None:
+        """验证6工具响应格式的有效性"""
+        # 通用验证
+        assert isinstance(response, dict), f"{tool_name} 响应必须是字典"
+        assert "success" in response, f"{tool_name} 响应缺少 success 字段"
+        assert isinstance(response["success"], bool), f"{tool_name} success 必须是布尔值"
+
+        if response["success"]:
+            # 成功响应的特定验证
+            if tool_name == "search_literature":
+                assert "merged_results" in response, f"{tool_name} 缺少 merged_results"
+                assert "total_count" in response, f"{tool_name} 缺少 total_count"
+                assert isinstance(response["merged_results"], list), f"{tool_name} merged_results 必须是列表"
+
+            elif tool_name == "get_article_details":
+                assert "article" in response, f"{tool_name} 缺少 article"
+                assert isinstance(response["article"], dict), f"{tool_name} article 必须是字典"
+
+            elif tool_name == "get_references":
+                assert "merged_references" in response, f"{tool_name} 缺少 merged_references"
+                assert "total_count" in response, f"{tool_name} 缺少 total_count"
+
+            elif tool_name == "get_literature_relations":
+                assert "relations" in response, f"{tool_name} 缺少 relations"
+                assert "statistics" in response, f"{tool_name} 缺少 statistics"
+
+            elif tool_name == "get_journal_quality":
+                assert "quality_metrics" in response, f"{tool_name} 缺少 quality_metrics"
+
+            elif tool_name == "export_batch_results":
+                assert "export_path" in response, f"{tool_name} 缺少 export_path"
+                assert "records_exported" in response, f"{tool_name} 缺少 records_exported"
+        else:
+            # 失败响应的验证
+            assert "error" in response, f"{tool_name} 失败响应缺少 error 字段"
+
+    @staticmethod
+    def create_error_response(tool_name: str, error_type: str, message: str) -> dict[str, Any]:
+        """创建标准化的错误响应"""
+        return {
+            "success": False,
+            "error": message,
+            "error_type": error_type,
+            "tool": tool_name,
+            "timestamp": time.time(),
+            "suggestion": SixToolTestHelper._get_error_suggestion(error_type)
+        }
+
+    @staticmethod
+    def _get_error_suggestion(error_type: str) -> str:
+        """根据错误类型提供建议"""
+        suggestions = {
+            "NetworkError": "请检查网络连接",
+            "RateLimitError": "请稍后重试或减少请求频率",
+            "AuthenticationError": "请检查API配置",
+            "ValidationError": "请检查输入参数",
+            "NotFoundError": "请检查标识符是否正确",
+            "TimeoutError": "请稍后重试",
+            "StorageError": "请检查磁盘空间",
+        }
+        return suggestions.get(error_type, "请联系技术支持")
+
+
+class WorkflowTester:
+    """工作流程测试器"""
+
+    def __init__(self):
+        self.helper = SixToolTestHelper()
+
+    def test_workflow(self, scenario_name: str, mock_tools: dict[str, Mock]) -> dict[str, Any]:
+        """测试完整工作流程"""
+        scenarios = self.helper.create_workflow_scenarios()
+        if scenario_name not in scenarios:
+            raise ValueError(f"未知的工作流程场景: {scenario_name}")
+
+        scenario = scenarios[scenario_name]
+        results = []
+
+        for step in scenario["steps"]:
+            tool_name = step["tool"]
+            params = step["params"]
+
+            if tool_name in mock_tools:
+                # 模拟工具调用
+                mock_tool = mock_tools[tool_name]
+                result = mock_tool.return_value
+                results.append({
+                    "tool": tool_name,
+                    "params": params,
+                    "result": result,
+                    "success": True
+                })
+            else:
+                results.append({
+                    "tool": tool_name,
+                    "params": params,
+                    "result": None,
+                    "success": False,
+                    "error": f"工具 {tool_name} 不可用"
+                })
+
+        return {
+            "scenario": scenario_name,
+            "description": scenario["description"],
+            "steps_completed": len(results),
+            "steps_successful": sum(1 for r in results if r["success"]),
+            "expected_tools": scenario["expected_tools_used"],
+            "actual_tools_used": len([r for r in results if r["success"]]),
+            "results": results,
+            "workflow_success": all(r["success"] for r in results)
+        }
+
+
+class PerformanceMonitor:
+    """性能监控器"""
+
+    def __init__(self):
+        self.measurements = {}
+
+    def start_measurement(self, name: str) -> None:
+        """开始测量"""
+        self.measurements[name] = {"start_time": time.time()}
+
+    def end_measurement(self, name: str) -> float:
+        """结束测量并返回耗时"""
+        if name not in self.measurements:
+            raise ValueError(f"测量 {name} 未开始")
+
+        measurement = self.measurements[name]
+        measurement["end_time"] = time.time()
+        measurement["duration"] = measurement["end_time"] - measurement["start_time"]
+        return measurement["duration"]
+
+    def get_measurement(self, name: str) -> dict[str, Any]:
+        """获取测量结果"""
+        return self.measurements.get(name, {})
+
+    def assert_performance_within_limits(self, name: str, max_time: float) -> None:
+        """断言性能在限制内"""
+        measurement = self.get_measurement(name)
+        if "duration" not in measurement:
+            raise AssertionError(f"测量 {name} 未完成")
+
+        actual_time = measurement["duration"]
+        assert actual_time <= max_time, f"性能测试失败: {name} 耗时 {actual_time:.2f}s 超过限制 {max_time:.2f}s"
+
+    def reset(self) -> None:
+        """重置所有测量"""
+        self.measurements.clear()
+
+
+# 新的fixture
+@pytest.fixture
+def six_tool_helper():
+    """6工具测试辅助工具fixture"""
+    return SixToolTestHelper()
+
+
+@pytest.fixture
+def workflow_tester():
+    """工作流程测试器fixture"""
+    return WorkflowTester()
+
+
+@pytest.fixture
+def performance_monitor():
+    """性能监控器fixture"""
+    return PerformanceMonitor()
+
+
+@pytest.fixture
+def workflow_scenarios():
+    """工作流程场景fixture"""
+    return SixToolTestHelper.create_workflow_scenarios()
+
+
+@pytest.fixture
+def performance_benchmarks():
+    """性能基准测试数据fixture"""
+    return SixToolTestHelper.create_performance_benchmarks()
+
+
+@pytest.fixture
+def mock_six_tool_responses():
+    """模拟6工具响应fixture"""
+    return {
+        "search_literature": {
+            "success": True,
+            "keyword": "test query",
+            "merged_results": [MockDataGenerator.create_article()],
+            "total_count": 1,
+            "search_time": 1.0,
+        },
+        "get_article_details": {
+            "success": True,
+            "identifier": "10.1234/test.2023",
+            "article": MockDataGenerator.create_article(),
+        },
+        "get_references": {
+            "success": True,
+            "identifier": "10.1234/test.2023",
+            "merged_references": [MockDataGenerator.create_article(title="Reference Article")],
+            "total_count": 1,
+            "processing_time": 0.5,
+        },
+        "get_literature_relations": {
+            "success": True,
+            "identifier": "10.1234/test.2023",
+            "relations": {"references": [], "similar": [], "citing": []},
+            "statistics": {"total_relations": 0},
+        },
+        "get_journal_quality": {
+            "success": True,
+            "journal_name": "Test Journal",
+            "quality_metrics": {"impact_factor": 2.5, "quartile": "Q2"},
+        },
+        "export_batch_results": {
+            "success": True,
+            "export_path": "/tmp/test_export.json",
+            "format_type": "json",
+            "records_exported": 1,
+            "file_size": "1.2KB",
+        }
+    }
