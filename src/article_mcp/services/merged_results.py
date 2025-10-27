@@ -41,10 +41,12 @@ def merge_articles_by_doi(articles_by_source: dict[str, list[dict]]) -> list[dic
 def merge_same_doi_articles(articles: list[dict]) -> dict:
     """合并同一DOI的多源文章"""
     if len(articles) == 1:
+        article = articles[0]
+        source_from = article.get("source_from", "unknown")
         return {
-            **articles[0],
-            "sources": [articles[0]["source_from"]],
-            "data_sources": {articles[0]["source_from"]: articles[0]},
+            **article,
+            "sources": [source_from],
+            "data_sources": {source_from: article},
         }
 
     # 选择最完整的数据作为基础
@@ -57,8 +59,8 @@ def merge_same_doi_articles(articles: list[dict]) -> dict:
 
     return {
         **base_article,
-        "sources": [a["source_from"] for a in articles],
-        "data_sources": {a["source_from"]: a for a in articles},
+        "sources": [a.get("source_from", "unknown") for a in articles],
+        "data_sources": {a.get("source_from", "unknown"): a for a in articles},
     }
 
 

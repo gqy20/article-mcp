@@ -24,9 +24,7 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
         max_results: int = 20,
         include_metadata: bool = True,
     ) -> dict[str, Any]:
-        """获取参考文献工具
-
-        通过文献标识符获取其引用的参考文献列表。
+        """获取参考文献工具。通过文献标识符获取其引用的参考文献列表。
 
         Args:
             identifier: 文献标识符 (DOI, PMID, PMCID, arXiv ID)
@@ -68,34 +66,48 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
             # 从多个数据源获取参考文献
             for source in sources:
                 try:
-                    if source == "europe_pmc" and "europe_pmc" in _reference_services:
-                        service = _reference_services["europe_pmc"]
-                        result = service.get_references(identifier, id_type, max_results)
-                        if result.get("success", False):
-                            references = result.get("references", [])
+                    if source == "europe_pmc" and "reference" in _reference_services:
+                        service = _reference_services["reference"]
+                        if id_type == "doi":
+                            result = service.get_references_by_doi_sync(identifier)
+                        else:
+                            result = {"success": False, "error": "Europe PMC only supports DOI for references"}
+                        # 判断参考文献获取成功：没有错误且有参考文献数据
+                        error = result.get("error")
+                        references = result.get("references", [])
+                        if not error and references:
                             references_by_source[source] = references
                             sources_used.append(source)
                             logger.info(f"从Europe PMC获取到 {len(references)} 条参考文献")
+                        else:
+                            logger.warning(f"Europe PMC参考文献获取失败: {error or '无参考文献数据'}")
 
-                    elif source == "crossref" and "crossref" in _reference_services:
+                    elif source == "crossref" and "reference" in _reference_services:
                         # Crossref参考文献获取逻辑
-                        service = _reference_services["crossref"]
-                        result = service.get_work_references(identifier, max_results)
-                        if result.get("success", False):
-                            references = result.get("references", [])
+                        service = _reference_services["reference"]
+                        references = service.get_references_crossref_sync(identifier)
+                        if references:  # Crossref方法直接返回参考文献列表或None
                             references_by_source[source] = references
                             sources_used.append(source)
                             logger.info(f"从Crossref获取到 {len(references)} 条参考文献")
+                        else:
+                            logger.warning("Crossref参考文献获取失败: 无数据")
 
-                    elif source == "pubmed" and "pubmed" in _reference_services:
-                        # PubMed参考文献获取逻辑
-                        service = _reference_services["pubmed"]
-                        result = service.get_pubmed_references(identifier, max_results)
-                        if result.get("success", False):
+                    elif source == "pubmed" and "reference" in _reference_services:
+                        # PubMed暂时不支持参考文献获取，通过reference服务间接支持
+                        service = _reference_services["reference"]
+                        if id_type == "doi":
+                            result = service.get_references_by_doi_sync(identifier)
+                            error = result.get("error")
                             references = result.get("references", [])
-                            references_by_source[source] = references
-                            sources_used.append(source)
-                            logger.info(f"从PubMed获取到 {len(references)} 条参考文献")
+                            if not error and references:
+                                references_by_source[source] = references
+                                sources_used.append(source)
+                                logger.info(f"从PubMed获取到 {len(references)} 条参考文献")
+                            else:
+                                logger.warning(f"PubMed参考文献获取失败: {error or '无参考文献数据'}")
+                        else:
+                            logger.warning("PubMed参考文献获取仅支持DOI标识符")
 
                 except Exception as e:
                     logger.error(f"从 {source} 获取参考文献失败: {e}")
@@ -136,8 +148,7 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
                 "processing_time": 0,
             }
 
-    return [get_references]
-
+    
 
 def _extract_identifier_type(identifier: str) -> str:
     """提取标识符类型"""

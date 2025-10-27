@@ -16,25 +16,23 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
     global _search_services
     _search_services = services
 
-    @mcp.tool()
+    @mcp.tool(description="多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。")
     def search_literature(
         keyword: str,
         sources: list[str] | None = None,
         max_results: int = 10,
         search_type: str = "comprehensive",
     ) -> dict[str, Any]:
-        """多源文献搜索工具
-
-        搜索多个学术数据库的文献，支持关键词检索和结果合并。
+        """多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。
 
         Args:
             keyword: 搜索关键词
-            sources: 数据源列表，可选 ["europe_pmc", "pubmed", "arxiv", "crossref", "openalex"]
-            max_results: 最大结果数 (建议10-50)
-            search_type: 搜索策略 ["comprehensive", "recent", "high_quality"]
+            sources: 数据源列表
+            max_results: 最大结果数
+            search_type: 搜索策略
 
         Returns:
-            包含搜索结果的字典，包括成功状态、文章列表和统计信息
+            搜索结果字典，包含文章列表和统计信息
         """
         try:
             if not keyword or not keyword.strip():
@@ -48,8 +46,8 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                     "total_count": 0,
                 }
 
-            from ..services.merged_results import merge_articles_by_doi
-            from ..services.merged_results import simple_rank_articles
+            from article_mcp.services.merged_results import merge_articles_by_doi
+            from article_mcp.services.merged_results import simple_rank_articles
 
             start_time = time.time()
             results_by_source = {}
@@ -84,14 +82,17 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                     else:
                         continue
 
-                    if result.get("success", False):
-                        results_by_source[source] = result.get("articles", [])
+                    # 判断搜索成功：没有错误且有文章结果
+                    error = result.get("error")
+                    articles = result.get("articles", [])
+                    if not error and articles:
+                        results_by_source[source] = articles
                         sources_used.append(source)
                         logger.info(
-                            f"{source} 搜索成功，找到 {len(results_by_source[source])} 篇文章"
+                            f"{source} 搜索成功，找到 {len(articles)} 篇文章"
                         )
                     else:
-                        logger.warning(f"{source} 搜索失败: {result.get('error', '未知错误')}")
+                        logger.warning(f"{source} 搜索失败: {error or '无搜索结果'}")
 
                 except Exception as e:
                     logger.error(f"{source} 搜索异常: {e}")
@@ -127,4 +128,5 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                 "search_time": 0,
             }
 
-    return [search_literature]
+  
+

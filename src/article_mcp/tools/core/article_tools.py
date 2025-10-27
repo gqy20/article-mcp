@@ -23,9 +23,7 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         sources: list[str] | None = None,
         include_quality_metrics: bool = False,
     ) -> dict[str, Any]:
-        """获取文献详情工具
-
-        通过DOI、PMID等标识符获取文献的详细信息。
+        """获取文献详情工具。通过DOI、PMID等标识符获取文献的详细信息。
 
         Args:
             identifier: 文献标识符 (DOI, PMID, PMCID, arXiv ID)
@@ -40,8 +38,8 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             if not identifier or not identifier.strip():
                 return {"success": False, "error": "文献标识符不能为空", "identifier": identifier}
 
-            from ..services.merged_results import extract_identifier_type
-            from ..services.merged_results import merge_same_doi_articles
+            from article_mcp.services.merged_results import extract_identifier_type
+            from article_mcp.services.merged_results import merge_same_doi_articles
 
             start_time = time.time()
             details_by_source = {}
@@ -82,12 +80,15 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                     else:
                         continue
 
-                    if result.get("success", False) and result.get("article"):
-                        details_by_source[source] = result["article"]
+                    # 判断获取成功：没有错误且有文章数据
+                    error = result.get("error")
+                    article = result.get("article")
+                    if not error and article:
+                        details_by_source[source] = article
                         sources_found.append(source)
                         logger.info(f"{source} 获取详情成功")
                     else:
-                        logger.debug(f"{source} 未找到文献详情")
+                        logger.debug(f"{source} 未找到文献详情: {error or '无数据'}")
 
                 except Exception as e:
                     logger.error(f"{source} 获取详情异常: {e}")
@@ -105,7 +106,7 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                 journal_name = merged_detail.get("journal", "")
                 if journal_name:
                     try:
-                        from ..services.mcp_config import get_easyscholar_key
+                        from article_mcp.services.mcp_config import get_easyscholar_key
 
                         secret_key = get_easyscholar_key(None, logger)
                         pubmed_service = _article_services.get("pubmed")
@@ -142,4 +143,4 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                 "processing_time": 0,
             }
 
-    return [get_article_details]
+    

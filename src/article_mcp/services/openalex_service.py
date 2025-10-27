@@ -12,7 +12,14 @@ class OpenAlexService:
     def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
         self.base_url = "https://api.openalex.org"
-        self.api_client = get_api_client(logger)
+        # OpenAlex需要特定的User-Agent以避免403错误
+        from .api_utils import UnifiedAPIClient
+        self.api_client = UnifiedAPIClient(logger)
+        # 添加符合OpenAlex要求的User-Agent
+        self.api_client.session.headers.update({
+            "User-Agent": "Article-MCP/2.0 (mailto:user@example.com)",
+            "Accept": "application/json"
+        })
 
     def search_works(
         self, query: str, max_results: int = 10, filters: dict = None
@@ -98,11 +105,24 @@ class OpenAlexService:
     def get_citations(self, doi: str, max_results: int = 20) -> dict[str, Any]:
         """获取引用文献"""
         try:
+            # 首先通过DOI查找OpenAlex Work ID
+            openalex_id = self._find_openalex_id_by_doi(doi)
+            if not openalex_id:
+                self.logger.warning(f"无法找到DOI {doi} 对应的OpenAlex ID")
+                return {
+                    "success": False,
+                    "citations": [],
+                    "total_count": 0,
+                    "source": "openalex",
+                    "error": f"无法找到DOI {doi} 对应的OpenAlex ID"
+                }
+
+            # 使用OpenAlex ID查询引用文献
             url = f"{self.base_url}/works"
             params = {
-                "filter": f"cites:{doi}",
+                "filter": f"cites:{openalex_id}",
                 "per-page": max_results,
-                "select": "id,title,authorships,publication_year,primary_location",
+                "select": "id,title,authorships,publication_year,primary_location,doi",
             }
 
             api_result = self.api_client.get(url, params=params)
@@ -118,6 +138,7 @@ class OpenAlexService:
                 "citations": self._format_articles(citations),
                 "total_count": len(citations),
                 "source": "openalex",
+                "openalex_id": openalex_id,
             }
 
         except Exception as e:
@@ -129,6 +150,34 @@ class OpenAlexService:
                 "source": "openalex",
                 "error": str(e),
             }
+
+    def _find_openalex_id_by_doi(self, doi: str) -> str | None:
+        """通过DOI查找OpenAlex Work ID"""
+        try:
+            url = f"{self.base_url}/works"
+            params = {
+                "filter": f"doi:{doi}",
+                "select": "id",
+                "per-page": 1
+            }
+
+            api_result = self.api_client.get(url, params=params)
+
+            if api_result.get("success", False):
+                data = api_result.get("data", {})
+                results = data.get("results", [])
+                if results and len(results) > 0:
+                    work = results[0]
+                    openalex_url = work.get("id", "")
+                    # 提取OpenAlex ID（格式如: https://openalex.org/W2159974629）
+                    if openalex_url and "/W" in openalex_url:
+                        return openalex_url.split("/W")[-1].split("?")[0]
+
+            return None
+
+        except Exception as e:
+            self.logger.error(f"通过DOI查找OpenAlex ID失败: {e}")
+            return None
 
     def _format_articles(self, items: list[dict]) -> list[dict]:
         """格式化文章列表"""

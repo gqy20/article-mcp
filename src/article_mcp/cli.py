@@ -80,7 +80,12 @@ def create_mcp_server():
     register_reference_tools(mcp, reference_services, logger)
 
     # 工具4: 文献关系分析工具
-    relation_services = {"europe_pmc": europe_pmc_service, "pubmed": pubmed_service}
+    relation_services = {
+        "europe_pmc": europe_pmc_service,
+        "pubmed": pubmed_service,
+        "crossref": crossref_service,
+        "openalex": openalex_service,
+    }
     register_relation_tools(mcp, relation_services, logger)
 
     # 工具5: 期刊质量评估工具
@@ -163,7 +168,7 @@ def start_server(
     elif transport == "streamable-http":
         print("使用 Streamable HTTP 传输模式")
         print(f"服务器地址: http://{host}:{port}{path}")
-        mcp.run(transport="streamable-http", host=host, port=port, path=path)
+        mcp.run(transport="streamable-http", host=host, port=port, path=path, stateless_http=True)
     else:
         print(f"不支持的传输模式: {transport}")
         sys.exit(1)

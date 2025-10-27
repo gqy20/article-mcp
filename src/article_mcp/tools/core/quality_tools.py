@@ -29,9 +29,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         ranking_type: str = "journal_impact",
         limit: int = 50,
     ) -> dict[str, Any]:
-        """期刊质量评估工具
-
-        评估期刊的学术质量和影响力指标。
+        """期刊质量评估工具。评估期刊的学术质量和影响力指标。
 
         Args:
             journal_name: 期刊名称（支持中英文）
@@ -46,18 +44,18 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         try:
             # 根据操作类型分发到具体处理函数
             if operation == "quality":
-                if isinstance(journals, list):
+                if isinstance(journal_name, list):
                     # 批量期刊质量评估
-                    return _batch_journal_quality(journals, include_metrics, use_cache, logger)
+                    return _batch_journal_quality(journal_name, include_metrics, use_cache, logger)
                 else:
                     # 单个期刊质量评估
-                    return _single_journal_quality(journals, include_metrics, use_cache, logger)
+                    return _single_journal_quality(journal_name, include_metrics, use_cache, logger)
 
             elif operation == "evaluation":
                 # 批量文献质量评估
-                if isinstance(journals, list):
+                if isinstance(journal_name, list):
                     return _batch_articles_quality_evaluation(
-                        journals, evaluation_criteria, weight_config, logger
+                        journal_name, evaluation_criteria, weight_config, logger
                     )
                 else:
                     return {
@@ -72,7 +70,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             elif operation in ["ranking", "field_ranking"]:
                 # 学科领域期刊排名
                 field_name = (
-                    journals if isinstance(journals, str) else (journals[0] if journals else "")
+                    journal_name if isinstance(journal_name, str) else (journal_name[0] if journal_name else "")
                 )
                 return _get_field_ranking(field_name, ranking_type, limit, logger)
 
@@ -80,7 +78,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                 return {
                     "success": False,
                     "error": f"不支持的操作类型: {operation}",
-                    "journal_name": journals,
+                    "journal_name": journal_name,
                     "quality_metrics": {},
                     "data_source": None,
                 }
@@ -90,13 +88,12 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             return {
                 "success": False,
                 "error": str(e),
-                "journal_name": journals,
+                "journal_name": journal_name,
                 "quality_metrics": {},
                 "data_source": None,
             }
 
-    return [get_journal_quality]
-
+    
 
 def _single_journal_quality(
     journal_name: str, include_metrics: list[str], use_cache: bool, logger

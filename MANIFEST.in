@@ -2,5 +2,6 @@ include *.py
 include *.md
 include *.json
 recursive-include src *.py *.json
-recursive-include tool_modules *.py
-recursive-include json *.json
+recursive-include src/resource *.json
+recursive-include scripts *.py
+recursive-include tests *.py
