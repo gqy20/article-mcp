@@ -16,7 +16,17 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
     global _reference_services
     _reference_services = services
 
-    @mcp.tool()
+    from mcp.types import ToolAnnotations
+
+    @mcp.tool(
+        description="获取参考文献工具。通过文献标识符获取完整参考文献列表。",
+        annotations=ToolAnnotations(
+            title="参考文献",
+            readOnlyHint=True,
+            openWorldHint=False
+        ),
+        tags={"references", "citations", "bibliography"}
+    )
     def get_references(
         identifier: str,
         id_type: str = "doi",
@@ -137,16 +147,13 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
 
         except Exception as e:
             logger.error(f"获取参考文献异常: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "identifier": identifier,
-                "sources_used": [],
-                "references_by_source": {},
-                "merged_references": [],
-                "total_count": 0,
-                "processing_time": 0,
-            }
+            # 抛出MCP标准错误
+            from mcp import McpError
+            from mcp.types import ErrorData
+            raise McpError(ErrorData(
+                code=-32603,
+                message=f"获取参考文献失败: {type(e).__name__}: {str(e)}"
+            ))
 
     
 

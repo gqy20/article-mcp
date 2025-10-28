@@ -16,8 +16,18 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
     global _relation_services
     _relation_services = services
 
-    @mcp.tool()
-    def get_literature_relations(
+    from mcp.types import ToolAnnotations
+
+    @mcp.tool(
+        description="文献关系分析工具。分析文献间的引用关系、相似性和合作网络。",
+        annotations=ToolAnnotations(
+            title="文献关系分析",
+            readOnlyHint=True,
+            openWorldHint=False
+        ),
+        tags={"relations", "network", "analysis", "citations"}
+    )
+    async def get_literature_relations(
         identifier: str | list[str] | None = None,
         identifiers: str | list[str] | None = None,
         id_type: str = "auto",
@@ -70,12 +80,12 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
             elif isinstance(final_identifiers, list):
                 if analysis_type == "basic":
                     # 多个文献的基本关系分析（批量处理）
-                    return _batch_literature_relations(
+                    return await _batch_literature_relations(
                         final_identifiers, id_type, relation_types, max_results, sources, logger
                     )
                 else:
                     # 文献网络分析
-                    return _analyze_literature_network(
+                    return await _analyze_literature_network(
                         final_identifiers, analysis_type, max_depth, max_results, logger
                     )
             else:

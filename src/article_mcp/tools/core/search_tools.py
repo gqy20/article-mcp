@@ -16,7 +16,17 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
     global _search_services
     _search_services = services
 
-    @mcp.tool(description="多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。")
+    from mcp.types import ToolAnnotations
+
+    @mcp.tool(
+        description="多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。",
+        annotations=ToolAnnotations(
+            title="文献搜索",
+            readOnlyHint=True,
+            openWorldHint=False
+        ),
+        tags={"search", "literature", "academic"}
+    )
     def search_literature(
         keyword: str,
         sources: list[str] | None = None,
@@ -36,15 +46,8 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
         """
         try:
             if not keyword or not keyword.strip():
-                return {
-                    "success": False,
-                    "error": "搜索关键词不能为空",
-                    "keyword": keyword,
-                    "sources_used": [],
-                    "results_by_source": {},
-                    "merged_results": [],
-                    "total_count": 0,
-                }
+                from fastmcp.exceptions import ToolError
+                raise ToolError("搜索关键词不能为空")
 
             from article_mcp.services.merged_results import merge_articles_by_doi
             from article_mcp.services.merged_results import simple_rank_articles
@@ -117,16 +120,13 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
 
         except Exception as e:
             logger.error(f"搜索过程中发生异常: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "keyword": keyword,
-                "sources_used": [],
-                "results_by_source": {},
-                "merged_results": [],
-                "total_count": 0,
-                "search_time": 0,
-            }
+            # 抛出MCP标准错误
+            from mcp import McpError
+            from mcp.types import ErrorData
+            raise McpError(ErrorData(
+                code=-32603,
+                message=f"搜索失败: {type(e).__name__}: {str(e)}"
+            ))
 
   
 

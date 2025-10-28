@@ -40,6 +40,19 @@ def create_mcp_server():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
+    # 添加中间件
+    from .middleware import MCPErrorHandlingMiddleware, LoggingMiddleware, TimingMiddleware
+
+    mcp.add_middleware(MCPErrorHandlingMiddleware(logger))
+    mcp.add_middleware(LoggingMiddleware(logger))
+    mcp.add_middleware(TimingMiddleware())
+
+    # 注册资源
+    from .resources import register_config_resources, register_journal_resources
+
+    register_config_resources(mcp)
+    register_journal_resources(mcp)
+
     # 核心服务依赖注入
     pubmed_service = create_pubmed_service(logger)
     europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)

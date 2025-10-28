@@ -16,7 +16,17 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     global _article_services
     _article_services = services
 
-    @mcp.tool()
+    from mcp.types import ToolAnnotations
+
+    @mcp.tool(
+        description="获取文献详情工具。通过DOI、PMID等标识符获取文献的详细信息。",
+        annotations=ToolAnnotations(
+            title="文献详情",
+            readOnlyHint=True,
+            openWorldHint=False
+        ),
+        tags={"literature", "details", "metadata"}
+    )
     def get_article_details(
         identifier: str,
         id_type: str = "auto",
@@ -36,7 +46,8 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         """
         try:
             if not identifier or not identifier.strip():
-                return {"success": False, "error": "文献标识符不能为空", "identifier": identifier}
+                from fastmcp.exceptions import ToolError
+                raise ToolError("文献标识符不能为空")
 
             from article_mcp.services.merged_results import extract_identifier_type
             from article_mcp.services.merged_results import merge_same_doi_articles
@@ -132,15 +143,12 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
         except Exception as e:
             logger.error(f"获取文献详情异常: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "identifier": identifier,
-                "sources_found": [],
-                "details_by_source": {},
-                "merged_detail": None,
-                "quality_metrics": None,
-                "processing_time": 0,
-            }
+            # 抛出MCP标准错误
+            from mcp import McpError
+            from mcp.types import ErrorData
+            raise McpError(ErrorData(
+                code=-32603,
+                message=f"获取文献详情失败: {type(e).__name__}: {str(e)}"
+            ))
 
     

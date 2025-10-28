@@ -18,7 +18,17 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     global _quality_services
     _quality_services = services
 
-    @mcp.tool()
+    from mcp.types import ToolAnnotations
+
+    @mcp.tool(
+        description="期刊质量评估工具。评估期刊的学术质量和影响力指标。",
+        annotations=ToolAnnotations(
+            title="期刊质量评估",
+            readOnlyHint=True,
+            openWorldHint=False
+        ),
+        tags={"quality", "journal", "metrics", "ranking"}
+    )
     def get_journal_quality(
         journal_name: str,
         operation: str = "quality",
@@ -101,14 +111,8 @@ def _single_journal_quality(
     """单个期刊质量评估"""
     try:
         if not journal_name or not journal_name.strip():
-            return {
-                "success": False,
-                "error": "期刊名称不能为空",
-                "journal_name": journal_name,
-                "quality_metrics": {},
-                "ranking_info": {},
-                "data_source": None,
-            }
+            from fastmcp.exceptions import ToolError
+            raise ToolError("期刊名称不能为空")
 
         # 处理None值的include_metrics参数
         if include_metrics is None:

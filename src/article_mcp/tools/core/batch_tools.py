@@ -18,7 +18,17 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
     global _batch_services
     _batch_services = services
 
-    @mcp.tool()
+    from mcp.types import ToolAnnotations
+
+    @mcp.tool(
+        description="通用结果导出工具。导出批量处理结果为不同格式文件。",
+        annotations=ToolAnnotations(
+            title="批量结果导出",
+            readOnlyHint=False,
+            openWorldHint=True
+        ),
+        tags={"export", "batch", "json", "csv", "excel"}
+    )
     def export_batch_results(
         results: dict[str, Any],
         format_type: str = "json",
