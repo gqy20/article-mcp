@@ -38,19 +38,19 @@
 cd scripts
 
 # 运行FastMCP合规性测试
-python test_fastmcp_compliance.py
+uv run python test_fastmcp_compliance.py
 ```
 
 ### 高级用法
 
 ```bash
 # 查看详细输出
-python test_fastmcp_compliance.py
+uv run python test_fastmcp_compliance.py
 
 # 测试特定模式（可扩展）
-python test_fastmcp_compliance.py --mode stdio
-python test_fastmcp_compliance.py --mode http
-python test_fastmcp_compliance.py --mode sse
+uv run python test_fastmcp_compliance.py --mode stdio
+uv run python test_fastmcp_compliance.py --mode http
+uv run python test_fastmcp_compliance.py --mode sse
 ```
 
 ## 测试标准
@@ -150,10 +150,10 @@ Address already in use
 
 ```bash
 # 启用详细日志
-python test_fastmcp_compliance.py
+uv run python test_fastmcp_compliance.py
 
 # 手动测试STDIO模式
-python -m article_mcp test
+uv run python -m article_mcp test
 ```
 
 ## 扩展测试
@@ -228,7 +228,7 @@ jobs:
     - name: Run compliance tests
       run: |
         cd scripts
-        python test_fastmcp_compliance.py
+        uv run python test_fastmcp_compliance.py
     - name: Upload test report
       uses: actions/upload-artifact@v3
       with:

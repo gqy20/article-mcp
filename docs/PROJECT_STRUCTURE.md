@@ -132,34 +132,34 @@ article-mcp/
 ### 日常开发测试
 ```bash
 # 快速功能验证
-python scripts/quick_test.py
+uv run python scripts/quick_test.py
 
 # 核心功能测试
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 
 # API集成测试
-python scripts/test_fixed_api_integration.py
+uv run python scripts/test_fixed_api_integration.py
 ```
 
 ### 完整测试验证
 ```bash
 # 运行所有测试
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 
 # 运行正式测试套件
-pytest tests/
+uv run pytest tests/
 
 # 性能测试
-python scripts/test_performance.py
+uv run python scripts/test_performance.py
 ```
 
 ### 兼容性测试
 ```bash
 # Cherry Studio兼容性
-python tests/test_cherry_studio_simulation.py
+uv run python tests/test_cherry_studio_simulation.py
 
 # HTTP协议测试
-python tests/test_complete_http_client.py
+uv run python tests/test_complete_http_client.py
 ```
 
 ## 📊 统计信息

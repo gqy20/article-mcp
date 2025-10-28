@@ -54,29 +54,29 @@
 
 ```bash
 # 快速测试项目状态
-python scripts/quick_test.py
+uv run python scripts/quick_test.py
 
 # 运行完整测试套件
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 ```
 
 ### 运行特定测试
 
 ```bash
 # 运行基础功能测试
-python scripts/test_basic_functionality.py
+uv run python scripts/test_basic_functionality.py
 
 # 运行CLI功能测试
-python scripts/test_cli_functions.py
+uv run python scripts/test_cli_functions.py
 
 # 运行服务模块测试
-python scripts/test_service_modules.py
+uv run python scripts/test_service_modules.py
 
 # 运行集成测试
-python scripts/test_integration.py
+uv run python scripts/test_integration.py
 
 # 运行性能测试
-python scripts/test_performance.py
+uv run python scripts/test_performance.py
 ```
 
 ### 使用PYTHONPATH
@@ -84,7 +84,7 @@ python scripts/test_performance.py
 如果遇到导入错误，可以显式设置PYTHONPATH：
 
 ```bash
-PYTHONPATH=src python scripts/quick_test.py
+uv run python scripts/quick_test.py
 ```
 
 ## 测试说明

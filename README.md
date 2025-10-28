@@ -255,20 +255,20 @@ uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
 
 ```bash
 # 核心功能测试（推荐日常使用）
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 
 # 快速测试（功能验证）
-python scripts/quick_test.py
+uv run python scripts/quick_test.py
 
 # 完整测试套件
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 
 # 分类测试
-python scripts/test_basic_functionality.py  # 基础功能测试
-python scripts/test_cli_functions.py       # CLI功能测试
-python scripts/test_service_modules.py     # 服务模块测试
-python scripts/test_integration.py         # 集成测试
-python scripts/test_performance.py         # 性能测试
+uv run python scripts/test_basic_functionality.py  # 基础功能测试
+uv run python scripts/test_cli_functions.py       # CLI功能测试
+uv run python scripts/test_service_modules.py     # 服务模块测试
+uv run python scripts/test_integration.py         # 集成测试
+uv run python scripts/test_performance.py         # 性能测试
 ```
 
 ### 项目信息

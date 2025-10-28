@@ -96,20 +96,20 @@ The project provides a comprehensive test suite:
 
 ```bash
 # Core functionality tests (recommended for daily use)
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 
 # Quick test for basic validation
-python scripts/quick_test.py
+uv run python scripts/quick_test.py
 
 # Complete test suite
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 
 # Individual test categories
-python scripts/test_basic_functionality.py  # Basic functionality
-python scripts/test_cli_functions.py       # CLI functions
-python scripts/test_service_modules.py     # Service modules
-python scripts/test_integration.py         # Integration tests
-python scripts/test_performance.py         # Performance tests
+uv run python scripts/test_basic_functionality.py  # Basic functionality
+uv run python scripts/test_cli_functions.py       # CLI functions
+uv run python scripts/test_service_modules.py     # Service modules
+uv run python scripts/test_integration.py         # Integration tests
+uv run python scripts/test_performance.py         # Performance tests
 
 # View project info
 uv run python -m article_mcp info
@@ -279,13 +279,13 @@ The project uses a comprehensive testing approach:
 ### Running Tests
 ```bash
 # Recommended daily usage
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 
 # Complete validation
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 
 # Individual testing
-python scripts/test_basic_functionality.py
+uv run python scripts/test_basic_functionality.py
 ```
 
 The testing approach verifies:

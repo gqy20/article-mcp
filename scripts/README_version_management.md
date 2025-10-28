@@ -22,14 +22,14 @@ uv version --bump major    # 主版本 (0.1.5 -> 1.0.0)
 uv version 1.0.0          # 设置为 1.0.0
 
 # 同步到所有相关文件
-python scripts/sync_version.py sync
+uv run python scripts/sync_version.py sync
 ```
 
 ### 2. 检查版本一致性
 
 ```bash
 # 检查所有文件版本号是否一致
-python scripts/sync_version.py check
+uv run python scripts/sync_version.py check
 
 # 查看当前版本
 uv version --short
@@ -50,7 +50,7 @@ uv version --short
 1. **永远不要手动修改** 除 `pyproject.toml` 外的版本号
 2. **版本号格式**：遵循语义化版本号 (MAJOR.MINOR.PATCH)
 3. **更新顺序**：先更新 `pyproject.toml`，再运行同步脚本
-4. **一致性检查**：定期运行 `python scripts/sync_version.py check`
+4. **一致性检查**：定期运行 `uv run python scripts/sync_version.py check`
 
 ## 🔧 工具命令参考
 
@@ -67,8 +67,8 @@ uv version 1.2.3            # 设置特定版本
 ### sync_version.py 脚本
 
 ```bash
-python scripts/sync_version.py sync    # 同步版本号
-python scripts/sync_version.py check   # 检查一致性
+uv run python scripts/sync_version.py sync    # 同步版本号
+uv run python scripts/sync_version.py check   # 检查一致性
 ```
 
 ## 🎉 最佳实践

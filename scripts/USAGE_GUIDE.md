@@ -9,13 +9,13 @@
 ### 最简单的测试
 ```bash
 # 测试核心工作功能（推荐日常使用）
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 ```
 
 ### 完整测试套件
 ```bash
 # 运行所有测试（耗时较长）
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 ```
 
 ## 📁 测试脚本详细说明
@@ -29,7 +29,7 @@ python scripts/run_all_tests.py
 - **适用场景**: 日常开发检查、CI/CD快速验证
 
 ```bash
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 ```
 
 **测试内容**:
@@ -84,32 +84,32 @@ python scripts/test_working_functions.py
 ### 日常开发
 ```bash
 # 快速检查核心功能
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 ```
 
 ### 代码提交前
 ```bash
 # 运行工作功能测试
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 
 # 如果有更多时间，运行基础功能测试
-python scripts/test_basic_functionality.py
+uv run python scripts/test_basic_functionality.py
 ```
 
 ### 发布前验证
 ```bash
 # 运行完整测试套件
-python scripts/run_all_tests.py
+uv run python scripts/run_all_tests.py
 ```
 
 ### 故障排除
 ```bash
 # 如果遇到问题，先测试最基础的功能
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 
 # 然后逐个运行分类测试
-python scripts/test_basic_functionality.py
-python scripts/test_cli_functions.py
+uv run python scripts/test_basic_functionality.py
+uv run python scripts/test_cli_functions.py
 ```
 
 ## 📊 测试结果解读
@@ -130,19 +130,19 @@ python scripts/test_cli_functions.py
 ```bash
 # 设置PYTHONPATH
 export PYTHONPATH=src:$PYTHONPATH
-python scripts/test_working_functions.py
+uv run python scripts/test_working_functions.py
 ```
 
 ### 详细输出
 ```bash
 # 查看详细测试输出
-python scripts/test_working_functions.py 2>&1 | tee test_output.log
+uv run python scripts/test_working_functions.py 2>&1 | tee test_output.log
 ```
 
 ### 并行测试（如果支持）
 ```bash
 # 某些测试脚本支持并行执行
-python scripts/test_performance.py --parallel
+uv run python scripts/test_performance.py --parallel
 ```
 
 ## 📝 脚本开发
@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
 如果遇到问题：
 
-1. 首先运行 `python scripts/test_working_functions.py`
+1. 首先运行 `uv run python scripts/test_working_functions.py`
 2. 查看具体的错误信息
 3. 检查Python环境和依赖
 4. 确保在项目根目录运行脚本

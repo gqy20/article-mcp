@@ -154,8 +154,8 @@ def main():
     """主函数"""
     if len(sys.argv) < 2:
         print("用法:")
-        print("  python sync_version.py sync    # 同步版本号")
-        print("  python sync_version.py check   # 检查一致性")
+        print("  uv run python sync_version.py sync    # 同步版本号")
+        print("  uv run python sync_version.py check   # 检查一致性")
         sys.exit(1)
 
     command = sys.argv[1]

@@ -21,13 +21,13 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="通用结果导出工具。导出批量处理结果为不同格式文件。",
+        description="通用结果导出工具。导出批量处理结果为JSON或CSV格式文件。",
         annotations=ToolAnnotations(
             title="批量结果导出",
             readOnlyHint=False,
             openWorldHint=True
         ),
-        tags={"export", "batch", "json", "csv", "excel"}
+        tags={"export", "batch", "json", "csv"}
     )
     def export_batch_results(
         results: dict[str, Any],
@@ -35,11 +35,11 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
         output_path: str | None = None,
         include_metadata: bool = True,
     ) -> dict[str, Any]:
-        """批量结果导出工具。导出批量处理结果为不同格式文件。
+        """批量结果导出工具。导出批量处理结果为JSON或CSV格式文件。
 
         Args:
             results: 批量处理结果
-            format_type: 导出格式 ["json", "csv", "excel"]
+            format_type: 导出格式 ["json", "csv"]
             output_path: 输出文件路径(可选)
             include_metadata: 是否包含元数据
 
@@ -89,11 +89,14 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
             elif format_type.lower() == "csv":
                 records_exported = _export_to_csv(results, output_path, include_metadata, logger)
             elif format_type.lower() == "excel":
-                records_exported = _export_to_excel(results, output_path, include_metadata, logger)
+                # Excel格式已移除，自动降级为CSV格式
+                logger.warning("Excel格式已移除，使用CSV格式替代")
+                output_path = output_path.with_suffix(".csv")
+                records_exported = _export_to_csv(results, output_path, include_metadata, logger)
             else:
                 return {
                     "success": False,
-                    "error": f"不支持的导出格式: {format_type}",
+                    "error": f"不支持的导出格式: {format_type}，支持的格式: json, csv",
                     "export_path": None,
                     "format_type": format_type,
                     "records_exported": 0,
@@ -247,24 +250,3 @@ def _export_to_csv(
         raise
 
 
-def _export_to_excel(
-    results: dict[str, Any], output_path: Path, include_metadata: bool, logger
-) -> int:
-    """导出为Excel格式"""
-    try:
-        # 简单的Excel导出实现
-        # 实际项目中可以使用pandas或openpyxl库
-        logger.warning("Excel导出功能需要安装pandas或openpyxl库，当前使用CSV格式替代")
-
-        # 改为CSV导出
-        csv_path = output_path.with_suffix(".csv")
-        records_count = _export_to_csv(results, csv_path, include_metadata, logger)
-
-        # 重命名为Excel文件名（实际内容为CSV）
-        csv_path.rename(output_path)
-
-        return records_count
-
-    except Exception as e:
-        logger.error(f"导出Excel异常: {e}")
-        raise
