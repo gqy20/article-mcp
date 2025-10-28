@@ -34,7 +34,7 @@ def create_mcp_server():
     from .tools.core.search_tools import register_search_tools
 
     # 创建 MCP 服务器实例
-    mcp = FastMCP("Article MCP Server", version="0.1.7")
+    mcp = FastMCP("Article MCP Server", version="0.1.8")
 
     # 创建服务实例
     logger = logging.getLogger(__name__)
