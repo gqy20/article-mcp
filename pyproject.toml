@@ -1,6 +1,6 @@
 [project]
 name = "article-mcp"
-version = "0.1.6"
+version = "0.1.7"
 description = "Article MCP文献搜索服务器 - 基于Europe PMC、arXiv等多个数据源的学术文献搜索工具"
 authors = [
     {name = "gqy20", email = "qingyu_ge@foxmail.com"}
@@ -35,7 +35,8 @@ dev = [
     "isort>=5.12.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
-    "pre-commit>=3.0.0"
+    "pre-commit>=3.0.0",
+    "psutil>=5.9.0"
 ]
 
 [build-system]
@@ -145,3 +146,8 @@ exclude_lines = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["article_mcp*"]
+
+[dependency-groups]
+dev = [
+    "psutil>=7.1.2",
+]

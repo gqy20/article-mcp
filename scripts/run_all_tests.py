@@ -11,12 +11,13 @@ from pathlib import Path
 # 获取脚本目录
 script_dir = Path(__file__).parent
 
-# 测试脚本列表
+# 测试脚本列表 - 只包含实际存在的测试文件
 test_scripts = [
-    ("基础功能测试", "test_basic_functionality.py"),
-    ("CLI功能测试", "test_cli_functions.py"),
-    ("服务模块测试", "test_service_modules.py"),
-    ("集成测试", "test_integration.py"),
+    ("核心功能测试", "test_working_functions.py"),
+    ("架构修复测试", "test_architecture_fixes.py"),
+    ("模块导入测试", "test_module_imports.py"),
+    ("简单导入测试", "test_simple_imports.py"),
+    ("FastMCP合规性测试", "test_fastmcp_compliance.py"),
     ("性能测试", "test_performance.py"),
 ]
 

@@ -17,7 +17,7 @@ Article MCP - 文献搜索服务器
 - 文献关系分析
 """
 
-__version__ = "0.1.5"
+__version__ = "0.1.7"
 __author__ = "gqy20"
 __email__ = "qingyu_ge@foxmail.com"
 
