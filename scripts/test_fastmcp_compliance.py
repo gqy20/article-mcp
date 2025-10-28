@@ -227,6 +227,15 @@ class FastMCPComplianceTester:
                     except Exception as e:
                         self.logger.warning(f"⚠️ HTTP资源访问失败: {e}")
 
+                    # 测试错误处理
+                    try:
+                        # 测试无效参数处理
+                        await client.call_tool("search_literature", {"keyword": 123})
+                        self.logger.warning("⚠️ HTTP模式应该检测到无效参数错误")
+                    except Exception as e:
+                        results["error_handling"] = True
+                        self.logger.info(f"✅ HTTP错误处理验证通过: {type(e).__name__}")
+
                     results["http_transport"] = True
                     self.logger.info("✅ HTTP传输验证通过")
 

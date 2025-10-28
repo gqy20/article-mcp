@@ -1,0 +1,202 @@
+name: FastMCP Compliance Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天凌晨2点运行，确保持续合规
+    - cron: '0 2 * * *'
+
+jobs:
+  compliance-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.10, 3.11, 3.12]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install uv
+        uv sync
+
+    - name: Run FastMCP Compliance Test
+      run: |
+        uv run python scripts/test_fastmcp_compliance.py
+
+    - name: Run Enhanced Error Handling Test
+      run: |
+        uv run python scripts/enhanced_error_handling_test.py
+
+    - name: Upload compliance reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: compliance-reports-python${{ matrix.python-version }}
+        path: |
+          scripts/fastmcp_compliance_report.txt
+          scripts/enhanced_error_handling_report.txt
+        retention-days: 30
+
+    - name: Check compliance score
+      run: |
+        # 检查合规性得分是否达到要求
+        if [ -f "scripts/fastmcp_compliance_report.txt" ]; then
+          SCORE=$(grep "总体合规性得分" scripts/fastmcp_compliance_report.txt | grep -o '[0-9]\+' | head -1)
+          echo "📊 合规性得分: $SCORE/100"
+
+          if [ "$SCORE" -lt 80 ]; then
+            echo "❌ 合规性得分低于80分，检查失败"
+            exit 1
+          else
+            echo "✅ 合规性得分符合要求"
+          fi
+        else
+          echo "❌ 合规性报告未生成"
+          exit 1
+        fi
+
+  performance-test:
+    runs-on: ubuntu-latest
+    needs: compliance-test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install uv
+        uv sync
+
+    - name: Run Performance Tests
+      run: |
+        uv run python scripts/test_performance.py
+
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-reports
+        path: scripts/performance_report.txt
+        retention-days: 30
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+        pip install uv
+        uv sync
+
+    - name: Run Safety Check
+      run: |
+        safety check --json --output safety-report.json || true
+        cat safety-report.json
+
+    - name: Run Bandit Security Scan
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        cat bandit-report.json
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          safety-report.json
+          bandit-report.json
+        retention-days: 30
+
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+        pip install uv
+        uv sync
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Check package
+      run: |
+        twine check dist/*
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: dist/
+        retention-days: 7
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [compliance-test, performance-test, security-scan, build-test]
+    if: always()
+
+    steps:
+    - name: Notify compliance status
+      run: |
+        if [ "${{ needs.compliance-test.result }}" == "success" ]; then
+          echo "✅ FastMCP合规性测试通过"
+        else
+          echo "❌ FastMCP合规性测试失败"
+          exit 1
+        fi
+
+        echo "📊 测试总结:"
+        echo "- 合规性测试: ${{ needs.compliance-test.result }}"
+        echo "- 性能测试: ${{ needs.performance-test.result }}"
+        echo "- 安全扫描: ${{ needs.security-scan.result }}"
+        echo "- 构建测试: ${{ needs.build-test.result }}"
