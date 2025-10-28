@@ -129,44 +129,47 @@ python main.py server
 
 配置完成后，重启你的 AI 客户端，即可使用以下功能：
 
-- 🔍 搜索学术文献 (`search_europe_pmc`)
-- 📄 获取文献详情 (`get_article_details`)  
-- 📚 获取参考文献 (`get_references_by_doi`)
-- 🔗 批量处理DOI (`batch_enrich_references_by_dois`)
-- 📰 搜索arXiv预印本 (`search_arxiv_papers`)
-- ⭐ 评估期刊质量 (`get_journal_quality`)
-- 🔗 获取相似文章 (`get_similar_articles`)
-- 🔗 获取引用文献 (`get_citing_articles`)
-- 🔄 获取所有关联信息 (`get_literature_relations`)
+- 🔍 多源文献搜索 (`search_literature`)
+- 📄 获取文献详情 (`get_article_details`)
+- 📚 获取参考文献 (`get_references`)
+- 🔗 文献关系分析 (`get_literature_relations`)
+- ⭐ 期刊质量评估 (`get_journal_quality`)
+- 📊 批量结果导出 (`export_batch_results`)
 
 ---
 
 ## 📋 完整功能列表
 
-### 核心搜索工具
+### 🔍 核心搜索工具
 
 | 工具名称 | 功能描述 | 主要参数 |
 |---------|---------|----------|
-| `search_europe_pmc` | 搜索 Europe PMC 文献数据库（高性能优化版本） | `keyword`, `email`, `start_date`, `end_date`, `max_results` |
-| `get_article_details` | 获取特定文献详细信息（高性能优化版本） | `identifier`, `id_type`, `mode`, `include_fulltext` |
-| `search_arxiv_papers` | 搜索 arXiv 预印本文献 | `keyword`, `email`, `start_date`, `end_date`, `max_results` |
+| `search_literature` | 多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。 | `keyword`, `sources[]`, `max_results`, `search_type` |
+| `get_article_details` | 获取文献详情工具。通过DOI、PMID等标识符获取文献的详细信息。 | `identifier`, `id_type`, `sources[]`, `include_quality_metrics` |
 
-### 参考文献工具
-
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|----------|
-| `get_references_by_doi` | 通过DOI获取参考文献列表（批量优化版本） | `doi` |
-| `batch_enrich_references_by_dois` | 批量补全多个DOI参考文献（超高性能版本） | `dois[]` (最多20个), `email` |
-| `get_similar_articles` | 获取相似文章推荐（基于PubMed相关文章算法） | `identifier`, `id_type`, `email`, `max_results` |
-| `get_citing_articles` | 获取引用该文献的文章 | `identifier`, `id_type`, `max_results`, `email` |
-| `get_literature_relations` | 获取文献的所有关联信息 | `identifier`, `id_type`, `max_results` |
-
-### 质量评估工具
+### 📚 参考文献工具
 
 | 工具名称 | 功能描述 | 主要参数 |
 |---------|---------|----------|
-| `get_journal_quality` | 获取期刊影响因子、分区等 | `journal_name`, `secret_key` |
-| `evaluate_articles_quality` | 批量评估文献期刊质量 | `articles[]`, `secret_key` |
+| `get_references` | 获取参考文献工具。通过文献标识符获取完整参考文献列表。 | `identifier`, `id_type`, `sources[]`, `max_results`, `include_metadata` |
+
+### 🔗 文献关系分析工具
+
+| 工具名称 | 功能描述 | 主要参数 |
+|---------|---------|----------|
+| `get_literature_relations` | 文献关系分析工具。分析文献间的引用关系、相似性和合作网络。 | `identifier/identifiers`, `id_type`, `relation_types[]`, `max_results`, `analysis_type` |
+
+### ⭐ 质量评估工具
+
+| 工具名称 | 功能描述 | 主要参数 |
+|---------|---------|----------|
+| `get_journal_quality` | 期刊质量评估工具。评估期刊的学术质量和影响力指标。 | `journal_name`, `operation`, `evaluation_criteria[]`, `include_metrics[]` |
+
+### 📊 批量处理工具
+
+| 工具名称 | 功能描述 | 主要参数 |
+|---------|---------|----------|
+| `export_batch_results` | 通用结果导出工具。导出批量处理结果为JSON或CSV格式文件。 | `results`, `format_type`, `output_path`, `include_metadata` |
 
 ---
 
@@ -230,13 +233,13 @@ export EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API密钥(可选)
 
 ```bash
 # STDIO 模式 (推荐用于桌面AI客户端)
-uv run main.py server --transport stdio
+uv run python -m article_mcp server --transport stdio
 
 # SSE 模式 (用于Web应用)
-uv run main.py server --transport sse --host 0.0.0.0 --port 9000
+uv run python -m article_mcp server --transport sse --host 0.0.0.0 --port 9000
 
 # HTTP 模式 (用于API集成)
-uv run main.py server --transport streamable-http --host 0.0.0.0 --port 9000
+uv run python -m article_mcp server --transport streamable-http --host 0.0.0.0 --port 9000
 ```
 
 ### API 限制与优化
@@ -427,7 +430,11 @@ uvx --from . article-mcp server
       "command": "uv",
       "args": [
         "run",
-        "main.py",
+        "--directory",
+        "/path/to/your/article-mcp",
+        "python",
+        "-m",
+        "article_mcp",
         "server"
       ],
       "env": {
@@ -497,23 +504,14 @@ uvx --from . article-mcp server
 
 ## 📖 使用示例
 
-### 搜索 Europe PMC 文献
+### 多源文献搜索
 
 ```json
 {
   "keyword": "machine learning cancer detection",
-  "start_date": "2020-01-01",
-  "end_date": "2024-12-31",
-  "max_results": 20
-}
-```
-
-### 获取文献详情（通过PMID）
-
-```json
-{
-  "identifier": "12345678",
-  "id_type": "pmid"
+  "sources": ["europe_pmc", "pubmed", "arxiv"],
+  "max_results": 20,
+  "search_type": "comprehensive"
 }
 ```
 
@@ -522,39 +520,56 @@ uvx --from . article-mcp server
 ```json
 {
   "identifier": "10.1000/xyz123",
-  "id_type": "doi"
+  "id_type": "doi",
+  "sources": ["europe_pmc", "crossref"],
+  "include_quality_metrics": true
 }
 ```
 
-### 获取文献详情（通过PMCID）
-
-```json
-{
-  "identifier": "PMC1234567",
-  "id_type": "pmcid"
-}
-```
-
-### 获取文献详情（异步模式）
+### 获取文献详情（通过PMID）
 
 ```json
 {
   "identifier": "12345678",
   "id_type": "pmid",
-  "mode": "async"
+  "sources": ["europe_pmc"],
+  "include_quality_metrics": false
 }
 ```
 
-### 批量获取参考文献
+### 获取参考文献
 
 ```json
 {
-  "dois": [
-    "10.1126/science.adf6218",
-    "10.1038/s41586-020-2649-2",
-    "10.1056/NEJMoa2034577"
-  ],
-  "email": "your.email@example.com"
+  "identifier": "10.1000/xyz123",
+  "id_type": "doi",
+  "sources": ["europe_pmc", "crossref"],
+  "max_results": 50,
+  "include_metadata": true
+}
+```
+
+### 文献关系分析（单个文献）
+
+```json
+{
+  "identifier": "10.1000/xyz123",
+  "id_type": "doi",
+  "relation_types": ["references", "similar", "citing"],
+  "max_results": 20,
+  "analysis_type": "basic"
+}
+```
+
+### 文献关系分析（批量分析）
+
+```json
+{
+  "identifiers": ["10.1000/xyz123", "10.1000/abc456"],
+  "id_type": "doi",
+  "relation_types": ["references", "similar"],
+  "max_results": 15,
+  "analysis_type": "basic"
 }
 ```
 
@@ -563,16 +578,42 @@ uvx --from . article-mcp server
 ```json
 {
   "journal_name": "Nature",
-  "secret_key": "your_easyscholar_key"
+  "operation": "quality",
+  "evaluation_criteria": ["impact_factor", "quartile", "jci"],
+  "include_metrics": ["impact_factor", "quartile", "jci", "分区"]
 }
 ```
 
-### 获取文献的所有关联信息
+### 批量期刊质量评估
 
 ```json
 {
-  "identifier": "10.1000/xyz123",
-  "id_type": "doi",
-  "max_results": 10
+  "journal_name": ["Nature", "Science", "Cell"],
+  "operation": "quality",
+  "include_metrics": ["impact_factor", "quartile"]
+}
+```
+
+### 导出搜索结果
+
+```json
+{
+  "results": {
+    "merged_results": [
+      {
+        "title": "论文标题",
+        "authors": [{"name": "作者1"}, {"name": "作者2"}],
+        "journal": "期刊名称",
+        "publication_date": "2024-01-01",
+        "doi": "10.1000/example123",
+        "pmid": "12345678",
+        "abstract": "论文摘要..."
+      }
+    ],
+    "total_count": 1,
+    "search_time": 1.2
+  },
+  "format_type": "json",
+  "include_metadata": true
 }
 ```
