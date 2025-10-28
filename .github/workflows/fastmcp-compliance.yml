@@ -48,7 +48,7 @@ jobs:
         fi
 
     - name: Upload compliance report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: compliance-report
