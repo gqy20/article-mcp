@@ -2,6 +2,10 @@
 
 > 🔬 基于 FastMCP 框架开发的专业文献搜索工具，可与 Claude Desktop、Cherry Studio 等 AI 助手无缝集成
 
+<a href="https://glama.ai/mcp/servers/@gqy20/article-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@gqy20/article-mcp/badge" alt="Europe PMC Literature Search Server MCP server" />
+</a>
+
 ## 🚀 快速开始
 
 ### 0️⃣ 克隆项目
