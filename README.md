@@ -75,7 +75,8 @@ python main.py server
         "server"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }
@@ -97,7 +98,8 @@ python main.py server
         "server"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }
@@ -118,12 +120,15 @@ python main.py server
         "stdio"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }
 }
 ```
+
+> **重要提示**：为了确保在 Cherry Studio 中正常工作，必须设置 `PYTHONIOENCODING=utf-8` 环境变量以正确处理 Unicode 字符。
 
 ### 4️⃣ 开始使用
 
@@ -412,7 +417,8 @@ uvx --from . article-mcp server
         "server"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }
@@ -438,7 +444,8 @@ uvx --from . article-mcp server
         "server"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }
@@ -461,12 +468,15 @@ uvx --from . article-mcp server
         "stdio"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }
 }
 ```
+
+> **编码兼容性说明**：Cherry Studio 需要 `PYTHONIOENCODING=utf-8` 环境变量来正确处理 Unicode 字符，避免工具列表加载失败。
 
 ### 发布说明
 

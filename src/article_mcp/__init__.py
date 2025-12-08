@@ -17,6 +17,11 @@ Article MCP - 文献搜索服务器
 - 文献关系分析
 """
 
+import os
+
+# 设置编码环境，确保emoji字符正确处理
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 __version__ = "0.1.8"
 __author__ = "gqy20"
 __email__ = "qingyu_ge@foxmail.com"
