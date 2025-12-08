@@ -1,5 +1,7 @@
 # Article MCP 文献搜索服务器
 
+[![MCP Server](https://glama.ai/mcp/servers/@gqy20/article-mcp/badge)](https://glama.ai/mcp/servers/@gqy20/article-mcp)
+
 > 🔬 基于 FastMCP 框架开发的专业文献搜索工具，可与 Claude Desktop、Cherry Studio 等 AI 助手无缝集成
 
 ## 🚀 快速开始
