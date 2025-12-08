@@ -22,7 +22,7 @@ def register_config_resources(mcp: FastMCP) -> None:
         return {
             "status": "running",
             "server": "Article MCP Server",
-            "version": "0.1.8",
+            "version": "0.1.9",
             "timestamp": time.time(),
             "uptime": "N/A",  # 可以后续实现
             "supported_data_sources": [
