@@ -2,10 +2,11 @@
 CrossRef API服务 - 使用统一API调用
 """
 
+import asyncio
 import logging
 from typing import Any
 
-from .api_utils import get_api_client
+from .api_utils import get_api_client, get_async_api_client
 
 
 class CrossRefService:
@@ -13,6 +14,13 @@ class CrossRefService:
         self.logger = logger or logging.getLogger(__name__)
         self.base_url = "https://api.crossref.org"
         self.api_client = get_api_client(logger)
+        self._async_api_client = None  # 延迟初始化异步客户端
+
+    def _get_async_client(self):
+        """获取异步API客户端（延迟初始化）"""
+        if self._async_api_client is None:
+            self._async_api_client = get_async_api_client(self.logger)
+        return self._async_api_client
 
     def search_works(self, query: str, max_results: int = 10) -> dict[str, Any]:
         """搜索CrossRef学术文献"""
@@ -39,6 +47,39 @@ class CrossRefService:
 
         except Exception as e:
             self.logger.error(f"CrossRef搜索失败: {e}")
+            return {
+                "success": False,
+                "articles": [],
+                "total_count": 0,
+                "source": "crossref",
+                "error": str(e),
+            }
+
+    async def search_works_async(self, query: str, max_results: int = 10) -> dict[str, Any]:
+        """异步搜索CrossRef学术文献"""
+        try:
+            url = f"{self.base_url}/works"
+            params = {
+                "query": query,
+                "rows": max_results,
+                "select": "title,author,DOI,created,member,short-container-title",
+            }
+
+            api_result = await self._get_async_client().get(url, params=params)
+
+            if not api_result.get("success", False):
+                raise Exception(api_result.get("error", "API调用失败"))
+
+            data = api_result.get("data", {})
+            return {
+                "success": True,
+                "articles": self._format_articles(data.get("message", {}).get("items", [])),
+                "total_count": data.get("message", {}).get("total-results", 0),
+                "source": "crossref",
+            }
+
+        except Exception as e:
+            self.logger.error(f"CrossRef异步搜索失败: {e}")
             return {
                 "success": False,
                 "articles": [],

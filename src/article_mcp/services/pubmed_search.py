@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 
@@ -26,6 +27,9 @@ class PubMedService:
             "Nov": "11",
             "Dec": "12",
         }
+
+        # 速率限制：PubMed 要求每秒最多3个请求（无API key时）
+        self._request_semaphore = None  # 延迟初始化，异步方法中创建
 
     # ------------------------ 公共辅助方法 ------------------------ #
     @staticmethod
@@ -434,6 +438,144 @@ class PubMedService:
             return {"articles": [], "error": f"网络请求错误: {e}", "message": None}
         except Exception as e:
             return {"articles": [], "error": f"处理错误: {e}", "message": None}
+
+    # ------------------------ 异步搜索接口 ------------------------ #
+    async def search_async(
+        self,
+        keyword: str,
+        email: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        max_results: int = 10,
+    ) -> dict[str, Any]:
+        """异步关键词搜索 PubMed，返回与 Europe PMC 一致的结构
+
+        与同步 search() 方法的区别：
+        - 使用 aiohttp 替代 requests 进行异步 HTTP 请求
+        - 使用 semaphore 进行速率限制（每秒最多3个请求）
+        - ESearch 和 EFetch 请求可以并发执行（与其他服务）
+
+        参数说明：
+        - keyword: 搜索关键词
+        - email: 可选的邮箱地址（用于 API 请求）
+        - start_date: 起始日期 (YYYY-MM-DD)
+        - end_date: 结束日期 (YYYY-MM-DD)
+        - max_results: 最大返回结果数
+
+        返回值：
+        - articles: 文章列表
+        - error: 错误信息（如果有）
+        - message: 状态消息
+        - processing_time: 处理时间（秒）
+        """
+        import time
+        import xml.etree.ElementTree as ET
+
+        import aiohttp
+
+        start_time = time.time()
+
+        # 速率限制
+        if self._request_semaphore is None:
+            self._request_semaphore = asyncio.Semaphore(3)
+
+        async with self._request_semaphore:
+            try:
+                if email and not self._validate_email(email):
+                    self.logger.info("邮箱格式不正确，将不在请求中携带 email 参数")
+                    email = None
+
+                # 构建查询语句
+                term = keyword.strip()
+                date_filter = self._format_date_range(start_date, end_date)
+                if date_filter:
+                    term = f"{term} AND {date_filter}"
+
+                # ESEARCH 请求参数
+                esearch_params = {
+                    "db": "pubmed",
+                    "term": term,
+                    "retmax": str(max_results),
+                    "retmode": "xml",
+                }
+                if email:
+                    esearch_params["email"] = email
+
+                self.logger.info(f"PubMed 异步 ESearch: {term}")
+
+                # 使用 aiohttp 进行异步请求
+                timeout = aiohttp.ClientTimeout(total=30)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    # ESEARCH
+                    async with session.get(
+                        self.base_url + "esearch.fcgi",
+                        params=esearch_params,
+                        headers=self.headers
+                    ) as response:
+                        if response.status != 200:
+                            return {
+                                "articles": [],
+                                "error": f"ESearch HTTP {response.status}",
+                                "message": None
+                            }
+                        esearch_content = await response.text()
+
+                    ids = ET.fromstring(esearch_content).findall(".//Id")
+                    if not ids:
+                        return {
+                            "articles": [],
+                            "message": "未找到相关文献",
+                            "error": None
+                        }
+                    pmids = [elem.text for elem in ids[:max_results]]
+
+                    # EFETCH 请求参数
+                    efetch_params = {
+                        "db": "pubmed",
+                        "id": ",".join(pmids),
+                        "retmode": "xml",
+                        "rettype": "xml",
+                    }
+                    if email:
+                        efetch_params["email"] = email
+
+                    self.logger.info(f"PubMed 异步 EFetch {len(pmids)} 篇文献")
+
+                    # EFETCH
+                    async with session.get(
+                        self.base_url + "efetch.fcgi",
+                        params=efetch_params,
+                        headers=self.headers
+                    ) as response:
+                        if response.status != 200:
+                            return {
+                                "articles": [],
+                                "error": f"EFetch HTTP {response.status}",
+                                "message": None
+                            }
+                        efetch_content = await response.text()
+
+                    root = ET.fromstring(efetch_content)
+
+                    articles = []
+                    for art in root.findall(".//PubmedArticle"):
+                        info = self._process_article(art)
+                        if info:
+                            articles.append(info)
+
+                    return {
+                        "articles": articles,
+                        "error": None,
+                        "message": f"找到 {len(articles)} 篇相关文献" if articles else "未找到相关文献",
+                        "processing_time": round(time.time() - start_time, 2),
+                    }
+
+            except asyncio.TimeoutError:
+                return {"articles": [], "error": "请求超时", "message": None}
+            except aiohttp.ClientError as e:
+                return {"articles": [], "error": f"网络请求错误: {e}", "message": None}
+            except Exception as e:
+                return {"articles": [], "error": f"处理错误: {e}", "message": None}
 
     # ------------------------ 引用文献获取 ------------------------ #
     def get_citing_articles(self, pmid: str, email: str = None, max_results: int = 20):

@@ -213,3 +213,181 @@ def simple_get(url: str, **params) -> dict[str, Any]:
 def simple_post(url: str, **kwargs) -> dict[str, Any]:
     """简单的POST请求"""
     return get_api_client().post(url, **kwargs)
+
+
+# ============================================================================
+# 异步 API 客户端
+# ============================================================================
+
+import asyncio
+from typing import Any
+
+import aiohttp
+
+
+class AsyncAPIClient:
+    """异步 API 客户端 - 用于异步 HTTP 请求"""
+
+    def __init__(self, logger: logging.Logger | None = None):
+        self.logger = logger or logging.getLogger(__name__)
+        self._session: aiohttp.ClientSession | None = None
+        self.timeout = aiohttp.ClientTimeout(total=60)
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """获取或创建 aiohttp 会话（懒加载）"""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(
+                timeout=self.timeout,
+                headers={
+                    "User-Agent": "Article-MCP/2.0-Async",
+                    "Accept": "application/json",
+                    "Accept-Encoding": "gzip, deflate",
+                }
+            )
+        return self._session
+
+    async def get(
+        self,
+        url: str,
+        params: dict | None = None,
+        headers: dict | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
+        """
+        异步 GET 请求
+
+        Args:
+            url: 请求URL
+            params: 查询参数
+            headers: 额外请求头
+            timeout: 超时时间（秒）
+
+        Returns:
+            统一格式的响应
+        """
+        try:
+            session = await self._get_session()
+
+            request_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else self.timeout
+
+            async with session.get(url, params=params, headers=headers, timeout=request_timeout) as response:
+                if response.status >= 400:
+                    error_msg = f"HTTP {response.status}: {response.reason}"
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                        "error_type": "http_error",
+                        "status_code": response.status,
+                        "url": url
+                    }
+
+                # 尝试解析 JSON
+                try:
+                    data = await response.json()
+                except (aiohttp.ContentTypeError, ValueError):
+                    data = await response.text() if response.content else {}
+
+                return {
+                    "success": True,
+                    "status_code": response.status,
+                    "data": data,
+                    "headers": dict(response.headers),
+                    "url": str(response.url)
+                }
+
+        except asyncio.TimeoutError:
+            self.logger.error(f"异步GET请求超时 {url}")
+            return {"success": False, "error": "请求超时", "error_type": "timeout", "url": url}
+        except aiohttp.ClientError as e:
+            self.logger.error(f"异步GET请求失败 {url}: {e}")
+            return {"success": False, "error": str(e), "error_type": "client_error", "url": url}
+        except Exception as e:
+            self.logger.error(f"异步GET请求异常 {url}: {e}")
+            return {"success": False, "error": str(e), "error_type": "unknown_error", "url": url}
+
+    async def post(
+        self,
+        url: str,
+        data: dict | str | None = None,
+        json: dict | None = None,
+        headers: dict | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
+        """
+        异步 POST 请求
+
+        Args:
+            url: 请求URL
+            data: 表单数据
+            json: JSON数据
+            headers: 额外请求头
+            timeout: 超时时间（秒）
+
+        Returns:
+            统一格式的响应
+        """
+        try:
+            session = await self._get_session()
+
+            request_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else self.timeout
+
+            async with session.post(url, data=data, json=json, headers=headers, timeout=request_timeout) as response:
+                if response.status >= 400:
+                    error_msg = f"HTTP {response.status}: {response.reason}"
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                        "error_type": "http_error",
+                        "status_code": response.status,
+                        "url": url
+                    }
+
+                # 尝试解析 JSON
+                try:
+                    data = await response.json()
+                except (aiohttp.ContentTypeError, ValueError):
+                    data = await response.text() if response.content else {}
+
+                return {
+                    "success": True,
+                    "status_code": response.status,
+                    "data": data,
+                    "headers": dict(response.headers),
+                    "url": str(response.url)
+                }
+
+        except asyncio.TimeoutError:
+            self.logger.error(f"异步POST请求超时 {url}")
+            return {"success": False, "error": "请求超时", "error_type": "timeout", "url": url}
+        except aiohttp.ClientError as e:
+            self.logger.error(f"异步POST请求失败 {url}: {e}")
+            return {"success": False, "error": str(e), "error_type": "client_error", "url": url}
+        except Exception as e:
+            self.logger.error(f"异步POST请求异常 {url}: {e}")
+            return {"success": False, "error": str(e), "error_type": "unknown_error", "url": url}
+
+    async def close(self):
+        """关闭会话"""
+        if self._session and not self._session.closed:
+            await self._session.close()
+            self._session = None
+
+
+# 全局异步API客户端实例
+_async_api_client: AsyncAPIClient | None = None
+
+
+def get_async_api_client(logger: logging.Logger | None = None) -> AsyncAPIClient:
+    """获取统一的异步API客户端（单例模式）"""
+    global _async_api_client
+    if _async_api_client is None:
+        _async_api_client = AsyncAPIClient(logger)
+    return _async_api_client
+
+
+async def close_async_api_client():
+    """关闭全局异步API客户端"""
+    global _async_api_client
+    if _async_api_client:
+        await _async_api_client.close()
+        _async_api_client = None

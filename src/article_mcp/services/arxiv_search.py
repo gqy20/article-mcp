@@ -3,6 +3,7 @@ arXiv 文献搜索服务
 基于 arXiv API 的学术文献搜索功能
 """
 
+import asyncio
 import logging
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -319,6 +320,227 @@ def search_arxiv(
         }
 
 
+async def search_arxiv_async(
+    keyword: str,
+    email: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    max_results: int = 10,
+    logger: logging.Logger | None = None,
+) -> dict[str, Any]:
+    """
+    异步搜索 arXiv 文献数据库
+
+    参数:
+        keyword: 搜索关键词
+        email: 联系邮箱（可选）
+        start_date: 开始日期，格式：YYYY-MM-DD（可选）
+        end_date: 结束日期，格式：YYYY-MM-DD（可选）
+        max_results: 最大返回结果数量，默认10
+        logger: 日志记录器（可选）
+
+    返回:
+        包含搜索结果的字典
+    """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+
+    try:
+        # 验证关键词
+        if not keyword or not keyword.strip():
+            return {
+                "articles": [],
+                "total_count": 0,
+                "message": "关键词不能为空",
+                "error": "关键词不能为空",
+            }
+
+        # 验证最大结果数
+        if not isinstance(max_results, int) or max_results < 1:
+            return {
+                "articles": [],
+                "total_count": 0,
+                "message": "max_results必须为大于等于1的整数",
+                "error": "max_results必须为大于等于1的整数",
+            }
+
+        # 构建基础查询
+        search_query_parts = [f"all:{keyword.strip()}"]
+
+        # 处理日期参数
+        if start_date or end_date:
+            try:
+                # 解析日期
+                end_dt = parse_date(end_date) if end_date else datetime.now()
+                start_dt = parse_date(start_date) if start_date else end_dt - relativedelta(years=3)
+
+                # 检查时间范围有效性
+                if start_dt > end_dt:
+                    return {
+                        "articles": [],
+                        "total_count": 0,
+                        "message": "起始时间不能晚于终止时间",
+                        "error": "起始时间不能晚于终止时间",
+                    }
+
+                # 格式化为arXiv日期范围查询条件
+                start_str = start_dt.strftime("%Y%m%d") + "0000"
+                end_str = end_dt.strftime("%Y%m%d") + "2359"
+                date_filter = f"submittedDate:[{start_str} TO {end_str}]"
+                search_query_parts.append(date_filter)
+
+            except ValueError as e:
+                return {
+                    "articles": [],
+                    "total_count": 0,
+                    "message": f"日期参数错误: {str(e)}",
+                    "error": f"日期参数错误: {str(e)}",
+                }
+
+        # 组合查询字符串
+        full_query = " AND ".join(search_query_parts)
+        encoded_query = urllib.parse.quote_plus(full_query)
+
+        base_url = "http://export.arxiv.org/api/query?"
+        articles = []
+        start_index = 0
+        results_per_page = min(100, max_results)  # arXiv 推荐每次不超过100条
+
+        logger.info(f"开始异步搜索 arXiv: {keyword}")
+
+        # 使用 aiohttp 进行异步请求
+        import aiohttp
+
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            while len(articles) < max_results:
+                num_to_fetch = min(results_per_page, max_results - len(articles))
+                if num_to_fetch <= 0:
+                    break
+
+                # 构建请求URL
+                url = (
+                    f"{base_url}search_query={encoded_query}"
+                    f"&start={start_index}"
+                    f"&max_results={num_to_fetch}"
+                    f"&sortBy=submittedDate&sortOrder=descending"
+                )
+
+                # 设置请求头
+                headers = {
+                    "User-Agent": (
+                        f"Europe-PMC-MCP-Server/2.0-Async (contact: {email})"
+                        if email
+                        else "Europe-PMC-MCP-Server/2.0-Async"
+                    )
+                }
+
+                async with session.get(url, headers=headers) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"arXiv API 返回错误状态 {response.status}: {error_text}")
+                        return {
+                            "articles": articles,
+                            "total_count": len(articles),
+                            "message": f"arXiv API 返回错误状态 {response.status}",
+                            "error": f"HTTP {response.status}",
+                        }
+
+                    # 检查内容类型
+                    content_type = response.headers.get("Content-Type", "")
+                    if "application/atom+xml" not in content_type:
+                        logger.error(f"意外的响应内容类型: {content_type}")
+                        return {
+                            "articles": [],
+                            "total_count": 0,
+                            "message": "arXiv API 返回了非预期的内容",
+                            "error": "arXiv API 返回了非预期的内容",
+                        }
+
+                    # 获取响应内容
+                    content = await response.text()
+
+                # 解析XML响应
+                root = ET.fromstring(content)
+                entries = root.findall(f"{ATOM_NS}entry")
+
+                # 如果当前页没有结果，停止获取
+                if not entries:
+                    logger.info("arXiv API 返回了空结果页，停止获取")
+                    break
+
+                # 处理本页文献
+                for entry in entries:
+                    if len(articles) >= max_results:
+                        break
+
+                    article_info = process_arxiv_entry(entry)
+                    if article_info:
+                        articles.append(article_info)
+
+                # 更新起始索引
+                start_index += len(entries)
+
+                # 如果获取到的数量少于请求的数量，说明是最后一页
+                if len(entries) < num_to_fetch:
+                    logger.info("获取到的结果数少于请求数，认为是最后一页")
+                    break
+
+        logger.info(f"成功异步获取 {len(articles)} 篇 arXiv 文献")
+
+        return {
+            "articles": articles,
+            "total_count": len(articles),
+            "message": (
+                f"找到 {len(articles)} 篇相关文献" if articles else "未找到与查询匹配的相关文献"
+            ),
+            "error": None,
+            "search_info": {
+                "keyword": keyword,
+                "date_range": (
+                    f"{start_date} 到 {end_date}" if start_date or end_date else "无日期限制"
+                ),
+                "max_results": max_results,
+            },
+        }
+
+    except asyncio.TimeoutError:
+        logger.error("arXiv API 异步请求超时")
+        return {
+            "articles": [],
+            "total_count": 0,
+            "message": "请求 arXiv API 超时",
+            "error": "请求超时",
+        }
+
+    except aiohttp.ClientError as e:
+        logger.error(f"arXiv API 异步网络请求错误: {str(e)}")
+        return {
+            "articles": [],
+            "total_count": 0,
+            "message": f"网络请求错误: {str(e)}",
+            "error": f"网络请求错误: {str(e)}",
+        }
+
+    except ET.ParseError as e:
+        logger.error(f"解析 arXiv XML 响应失败: {str(e)}")
+        return {
+            "articles": [],
+            "total_count": 0,
+            "message": "解析 arXiv 返回的 XML 数据时出错",
+            "error": "解析 XML 数据时出错",
+        }
+
+    except Exception as e:
+        logger.error(f"处理 arXiv 异步搜索时发生未知错误: {str(e)}")
+        return {
+            "articles": [],
+            "total_count": 0,
+            "message": f"处理错误: {str(e)}",
+            "error": f"处理错误: {str(e)}",
+        }
+
+
 class ArXivSearchService:
     """arXiv搜索服务类"""
 
@@ -328,6 +550,15 @@ class ArXivSearchService:
     def search(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
         """搜索arXiv文献"""
         return search_arxiv(keyword=keyword, max_results=max_results, logger=self.logger, **kwargs)
+
+    async def search_async(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
+        """异步搜索arXiv文献"""
+        return await search_arxiv_async(
+            keyword=keyword,
+            max_results=max_results,
+            logger=self.logger,
+            **kwargs
+        )
 
     def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs) -> dict[str, Any]:
         """获取arXiv文献详情"""

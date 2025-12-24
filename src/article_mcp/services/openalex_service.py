@@ -2,10 +2,11 @@
 OpenAlex API服务 - 使用统一API调用
 """
 
+import asyncio
 import logging
 from typing import Any
 
-from .api_utils import get_api_client
+from .api_utils import get_api_client, get_async_api_client
 
 
 class OpenAlexService:
@@ -20,6 +21,16 @@ class OpenAlexService:
             "User-Agent": "Article-MCP/2.0 (mailto:user@example.com)",
             "Accept": "application/json"
         })
+        # 异步客户端（延迟初始化）
+        self._async_api_client = None
+
+    def _get_async_client(self):
+        """获取异步API客户端（延迟初始化）"""
+        if self._async_api_client is None:
+            self._async_api_client = get_async_api_client(self.logger)
+            # OpenAlex需要特定的User-Agent以避免403错误
+            # 注意：asyncio中需要异步设置headers
+        return self._async_api_client
 
     def search_works(
         self, query: str, max_results: int = 10, filters: dict = None
@@ -51,6 +62,50 @@ class OpenAlexService:
 
         except Exception as e:
             self.logger.error(f"OpenAlex搜索失败: {e}")
+            return {
+                "success": False,
+                "articles": [],
+                "total_count": 0,
+                "source": "openalex",
+                "error": str(e),
+            }
+
+    async def search_works_async(
+        self, query: str, max_results: int = 10, filters: dict = None
+    ) -> dict[str, Any]:
+        """异步搜索OpenAlex学术文献"""
+        try:
+            url = f"{self.base_url}/works"
+            params = {
+                "search": query,
+                "per-page": max_results,
+                "select": "id,title,authorships,publication_year,primary_location,open_access",
+            }
+
+            if filters:
+                params.update(filters)
+
+            # OpenAlex 需要特定的 User-Agent
+            headers = {
+                "User-Agent": "Article-MCP/2.0-Async (mailto:user@example.com)",
+                "Accept": "application/json"
+            }
+
+            api_result = await self._get_async_client().get(url, params=params, headers=headers)
+
+            if not api_result.get("success", False):
+                raise Exception(api_result.get("error", "API调用失败"))
+
+            data = api_result.get("data", {})
+            return {
+                "success": True,
+                "articles": self._format_articles(data.get("results", [])),
+                "total_count": data.get("meta", {}).get("count", 0),
+                "source": "openalex",
+            }
+
+        except Exception as e:
+            self.logger.error(f"OpenAlex异步搜索失败: {e}")
             return {
                 "success": False,
                 "articles": [],
