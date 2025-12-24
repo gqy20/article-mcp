@@ -167,6 +167,64 @@ class TestSingleLiteratureRelations:
         assert "文献标识符不能为空" in result.get("error", "")
         assert result["relations"] == {}
 
+    async def test_single_literature_relations_citing_articles(
+        self, mock_services, mock_openalex_service, logger
+    ):
+        """测试获取引用文献功能（修复后）"""
+        # 更新 mock 返回更完整的引用文献数据
+        mock_openalex_service.get_citations = Mock(
+            return_value={
+                "success": True,
+                "citations": [
+                    {
+                        "title": "Citing Article 1: Cancer Research",
+                        "authors": ["Author One", "Author Two"],
+                        "doi": "10.3333/cite1.2022",
+                        "journal": "Nature",
+                        "publication_year": "2022",
+                        "source": "openalex",
+                    },
+                    {
+                        "title": "Citing Article 2: Angiogenesis Study",
+                        "authors": ["Author Three"],
+                        "doi": "10.4444/cite2.2023",
+                        "journal": "Cell",
+                        "publication_year": "2023",
+                        "source": "openalex",
+                    },
+                ],
+                "total_count": 2,
+            }
+        )
+        relation_tools._relation_services = mock_services
+
+        result = relation_tools._single_literature_relations(
+            identifier="10.1038/nature10144",
+            id_type="doi",
+            relation_types=["citing"],
+            max_results=10,
+            sources=["openalex"],
+            logger=logger,
+        )
+
+        # 验证结果
+        assert result["success"] is True
+        assert "citing" in result["relations"]
+        assert len(result["relations"]["citing"]) == 2
+        assert result["statistics"]["citing_count"] == 2
+        assert result["statistics"]["total_relations"] == 2
+
+        # 验证引用文献数据完整性
+        citing_1 = result["relations"]["citing"][0]
+        assert citing_1["title"] == "Citing Article 1: Cancer Research"
+        assert citing_1["journal"] == "Nature"
+        assert citing_1["publication_year"] == "2022"
+
+        # 验证服务方法被调用
+        mock_openalex_service.get_citations.assert_called_once_with(
+            "10.1038/nature10144", 10
+        )
+
 
 @pytest.mark.asyncio
 class TestBatchLiteratureRelations:

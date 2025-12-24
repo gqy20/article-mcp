@@ -134,10 +134,10 @@ class OpenAlexService:
                     "error": f"无法找到DOI {doi} 对应的OpenAlex ID"
                 }
 
-            # 使用OpenAlex ID查询引用文献
+            # 使用OpenAlex ID查询引用文献（需要W前缀）
             url = f"{self.base_url}/works"
             params = {
-                "filter": f"cites:{openalex_id}",
+                "filter": f"cites:W{openalex_id}",
                 "per-page": max_results,
                 "select": "id,title,authorships,publication_year,primary_location,doi",
             }
