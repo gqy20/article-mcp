@@ -55,5 +55,5 @@ repos:
         always_run: false
 
 # 配置选项
-default_stages: [commit]
+default_stages: [pre-commit]
 fail_fast: false
