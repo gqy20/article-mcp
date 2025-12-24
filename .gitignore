@@ -30,6 +30,8 @@ logs/
 htmlcov/
 .pytest_cache/
 test-reports/
+# pytest临时fixture目录
+<pytest_fixture(*)>
 
 # 缓存目录
 .mypy_cache/
