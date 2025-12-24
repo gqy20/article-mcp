@@ -179,26 +179,30 @@ def merge_citation_results(citation_results: dict[str, dict]) -> dict[str, Any]:
 
 @lru_cache(maxsize=5000)
 def extract_identifier_type(identifier: str) -> str:
-    """提取标识符类型"""
-    identifier = identifier.strip()
+    """提取标识符类型，支持带前缀的格式"""
+    original = identifier
+    identifier = identifier.strip().upper()
 
-    # DOI检测
-    if identifier.startswith("10.") and "/" in identifier:
+    # DOI检测 (支持 DOI: 前缀、URL 格式、或直接以 10. 开头)
+    if (
+        identifier.startswith("DOI:")
+        or "//" in identifier
+        or (original.startswith("10.") and "/" in original)
+    ):
         return "doi"
 
-    # PMID检测 (纯数字，通常7-8位)
-    if identifier.isdigit() and 6 <= len(identifier) <= 8:
-        return "pmid"
-
-    # PMCID检测
-    if identifier.startswith("PMC") and identifier[3:].isdigit():
+    # PMCID检测 (支持 PMCID: 或 PMC 前缀)
+    if identifier.startswith("PMCID:") or identifier.startswith("PMC"):
         return "pmcid"
 
-    # arXiv ID检测
-    if identifier.startswith("arXiv:") or (
-        "." in identifier
-        and identifier.replace(".", "").replace("-", "").replace("_", "").isalnum()
+    # PMID检测 (支持 PMID: 前缀，或纯数字7-8位)
+    if identifier.startswith("PMID:") or (
+        original.isdigit() and 6 <= len(original) <= 8
     ):
+        return "pmid"
+
+    # arXiv ID检测 (支持 ARXIV: 前缀或 arXiv: 前缀)
+    if identifier.startswith("ARXIV:") or original.startswith("arXiv:"):
         return "arxiv_id"
 
     # 默认尝试DOI
