@@ -2,6 +2,8 @@
 文献关系分析工具 - 核心工具4（统一关系分析工具）
 """
 
+import asyncio
+import logging
 import time
 from typing import Any
 
@@ -9,12 +11,14 @@ from fastmcp import FastMCP
 
 # 全局服务实例
 _relation_services = None
+_logger = None  # 全局 logger
 
 
 def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册文献关系分析工具"""
-    global _relation_services
+    global _relation_services, _logger
     _relation_services = services
+    _logger = logger
 
     from mcp.types import ToolAnnotations
 
@@ -113,9 +117,12 @@ def _single_literature_relations(
     relation_types: list[str],
     max_results: int,
     sources: list[str],
-    logger,
+    logger: Any = None,
 ) -> dict[str, Any]:
     """单个文献的关系分析"""
+    # 使用传入的 logger 或全局 logger
+    logger = logger or _logger or logging.getLogger(__name__)
+
     try:
         if not identifier or not identifier.strip():
             return {
@@ -188,15 +195,18 @@ def _single_literature_relations(
         }
 
 
-def _batch_literature_relations(
+async def _batch_literature_relations(
     identifiers: list[str],
     id_type: str,
     relation_types: list[str],
     max_results: int,
     sources: list[str],
-    logger,
+    logger: Any = None,
 ) -> dict[str, Any]:
-    """批量文献关系分析"""
+    """批量文献关系分析（异步并行版本）"""
+    # 使用传入的 logger 或全局 logger
+    logger = logger or _logger or logging.getLogger(__name__)
+
     try:
         if not identifiers:
             return {
@@ -212,22 +222,37 @@ def _batch_literature_relations(
         batch_results = {}
         successful_analyses = 0
 
-        for identifier in identifiers:
+        # 并行分析每个文献
+        async def analyze_single(identifier: str) -> tuple[str, dict[str, Any]]:
+            """分析单个文献"""
             try:
                 result = _single_literature_relations(
                     identifier, id_type, relation_types, max_results, sources, logger
                 )
-                batch_results[identifier] = result
-                if result.get("success", False):
-                    successful_analyses += 1
+                return identifier, result
             except Exception as e:
                 logger.error(f"分析文献 '{identifier}' 失败: {e}")
-                batch_results[identifier] = {
+                return identifier, {
                     "success": False,
                     "error": str(e),
                     "identifier": identifier,
                     "relations": {},
                 }
+
+        # 并行执行所有文献分析
+        tasks = [analyze_single(identifier) for identifier in identifiers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # 处理结果
+        for result in results:
+            if isinstance(result, Exception):
+                logger.error(f"分析文献时发生异常: {result}")
+                continue
+
+            identifier, analysis_result = result
+            batch_results[identifier] = analysis_result
+            if analysis_result.get("success", False):
+                successful_analyses += 1
 
         processing_time = round(time.time() - start_time, 2)
 
@@ -252,14 +277,17 @@ def _batch_literature_relations(
         }
 
 
-def _analyze_literature_network(
+async def _analyze_literature_network(
     identifiers: list[str],
     analysis_type: str,
     max_depth: int,
     max_results: int,
-    logger,
+    logger: Any = None,
 ) -> dict[str, Any]:
-    """文献网络分析"""
+    """文献网络分析（异步版本）"""
+    # 使用传入的 logger 或全局 logger
+    logger = logger or _logger or logging.getLogger(__name__)
+
     try:
         if not identifiers:
             return {
