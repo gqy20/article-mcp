@@ -4,64 +4,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Article MCP is a high-performance literature search server based on FastMCP framework that integrates multiple academic databases including Europe PMC, arXiv, and PubMed. It provides comprehensive literature search, reference management, and quality evaluation tools for academic research.
+Article MCP is a high-performance literature search server based on FastMCP framework that integrates multiple academic databases including Europe PMC, arXiv, PubMed, CrossRef, and OpenAlex. It provides comprehensive literature search, reference management, and quality evaluation tools for academic research.
 
 ## Architecture
 
-The project follows a standard Python src layout architecture with clear separation of concerns:
+The project follows a standard Python src layout with layered architecture:
 
-- **Core Package** (`src/article_mcp/`): Main package following Python packaging best practices
-- **Service Layer** (`src/article_mcp/services/`): Service layer for API integrations and business logic
-- **Tool Layer** (`src/article_mcp/tools/`): MCP tool registration and implementations
-- **Compatibility Layer** (`main.py`): Backward-compatible CLI interface
+- **CLI Layer** (`cli.py`): Main CLI entry point and MCP server creation via `create_mcp_server()`
+- **Tool Layer** (`tools/core/`): 6 core MCP tool registrations
+- **Service Layer** (`services/`): API integrations using dependency injection pattern
+- **Middleware Layer** (`middleware/`): Error handling, logging, and performance monitoring
+- **Resource Layer** (`resources/`): MCP resources for config and journal data
+- **Compatibility Layer** (`main.py`): Backward-compatible CLI entry point
 
-### Core Package Structure
+### The 6 Core Tools
 
-The main package (`src/article_mcp/`) follows Python packaging standards with:
+All tools are registered in `cli.py:create_mcp_server()` with their respective service dependencies:
 
-- `__init__.py`: Package initialization and clean API exports
-- `cli.py`: Main CLI entry point and MCP server creation
-- `__main__.py`: Python module execution support
+1. **search_literature** (`tools/core/search_tools.py`): Multi-source literature search
+2. **get_article_details** (`tools/core/article_tools.py`): Article details by identifier
+3. **get_references** (`tools/core/reference_tools.py`): Reference list retrieval
+4. **get_literature_relations** (`tools/core/relation_tools.py`): Citation relationship analysis
+5. **get_journal_quality** (`tools/core/quality_tools.py`): Journal quality assessment
+6. **export_batch_results** (`tools/core/batch_tools.py`): Batch result export
 
-### Service Layer Architecture
+### Service Injection Pattern
 
-The service layer (`src/article_mcp/services/`) implements dependency injection pattern with these key services:
+Services are created in `create_mcp_server()` and passed to tool registrars:
+```python
+pubmed_service = create_pubmed_service(logger)
+europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)
+# ... other services
+register_search_tools(mcp, {"europe_pmc": europe_pmc_service, ...}, logger)
+```
 
-- `EuropePMCService` (`europe_pmc.py`): Europe PMC API integration with caching and performance optimizations
-- `ReferenceService` (`reference_service.py`): Reference management and DOI resolution
-- `PubMedService` (`pubmed_search.py`): PubMed search and literature retrieval
-- `LiteratureRelationService` (`literature_relation_service.py`): Literature relationship analysis
-- `ArXivSearchService` (`arxiv_search.py`): arXiv preprint search functionality
-- `CrossRefService` (`crossref_service.py`): CrossRef API integration
-- `OpenAlexService` (`openalex_service.py`): OpenAlex API integration
+### Middleware System
 
-**Supporting Services:**
-- `api_utils.py`: API client utilities and common patterns
-- `mcp_config.py`: MCP configuration management
-- `error_utils.py`: Error handling utilities
-- `html_to_markdown.py`: HTML to Markdown conversion
-- `merged_results.py`: Result merging and deduplication
-- `similar_articles.py`: Similar article finding algorithms
+Three middlewares are added to the MCP server in `create_mcp_server()`:
 
-### Tool Layer Organization
+- **MCPErrorHandlingMiddleware** (`middleware/`): Converts exceptions to MCP standard errors
+- **LoggingMiddleware** (`middleware/logging.py`): Request/response logging
+- **TimingMiddleware** (`middleware/logging.py`): Performance stats collection
 
-The tool layer (`src/article_mcp/tools/`) contains MCP tool implementations:
-
-**Core Tool Modules** (`src/article_mcp/tools/core/`):
-- `search_tools.py`: Literature search tools registration
-- `article_tools.py`: Article detail tools registration
-- `reference_tools.py`: Reference management tools registration
-- `relation_tools.py`: Literature relationship analysis tools registration
-- `quality_tools.py`: Journal quality evaluation tools registration
-- `batch_tools.py`: Batch processing tools registration
-
-**Additional Tool Modules:**
-- `article_detail_tools.py`: Article detail retrieval tools
-- `quality_tools.py`: Quality assessment tools
-- `reference_tools.py`: Reference processing tools
-- `relation_tools.py`: Relationship analysis tools
-- `search_tools.py`: Search functionality tools
-- `legacy/`: Backward compatibility support
+Access global performance stats via `middleware.get_global_performance_stats()`.
 
 ## Development Commands
 
@@ -92,49 +77,54 @@ uv run python -m article_mcp server --transport streamable-http --host 0.0.0.0 -
 ```
 
 ### Testing
-The project provides a comprehensive test suite:
-
 ```bash
-# Core functionality tests (recommended for daily use)
+# Core functionality (recommended for daily use)
 uv run python scripts/test_working_functions.py
 
-# Quick test for basic validation
+# Quick validation
 uv run python scripts/quick_test.py
 
 # Complete test suite
 uv run python scripts/run_all_tests.py
 
-# Individual test categories
-uv run python scripts/test_basic_functionality.py  # Basic functionality
-uv run python scripts/test_cli_functions.py       # CLI functions
-uv run python scripts/test_service_modules.py     # Service modules
-uv run python scripts/test_integration.py         # Integration tests
-uv run python scripts/test_performance.py         # Performance tests
+# Individual tests
+uv run python scripts/test_basic_functionality.py
+uv run python scripts/test_cli_functions.py
+uv run python scripts/test_service_modules.py
+uv run python scripts/test_integration.py
+uv run python scripts/test_performance.py
 
-# View project info
-uv run python -m article_mcp info
+# Pytest-based tests
+pytest                    # Run all tests
+pytest tests/unit/        # Unit tests only
+pytest -m integration     # Integration tests only
+pytest -m "not slow"      # Exclude slow tests
+```
+
+### Code Quality
+```bash
+# Format code
+black src/ tests/
+isort src/ tests/
+
+# Lint
+ruff check src/ tests/
+
+# Type checking
+mypy src/
+
+# All quality checks
+ruff check src/ tests/ && mypy src/ && black --check src/ tests/
 ```
 
 ### Package Management
 ```bash
-# Build package
-python -m build
-
-# Install from local
-uvx --from . article-mcp server
-
-# Test PyPI package
-uvx article-mcp server
+python -m build           # Build package
+uvx --from . article-mcp server  # Install from local
+uvx article-mcp server      # Test PyPI package
 ```
 
 ## Key Development Patterns
-
-### Service Registration Pattern
-All services are registered in `src/article_mcp/cli.py:create_mcp_server()` using dependency injection:
-```python
-pubmed_service = create_pubmed_service(logger)
-europe_pmc_service = create_europe_pmc_service(logger, pubmed_service)
-```
 
 ### Caching Strategy
 The project implements intelligent caching with 24-hour expiry:
@@ -149,36 +139,23 @@ Different APIs have different rate limits:
 - arXiv: 3 seconds/request (official limit)
 
 ### Error Handling
-Comprehensive error handling includes:
-- Network timeouts and retries
-- API limit handling
-- Graceful degradation for partial failures
-- Detailed error messages in responses
+Comprehensive error handling via middleware:
+- `MCPErrorHandlingMiddleware` converts exceptions to MCP standard errors
+- User input errors become `ToolError` with friendly messages
+- System errors become `McpError` with error codes
 
 ## Configuration
 
 ### Environment Variables
 ```bash
-PYTHONUNBUFFERED=1     # Disable Python output buffering
-UV_LINK_MODE=copy      # uv link mode (optional)
-EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API key (optional)
+PYTHONUNBUFFERED=1       # Disable Python output buffering
+PYTHONIOENCODING=utf-8   # Required for Cherry Studio Unicode support
+EASYSCHOLAR_SECRET_KEY=your_secret_key  # Optional: for journal quality tools
 ```
 
-### MCP Configuration Integration (v0.1.1+)
+### MCP Client Configuration
 
-The project now supports reading EasyScholar API keys from MCP client configuration files:
-
-**Configuration Priority:**
-1. MCP config file keys (highest priority)
-2. Function parameter keys
-3. Environment variable keys
-
-**Supported Configuration Paths:**
-- `~/.config/claude-desktop/config.json`
-- `~/.config/claude/config.json`
-- `~/.claude/config.json`
-
-**Example Configuration:**
+**PyPI package (recommended):**
 ```json
 {
   "mcpServers": {
@@ -187,111 +164,27 @@ The project now supports reading EasyScholar API keys from MCP client configurat
       "args": ["article-mcp", "server"],
       "env": {
         "PYTHONUNBUFFERED": "1",
-        "EASYSCHOLAR_SECRET_KEY": "your_easyscholar_api_key_here"
+        "PYTHONIOENCODING": "utf-8",
+        "EASYSCHOLAR_SECRET_KEY": "your_key_here"
       }
     }
   }
 }
 ```
 
-### MCP Client Configuration
-The project supports multiple AI client configurations (Claude Desktop, Cherry Studio) with different transport modes.
-
-## Performance Characteristics
-
-- **Batch Processing**: Supports up to 20 DOIs simultaneously
-- **Parallel Execution**: Async/await pattern with semaphore control
-- **Smart Caching**: 24-hour cache with hit tracking
-- **Retry Logic**: Automatic retry for network failures
-- **Performance Monitoring**: Built-in performance statistics
-
-## Data Flow
-
-1. **Request Processing**: FastMCP receives tool calls
-2. **Service Layer**: Appropriate service handles the request
-3. **API Integration**: Service calls external APIs with caching
-4. **Response Processing**: Data is formatted and returned with metadata
-5. **Cache Management**: Results are cached for future requests
-
-## Package Structure
-
-```
-article-mcp/
-├── main.py              # Compatibility entry point (redirects to new CLI)
-├── pyproject.toml       # Project configuration and dependencies
-├── src/                 # Source code root
-│   └── article_mcp/     # Main package (standard Python src layout)
-│       ├── __init__.py  # Package initialization
-│       ├── cli.py       # Main CLI entry point and MCP server creation
-│       ├── __main__.py  # Python module execution support
-│       ├── services/    # Service layer
-│       │   ├── europe_pmc.py    # Europe PMC integration
-│       │   ├── reference_service.py  # Reference management
-│       │   ├── pubmed_search.py # PubMed search
-│       │   ├── literature_relation_service.py  # Literature analysis
-│       │   ├── arxiv_search.py  # arXiv integration
-│       │   ├── crossref_service.py  # CrossRef service
-│       │   ├── openalex_service.py  # OpenAlex service
-│       │   └── [other utility modules...]
-│       ├── tools/       # Tool layer (MCP tool implementations)
-│       │   ├── core/    # Core tool registration modules
-│       │   ├── search_tools.py
-│       │   ├── article_detail_tools.py
-│       │   ├── reference_tools.py
-│       │   ├── relation_tools.py
-│       │   ├── quality_tools.py
-│       │   └── [other tool modules...]
-│       └── legacy/      # Backward compatibility support
-├── src/resource/        # Resource files
-│   └── journal_info.json
-├── tests/               # Comprehensive test suite
-│   ├── unit/            # Unit tests
-│   ├── integration/     # Integration tests
-│   └── utils/           # Test utilities
-├── scripts/             # Test scripts
-│   ├── test_working_functions.py  # Core functionality tests
-│   ├── test_basic_functionality.py # Basic functionality tests
-│   ├── test_cli_functions.py      # CLI function tests
-│   ├── test_service_modules.py    # Service module tests
-│   ├── test_integration.py        # Integration tests
-│   ├── test_performance.py        # Performance tests
-│   ├── run_all_tests.py           # Complete test suite
-│   └── quick_test.py              # Quick validation
-└── docs/                # Documentation
+**Local development:**
+```json
+{
+  "mcpServers": {
+    "article-mcp": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/article-mcp", "python", "-m", "article_mcp", "server"],
+      "env": {"PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
+    }
+  }
+}
 ```
 
-## Testing Strategy
+**Configuration paths searched:** `~/.config/claude-desktop/config.json`, `~/.config/claude/config.json`, `~/.claude/config.json`
 
-The project uses a comprehensive testing approach:
-
-### Test Scripts (scripts/)
-- **Core Functionality Tests**: `test_working_functions.py` - Essential functionality validation
-- **Test Categories**: Individual test modules for different aspects
-- **Complete Suite**: `run_all_tests.py` - Full project validation
-- **Quick Tests**: `quick_test.py` - Fast basic validation
-
-### Test Suite (tests/)
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Cross-component functionality
-- **Performance Tests**: Performance benchmarks
-- **Test Utilities**: Helper functions and fixtures
-
-### Running Tests
-```bash
-# Recommended daily usage
-uv run python scripts/test_working_functions.py
-
-# Complete validation
-uv run python scripts/run_all_tests.py
-
-# Individual testing
-uv run python scripts/test_basic_functionality.py
-```
-
-The testing approach verifies:
-- Package imports and structure integrity
-- CLI functionality and command processing
-- Service module initialization and basic operations
-- MCP server creation and tool registration
-- Integration between components
-- Performance characteristics
+**Key priority:** MCP config > function parameter > environment variable
