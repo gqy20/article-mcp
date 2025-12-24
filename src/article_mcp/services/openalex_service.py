@@ -32,44 +32,6 @@ class OpenAlexService:
             # 注意：asyncio中需要异步设置headers
         return self._async_api_client
 
-    def search_works(
-        self, query: str, max_results: int = 10, filters: dict = None
-    ) -> dict[str, Any]:
-        """搜索OpenAlex学术文献"""
-        try:
-            url = f"{self.base_url}/works"
-            params = {
-                "search": query,
-                "per-page": max_results,
-                "select": "id,title,authorships,publication_year,primary_location,open_access",
-            }
-
-            if filters:
-                params.update(filters)
-
-            api_result = self.api_client.get(url, params=params)
-
-            if not api_result.get("success", False):
-                raise Exception(api_result.get("error", "API调用失败"))
-
-            data = api_result.get("data", {})
-            return {
-                "success": True,
-                "articles": self._format_articles(data.get("results", [])),
-                "total_count": data.get("meta", {}).get("count", 0),
-                "source": "openalex",
-            }
-
-        except Exception as e:
-            self.logger.error(f"OpenAlex搜索失败: {e}")
-            return {
-                "success": False,
-                "articles": [],
-                "total_count": 0,
-                "source": "openalex",
-                "error": str(e),
-            }
-
     async def search_works_async(
         self, query: str, max_results: int = 10, filters: dict = None
     ) -> dict[str, Any]:

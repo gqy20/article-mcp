@@ -180,50 +180,6 @@ class EuropePMCService:
 
         return params
 
-    def search_sync(
-        self,
-        keyword: str,
-        email: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-        max_results: int = 10,
-    ) -> dict[str, Any]:
-        """同步搜索 Europe PMC 文献数据库"""
-        self.logger.info(f"开始同步搜索: {keyword}")
-
-        try:
-            params = self._build_query_params(keyword, start_date, end_date, max_results, email)
-
-            session = self._get_sync_session()
-            response = session.get(self.base_url, params=params, timeout=45)
-            response.raise_for_status()
-
-            data = response.json()
-            results = data.get("resultList", {}).get("result", [])
-            hit_count = data.get("hitCount", 0)
-
-            if not results:
-                return {"message": "未找到相关文献", "articles": [], "error": None}
-
-            articles = []
-            for article_json in results:
-                article_info = self.process_europe_pmc_article(article_json)
-                if article_info:
-                    articles.append(article_info)
-                if len(articles) >= max_results:
-                    break
-
-            return {
-                "articles": articles,
-                "error": None,
-                "message": f"找到 {len(articles)} 篇相关文献 (共 {hit_count} 条)",
-            }
-
-        except ValueError as e:
-            return {"error": f"参数错误: {str(e)}", "articles": [], "message": None}
-        except Exception as e:
-            return {"error": f"搜索失败: {str(e)}", "articles": [], "message": None}
-
     async def search_async(
         self,
         keyword: str,
@@ -560,21 +516,6 @@ class EuropePMCService:
             return []
 
     # 统一接口
-    def search(
-        self,
-        query: str,
-        email: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-        max_results: int = 10,
-        mode: str = "sync",
-    ) -> dict[str, Any]:
-        """统一搜索接口"""
-        if mode == "async":
-            return asyncio.run(self.search_async(query, email, start_date, end_date, max_results))
-        else:
-            return self.search_sync(query, email, start_date, end_date, max_results)
-
     def fetch(
         self,
         identifier: str,

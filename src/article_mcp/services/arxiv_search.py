@@ -547,10 +547,6 @@ class ArXivSearchService:
     def __init__(self, logger):
         self.logger = logger
 
-    def search(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
-        """搜索arXiv文献"""
-        return search_arxiv(keyword=keyword, max_results=max_results, logger=self.logger, **kwargs)
-
     async def search_async(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
         """异步搜索arXiv文献"""
         return await search_arxiv_async(
