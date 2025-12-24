@@ -11,13 +11,13 @@ from typing import Any
 
 import aiohttp
 import requests
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 
 
 class EuropePMCService:
     """Europe PMC 服务类"""
 
-    def __init__(self, logger: logging.Logger | None = None, pubmed_service=None):
+    def __init__(self, logger: logging.Logger | None = None, pubmed_service: Any = None) -> None:
         self.logger = logger or logging.getLogger(__name__)
         self.pubmed_service = pubmed_service  # 注入PubMed服务用于PMC全文获取
 
@@ -34,8 +34,8 @@ class EuropePMCService:
         self.search_semaphore = asyncio.Semaphore(3)
 
         # 缓存
-        self.cache = {}
-        self.cache_expiry = {}
+        self.cache: dict[str, Any] = {}
+        self.cache_expiry: dict[str, datetime] = {}
 
     def _get_sync_session(self) -> requests.Session:
         """创建同步会话"""
@@ -43,7 +43,9 @@ class EuropePMCService:
         session.headers.update(self.headers)
         return session
 
-    def _get_cached_or_fetch_sync(self, key: str, fetch_func, cache_duration_hours: int = 24):
+    def _get_cached_or_fetch_sync(
+        self, key: str, fetch_func: Any, cache_duration_hours: int = 24
+    ) -> dict[str, Any] | None:
         """获取缓存或执行获取函数（同步版本），返回结果和缓存命中信息"""
         now = datetime.now()
         cache_hit = False
@@ -66,9 +68,11 @@ class EuropePMCService:
         if isinstance(result, dict):
             result["cache_hit"] = cache_hit
 
-        return result
+        return result  # type: ignore[no-any-return]
 
-    async def _get_cached_or_fetch(self, key: str, fetch_func, cache_duration_hours: int = 24):
+    async def _get_cached_or_fetch(
+        self, key: str, fetch_func: Any, cache_duration_hours: int = 24
+    ) -> dict[str, Any] | None:
         """获取缓存或执行获取函数，返回结果和缓存命中信息"""
         now = datetime.now()
         cache_hit = False
@@ -91,7 +95,7 @@ class EuropePMCService:
         if isinstance(result, dict):
             result["cache_hit"] = cache_hit
 
-        return result
+        return result  # type: ignore[no-any-return]
 
     def validate_email(self, email: str) -> bool:
         """验证邮箱格式"""
@@ -149,8 +153,13 @@ class EuropePMCService:
             return None
 
     def _build_query_params(
-        self, keyword: str, start_date: str, end_date: str, max_results: int, email: str = None
-    ):
+        self,
+        keyword: str,
+        start_date: str,
+        end_date: str,
+        max_results: int,
+        email: str | None = None,
+    ) -> dict[str, Any]:
         """构建查询参数"""
         # 处理日期
         end_dt = self.parse_date(end_date) if end_date else datetime.now()
@@ -185,17 +194,21 @@ class EuropePMCService:
         start_date: str | None = None,
         end_date: str | None = None,
         max_results: int = 10,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """异步搜索 Europe PMC 文献数据库"""
         async with self.search_semaphore:
             cache_key = f"search_{keyword}_{start_date}_{end_date}_{max_results}"
 
-            async def fetch_from_api():
+            async def fetch_from_api() -> dict[str, Any]:
                 self.logger.info(f"开始异步搜索: {keyword}")
 
                 try:
                     params = self._build_query_params(
-                        keyword, start_date, end_date, max_results, email
+                        keyword,
+                        start_date or "",
+                        end_date or "",
+                        max_results,
+                        email,
                     )
 
                     async with aiohttp.ClientSession(timeout=self.timeout) as session:
@@ -241,11 +254,11 @@ class EuropePMCService:
 
     def get_article_details_sync(
         self, identifier: str, id_type: str = "pmid", include_fulltext: bool = False
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """同步获取文献详情"""
         self.logger.info(f"获取文献详情: {id_type}={identifier}")
 
-        def fetch_from_api():
+        def fetch_from_api() -> dict[str, Any]:
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -357,12 +370,12 @@ class EuropePMCService:
 
     async def get_article_details_async(
         self, identifier: str, id_type: str = "pmid", include_fulltext: bool = False
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """异步获取文献详情"""
         async with self.search_semaphore:
             cache_key = f"article_{id_type}_{identifier}"
 
-            async def fetch_from_api():
+            async def fetch_from_api() -> dict[str, Any]:
                 self.logger.info(f"异步获取文献详情: {id_type}={identifier}")
 
                 max_retries = 3
@@ -477,6 +490,8 @@ class EuropePMCService:
             return await self._get_cached_or_fetch(cache_key, fetch_from_api)
 
     # 批量查询功能
+
+    # 批量查询功能
     async def search_batch_dois_async(
         self, dois: list[str], session: aiohttp.ClientSession
     ) -> list[dict[str, Any]]:
@@ -504,7 +519,7 @@ class EuropePMCService:
                     data = await response.json()
                     results = data.get("resultList", {}).get("result", [])
                     self.logger.info(f"批量查询获得 {len(results)} 个结果")
-                    return results
+                    return results  # type: ignore[no-any-return]
                 else:
                     self.logger.error(f"批量查询失败: {response.status}")
                     return []
@@ -520,7 +535,7 @@ class EuropePMCService:
         id_type: str = "pmid",
         mode: str = "sync",
         include_fulltext: bool = False,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """统一获取详情接口"""
         import time
 
@@ -542,7 +557,7 @@ class EuropePMCService:
 
 
 def create_europe_pmc_service(
-    logger: logging.Logger | None = None, pubmed_service=None
+    logger: logging.Logger | None = None, pubmed_service: Any = None
 ) -> EuropePMCService:
     """创建 Europe PMC 服务实例"""
     return EuropePMCService(logger, pubmed_service)

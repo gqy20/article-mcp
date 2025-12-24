@@ -1,11 +1,12 @@
 import asyncio
+import logging
 from typing import Any
 
 
 class PubMedService:
     """PubMed 关键词搜索服务 (控制在 500 行以内)"""
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging.Logger | None = None) -> None:
         import logging
         import re
 
@@ -29,7 +30,7 @@ class PubMedService:
         }
 
         # 速率限制：PubMed 要求每秒最多3个请求（无API key时）
-        self._request_semaphore = None  # 延迟初始化，异步方法中创建
+        self._request_semaphore: Any = None  # 延迟初始化，异步方法中创建
 
     # ------------------------ 公共辅助方法 ------------------------ #
     @staticmethod
@@ -42,7 +43,7 @@ class PubMedService:
 
         fmt_in = ["%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"]
 
-        def _parse(d):
+        def _parse(d: str | None) -> Any:
             if not d:
                 return None
             for f in fmt_in:
@@ -65,7 +66,7 @@ class PubMedService:
         return f"({start_dt.strftime('%Y/%m/%d')}[PDAT] : {end_dt.strftime('%Y/%m/%d')}[PDAT])"
 
     # ------------------------ 核心解析逻辑 ------------------------ #
-    def _process_article(self, article_xml):
+    def _process_article(self, article_xml: Any) -> dict[str, Any] | None:
         if article_xml is None:
             return None
         try:
@@ -157,7 +158,7 @@ class PubMedService:
             return None
 
     # ------------------------ 期刊质量评估 ------------------------ #
-    def _load_journal_cache(self):
+    def _load_journal_cache(self) -> dict[str, Any]:
         """加载本地期刊信息缓存"""
         import json
         import os
@@ -166,13 +167,13 @@ class PubMedService:
             cache_path = os.path.join(os.path.dirname(__file__), "resource", "journal_info.json")
             if os.path.exists(cache_path):
                 with open(cache_path, encoding="utf-8") as f:
-                    return json.load(f)
+                    return json.load(f)  # type: ignore[no-any-return]
             return {}
         except Exception as e:
             self.logger.warning(f"加载期刊缓存失败: {e}")
             return {}
 
-    def _save_journal_cache(self, cache_data):
+    def _save_journal_cache(self, cache_data: dict[str, Any]) -> None:
         """保存期刊信息到本地缓存"""
         import json
         import os
@@ -185,7 +186,7 @@ class PubMedService:
         except Exception as e:
             self.logger.warning(f"保存期刊缓存失败: {e}")
 
-    def _query_easyscholar_api(self, journal_name: str, secret_key: str):
+    def _query_easyscholar_api(self, journal_name: str, secret_key: str) -> dict[str, Any] | None:
         """调用 EasyScholar API 获取期刊信息"""
         import requests
 
@@ -199,7 +200,7 @@ class PubMedService:
 
             data = response.json()
             if data.get("code") == 200 and data.get("data"):
-                return data["data"]
+                return data["data"]  # type: ignore[no-any-return]
             else:
                 self.logger.warning(f"EasyScholar API 返回错误: {data.get('msg', 'Unknown error')}")
                 return None
@@ -211,7 +212,7 @@ class PubMedService:
             self.logger.warning(f"EasyScholar API 处理错误: {e}")
             return None
 
-    def _extract_quality_metrics(self, rank_data):
+    def _extract_quality_metrics(self, rank_data: Any) -> dict[str, Any]:
         """从期刊排名数据中提取质量指标"""
         if not rank_data:
             return {}
@@ -242,7 +243,9 @@ class PubMedService:
 
         return metrics
 
-    def get_journal_quality(self, journal_name: str, secret_key: str = None):
+    def get_journal_quality(
+        self, journal_name: str, secret_key: str | None = None
+    ) -> dict[str, Any]:
         """获取期刊质量评估信息（影响因子、分区等）"""
         if not journal_name or not journal_name.strip():
             return {"error": "期刊名称不能为空"}
@@ -328,7 +331,9 @@ class PubMedService:
             + ("（未提供 EasyScholar API 密钥）" if not secret_key else ""),
         }
 
-    def evaluate_articles_quality(self, articles: list, secret_key: str = None):
+    def evaluate_articles_quality(
+        self, articles: list[dict[str, Any]], secret_key: str | None = None
+    ) -> list[dict[str, Any]]:
         """批量评估文献的期刊质量"""
         if not articles:
             return []
@@ -401,7 +406,10 @@ class PubMedService:
 
                 # 构建查询语句
                 term = keyword.strip()
-                date_filter = self._format_date_range(start_date, end_date)
+                date_filter = self._format_date_range(
+                    start_date or "",
+                    end_date or "",
+                )
                 if date_filter:
                     term = f"{term} AND {date_filter}"
 
@@ -435,7 +443,7 @@ class PubMedService:
                     ids = ET.fromstring(esearch_content).findall(".//Id")
                     if not ids:
                         return {"articles": [], "message": "未找到相关文献", "error": None}
-                    pmids = [elem.text for elem in ids[:max_results]]
+                    pmids = [elem.text for elem in ids[:max_results] if elem.text]
 
                     # EFETCH 请求参数
                     efetch_params = {
@@ -486,7 +494,9 @@ class PubMedService:
                 return {"articles": [], "error": f"处理错误: {e}", "message": None}
 
     # ------------------------ 引用文献获取 ------------------------ #
-    def get_citing_articles(self, pmid: str, email: str = None, max_results: int = 20):
+    def get_citing_articles(
+        self, pmid: str, email: str | None = None, max_results: int = 20
+    ) -> dict[str, Any]:
         """获取引用该 PMID 的文献信息（Semantic Scholar → PubMed 补全）"""
         import time
         import xml.etree.ElementTree as ET
@@ -507,7 +517,7 @@ class PubMedService:
                 "limit": max_results,
             }
             self.logger.info(f"Semantic Scholar 查询引用: {ss_url}")
-            ss_resp = requests.get(ss_url, params=ss_params, timeout=20)
+            ss_resp = requests.get(ss_url, params=ss_params, timeout=20)  # type: ignore[arg-type]
             if ss_resp.status_code != 200:
                 return {
                     "citing_articles": [],
@@ -786,6 +796,6 @@ class PubMedService:
             }
 
 
-def create_pubmed_service(logger=None):
+def create_pubmed_service(logger: logging.Logger | None = None) -> PubMedService:
     """工厂函数，保持接口一致"""
     return PubMedService(logger)

@@ -6,7 +6,7 @@ from typing import Any
 
 def merge_articles_by_doi(articles_by_source: dict[str, list[dict]]) -> list[dict]:
     """按DOI合并文章，保留所有来源信息"""
-    doi_to_articles = {}
+    doi_to_articles: dict[str, list[dict]] = {}
 
     # 收集所有文章，按DOI分组
     for source, articles in articles_by_source.items():
@@ -90,12 +90,17 @@ def deduplicate_articles(articles: list[dict]) -> list[dict]:
     return deduplicated
 
 
-def simple_rank_articles(articles: list[dict], source_priority: list[str] = None) -> list[dict]:
+def simple_rank_articles(
+    articles: list[dict], source_priority: list[str] | None = None
+) -> list[dict]:
     """简单的文章排序，基于数据源优先级"""
     if source_priority is None:
         source_priority = ["europe_pmc", "pubmed", "crossref", "openalex", "arxiv"]
+    else:
+        # 使用传入的优先级
+        pass
 
-    def get_priority_score(article):
+    def get_priority_score(article: dict) -> int:
         sources = article.get("sources", [article.get("source_from", "")])
         for i, priority_source in enumerate(source_priority):
             if priority_source in sources:
