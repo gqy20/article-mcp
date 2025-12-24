@@ -1,5 +1,4 @@
-"""
-PubMed 服务异步实现测试
+"""PubMed 服务异步实现测试
 
 这个测试文件为 PubMed 服务定义异步接口的测试用例。
 按照 TDD 原则，先编写测试，然后实现功能。
@@ -14,9 +13,7 @@ PubMed 服务异步实现测试
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
-from xml.etree import ElementTree as ET
 
 import pytest
 
@@ -34,6 +31,7 @@ class TestPubMedServiceAsyncMethods:
     def pubmed_service(self):
         """创建 PubMed 服务实例"""
         from article_mcp.services.pubmed_search import PubMedService
+
         return PubMedService(logger=Mock())
 
     @pytest.mark.asyncio
@@ -47,8 +45,10 @@ class TestPubMedServiceAsyncMethods:
 
         # 预期：方法是异步的
         import inspect
-        assert inspect.iscoroutinefunction(pubmed_service.search_async), \
+
+        assert inspect.iscoroutinefunction(pubmed_service.search_async), (
             "search_async 应该是异步函数"
+        )
 
         # 预期：可以调用并返回结果
         try:
@@ -62,10 +62,7 @@ class TestPubMedServiceAsyncMethods:
     async def test_search_async_with_max_results(self, pubmed_service):
         """测试：异步搜索遵守 max_results 参数"""
         try:
-            result = await pubmed_service.search_async(
-                "cancer",
-                max_results=3
-            )
+            result = await pubmed_service.search_async("cancer", max_results=3)
 
             articles = result.get("articles", [])
             assert len(articles) <= 3, f"返回的文章数量应该 ≤ 3，实际返回 {len(articles)}"
@@ -77,10 +74,7 @@ class TestPubMedServiceAsyncMethods:
         """测试：异步搜索支持日期范围过滤"""
         try:
             result = await pubmed_service.search_async(
-                "COVID-19",
-                start_date="2020-01-01",
-                end_date="2021-12-31",
-                max_results=10
+                "COVID-19", start_date="2020-01-01", end_date="2021-12-31", max_results=10
             )
 
             articles = result.get("articles", [])
@@ -110,13 +104,11 @@ class TestPubMedServiceAsyncMethods:
         """测试：多个异步搜索可以并行执行"""
         try:
             # 启动多个搜索任务
-            tasks = [
-                pubmed_service.search_async(f"keyword {i}", max_results=3)
-                for i in range(3)
-            ]
+            tasks = [pubmed_service.search_async(f"keyword {i}", max_results=3) for i in range(3)]
 
             # 并行执行
             import time
+
             start = time.time()
             results = await asyncio.gather(*tasks, return_exceptions=True)
             elapsed = time.time() - start
@@ -178,7 +170,7 @@ class TestPubMedServiceAsyncWithMocking:
         service = PubMedService(logger=Mock())
 
         # Mock aiohttp ClientSession
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = Mock()
             mock_session.get = AsyncMock(return_value=mock_aiohttp_response)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -204,6 +196,7 @@ class TestPubMedServiceAsyncErrorHandling:
     def pubmed_service(self):
         """创建 PubMed 服务实例"""
         from article_mcp.services.pubmed_search import PubMedService
+
         return PubMedService(logger=Mock())
 
     @pytest.mark.asyncio
@@ -211,8 +204,9 @@ class TestPubMedServiceAsyncErrorHandling:
         """测试：异步搜索处理超时"""
         try:
             # Mock 超时场景
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 import asyncio
+
                 mock_session = Mock()
 
                 async def mock_get_with_timeout(*args, **kwargs):
@@ -237,7 +231,7 @@ class TestPubMedServiceAsyncErrorHandling:
     async def test_search_async_handles_network_error(self, pubmed_service):
         """测试：异步搜索处理网络错误"""
         try:
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
                 # Mock 网络错误
@@ -262,7 +256,7 @@ class TestPubMedServiceAsyncErrorHandling:
     async def test_search_async_handles_empty_response(self, pubmed_service):
         """测试：异步搜索处理空响应"""
         try:
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_response = Mock()
                 mock_response.status = 200
                 mock_response.text = AsyncMock(return_value="<PubmedArticleSet></PubmedArticleSet>")
@@ -290,6 +284,7 @@ class TestPubMedServiceAsyncPerformance:
     def pubmed_service(self):
         """创建 PubMed 服务实例"""
         from article_mcp.services.pubmed_search import PubMedService
+
         return PubMedService(logger=Mock())
 
     @pytest.mark.asyncio
@@ -301,11 +296,11 @@ class TestPubMedServiceAsyncPerformance:
         try:
             # 测试异步并行搜索
             import time
+
             start_async = time.time()
-            async_results = await asyncio.gather(*[
-                pubmed_service.search_async(keyword, max_results=5)
-                for keyword in keywords
-            ])
+            async_results = await asyncio.gather(
+                *[pubmed_service.search_async(keyword, max_results=5) for keyword in keywords]
+            )
             async_time = time.time() - start_async
 
             # 验证异步结果
@@ -337,6 +332,7 @@ class TestPubMedServiceAsyncPerformance:
             tasks = [limited_search(f"keyword {i}") for i in range(10)]
 
             import time
+
             start = time.time()
             results = await asyncio.gather(*tasks, return_exceptions=True)
             elapsed = time.time() - start
@@ -358,45 +354,44 @@ class TestPubMedServiceAsyncPerformance:
 # 实现检查
 # ============================================================================
 
+
 def test_pubmed_async_method_signature():
     """测试：检查 PubMed 服务异步方法的方法签名"""
+    import inspect
 
     from article_mcp.services.pubmed_search import PubMedService
-    import inspect
 
     service = PubMedService(logger=Mock())
 
     # 检查 search_async 方法
-    if hasattr(service, 'search_async'):
+    if hasattr(service, "search_async"):
         sig = inspect.signature(service.search_async)
         params = list(sig.parameters.keys())
 
         # 应该有的参数
-        expected_params = ['self', 'query', 'max_results']
+        expected_params = ["self", "query", "max_results"]
         for param in expected_params:
             assert param in params, f"search_async 应该有 {param} 参数"
 
         # 应该是异步方法
-        assert inspect.iscoroutinefunction(service.search_async), \
-            "search_async 应该是异步函数"
+        assert inspect.iscoroutinefunction(service.search_async), "search_async 应该是异步函数"
     else:
         pytest.skip("search_async 方法尚未实现")
 
 
 def test_pubmed_async_imports():
     """测试：检查 PubMed 服务是否有必要的异步导入"""
+    import inspect
 
     import article_mcp.services.pubmed_search as pubmed_module
-    import inspect
 
     source = inspect.getsource(pubmed_module)
 
     # 检查是否有必要的异步导入
-    has_aiohttp = 'aiohttp' in source or 'import aiohttp' in source
-    has_asyncio = 'asyncio' in source or 'import asyncio' in source
+    has_asyncio = "asyncio" in source or "import asyncio" in source
 
     # 如果实现了异步方法，应该有这些导入
-    if hasattr(pubmed_module.PubMedService, 'search_async'):
+    if hasattr(pubmed_module.PubMedService, "search_async"):
         assert has_asyncio, "实现异步方法需要 asyncio"
         # aiohttp 不是必需的，可以使用其他异步HTTP库
 

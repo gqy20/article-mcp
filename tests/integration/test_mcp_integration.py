@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-MCP集成测试
+"""MCP集成测试
 测试完整的MCP服务器功能和工作流程
 """
 
@@ -8,9 +7,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -25,8 +22,10 @@ from article_mcp.cli import create_mcp_server  # noqa: E402
 from article_mcp.tools.core.article_tools import register_article_tools  # noqa: E402
 from article_mcp.tools.core.reference_tools import register_reference_tools  # noqa: E402
 from article_mcp.tools.core.search_tools import register_search_tools  # noqa: E402
-from tests.utils.test_helpers import MockDataGenerator  # noqa: E402
-from tests.utils.test_helpers import TestTimer
+from tests.utils.test_helpers import (
+    MockDataGenerator,  # noqa: E402
+    TestTimer,
+)
 
 
 class TestMCPServerIntegration:
@@ -279,7 +278,6 @@ class TestPerformanceIntegration:
     @pytest.mark.asyncio
     async def test_memory_usage_integration(self):
         """测试内存使用集成"""
-
         import psutil
 
         # 获取当前进程

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-6工具架构集成测试
+"""6工具架构集成测试
 测试完整的端到端工作流程
 """
 
@@ -9,8 +8,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 # 添加src目录到Python路径
 project_root = Path(__file__).parent.parent

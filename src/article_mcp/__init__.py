@@ -1,5 +1,4 @@
-"""
-Article MCP - 文献搜索服务器
+"""Article MCP - 文献搜索服务器
 基于 FastMCP 框架的学术文献搜索工具
 
 这个包提供了统一的API来搜索和获取学术文献信息，支持多个数据源：
@@ -20,7 +19,7 @@ Article MCP - 文献搜索服务器
 import os
 
 # 设置编码环境，确保emoji字符正确处理
-os.environ['PYTHONIOENCODING'] = 'utf-8'
+os.environ["PYTHONIOENCODING"] = "utf-8"
 
 __version__ = "0.1.9"
 __author__ = "gqy20"

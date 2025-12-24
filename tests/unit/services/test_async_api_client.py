@@ -1,5 +1,4 @@
-"""
-异步 API 客户端测试
+"""异步 API 客户端测试
 
 这个测试文件为统一的异步 API 客户端定义测试用例。
 异步 api_client 将被 CrossRef 和 OpenAlex 服务使用。
@@ -16,7 +15,6 @@
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -35,6 +33,7 @@ class TestAsyncAPIClient:
         """测试：异步 API 客户端类是否存在"""
         try:
             from article_mcp.services.api_utils import AsyncAPIClient
+
             assert True
         except ImportError:
             pytest.skip("AsyncAPIClient 类尚未实现")
@@ -47,8 +46,8 @@ class TestAsyncAPIClient:
             client = AsyncAPIClient(logger=Mock())
 
             # 检查基本属性
-            assert hasattr(client, 'timeout') or hasattr(client, '_timeout')
-            assert hasattr(client, 'session') or hasattr(client, '_session')
+            assert hasattr(client, "timeout") or hasattr(client, "_timeout")
+            assert hasattr(client, "session") or hasattr(client, "_session")
 
         except ImportError:
             pytest.skip("AsyncAPIClient 类尚未实现")
@@ -66,7 +65,7 @@ class TestAsyncAPIClient:
             mock_response.status = 200
             mock_response.json = AsyncMock(return_value={"data": "test"})
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.get = AsyncMock(return_value=mock_response)
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -96,7 +95,7 @@ class TestAsyncAPIClient:
             mock_response.status = 200
             mock_response.json = AsyncMock(return_value={"results": []})
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.get = AsyncMock(return_value=mock_response)
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -104,7 +103,7 @@ class TestAsyncAPIClient:
                 mock_session_class.return_value = mock_session
 
                 params = {"query": "test", "limit": 10}
-                result = await client.get("https://api.example.com/search", params=params)
+                await client.get("https://api.example.com/search", params=params)
 
                 # 验证参数被传递
                 mock_session.get.assert_called_once()
@@ -126,7 +125,7 @@ class TestAsyncAPIClient:
             mock_response.status = 201
             mock_response.json = AsyncMock(return_value={"id": "123"})
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.post = AsyncMock(return_value=mock_response)
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -156,7 +155,7 @@ class TestAsyncAPIClientErrorHandling:
 
             client = AsyncAPIClient(logger=Mock())
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
                 # Mock 超时
@@ -187,7 +186,7 @@ class TestAsyncAPIClientErrorHandling:
 
             client = AsyncAPIClient(logger=Mock())
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
                 # Mock 网络错误
@@ -220,7 +219,7 @@ class TestAsyncAPIClientErrorHandling:
             mock_response.status = 404
             mock_response.raise_for_status = Mock(side_effect=Exception("Not Found"))
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.get = AsyncMock(return_value=mock_response)
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -251,21 +250,23 @@ class TestAsyncAPIClientErrorHandling:
                 Mock(status=200, json=AsyncMock(return_value={"data": "success"})),
             ]
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
                 call_count = 0
+
                 async def mock_get_with_retry(*args, **kwargs):
                     nonlocal call_count
                     response = responses[min(call_count, len(responses) - 1)]
                     call_count += 1
                     if response.status == 429:
                         import aiohttp
+
                         raise aiohttp.ClientResponseError(
                             request_info=Mock(),
                             history=(),
                             status=response.status,
-                            message="Rate limited"
+                            message="Rate limited",
                         )
                     await asyncio.sleep(0.01)
                     return response
@@ -302,7 +303,7 @@ class TestAsyncAPIClientPerformance:
                 mock_response.json = AsyncMock(return_value={"url": url})
                 return mock_response
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.get = mock_request
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -310,16 +311,12 @@ class TestAsyncAPIClientPerformance:
                 mock_session_class.return_value = mock_session
 
                 # 并发发送多个请求
-                urls = [
-                    f"https://api.example.com/data/{i}"
-                    for i in range(5)
-                ]
+                urls = [f"https://api.example.com/data/{i}" for i in range(5)]
 
                 import time
+
                 start = time.time()
-                results = await asyncio.gather(*[
-                    client.get(url) for url in urls
-                ])
+                results = await asyncio.gather(*[client.get(url) for url in urls])
                 elapsed = time.time() - start
 
                 # 验证所有请求成功
@@ -350,7 +347,7 @@ class TestAsyncAPIClientPerformance:
                 mock_response.json = AsyncMock(return_value={})
                 return mock_response
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 # Mock 会话应该只创建一次
                 mock_session = Mock()
                 mock_session.get = mock_request
@@ -401,7 +398,7 @@ class TestAsyncAPIClientSingleton:
                 mock_response.json = AsyncMock(return_value={})
                 return mock_response
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.get = mock_request
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -423,40 +420,39 @@ class TestAsyncAPIClientSingleton:
 # 实现检查
 # ============================================================================
 
+
 def test_async_api_client_signature():
     """测试：检查异步 API 客户端的方法签名"""
-
     try:
-        from article_mcp.services.api_utils import AsyncAPIClient
         import inspect
+
+        from article_mcp.services.api_utils import AsyncAPIClient
 
         client = AsyncAPIClient(logger=Mock())
 
         # 检查 get 方法
-        if hasattr(client, 'get'):
+        if hasattr(client, "get"):
             sig = inspect.signature(client.get)
             params = list(sig.parameters.keys())
 
             # 应该有的参数
-            expected_params = ['url', 'params', 'headers', 'timeout']
+            expected_params = ["url", "params", "headers", "timeout"]
             for param in expected_params:
                 assert param in params, f"get 方法应该有 {param} 参数"
 
             # 应该是异步方法
-            assert inspect.iscoroutinefunction(client.get), \
-                "get 方法应该是异步函数"
+            assert inspect.iscoroutinefunction(client.get), "get 方法应该是异步函数"
 
         # 检查 post 方法
-        if hasattr(client, 'post'):
+        if hasattr(client, "post"):
             sig = inspect.signature(client.post)
             params = list(sig.parameters.keys())
 
-            expected_params = ['url', 'data', 'json', 'headers', 'timeout']
+            expected_params = ["url", "data", "json", "headers", "timeout"]
             for param in expected_params:
                 assert param in params, f"post 方法应该有 {param} 参数"
 
-            assert inspect.iscoroutinefunction(client.post), \
-                "post 方法应该是异步函数"
+            assert inspect.iscoroutinefunction(client.post), "post 方法应该是异步函数"
 
     except ImportError:
         pytest.skip("AsyncAPIClient 类尚未实现")
@@ -464,19 +460,19 @@ def test_async_api_client_signature():
 
 def test_async_api_client_imports():
     """测试：检查异步 API 客户端的必要导入"""
-
     try:
-        import article_mcp.services.api_utils as api_utils_module
         import inspect
+
+        import article_mcp.services.api_utils as api_utils_module
 
         source = inspect.getsource(api_utils_module)
 
         # 检查是否有 aiohttp 导入
-        has_aiohttp = 'aiohttp' in source or 'import aiohttp' in source
-        has_asyncio = 'asyncio' in source or 'import asyncio' in source
+        has_aiohttp = "aiohttp" in source or "import aiohttp" in source
+        has_asyncio = "asyncio" in source or "import asyncio" in source
 
         # 如果实现了异步客户端，应该有这些导入
-        if hasattr(api_utils_module, 'AsyncAPIClient'):
+        if hasattr(api_utils_module, "AsyncAPIClient"):
             assert has_aiohttp, "异步客户端需要 aiohttp"
             assert has_asyncio, "异步客户端需要 asyncio"
 

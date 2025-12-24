@@ -1,6 +1,4 @@
-"""
-pytest 配置和共享 fixtures
-"""
+"""pytest 配置和共享 fixtures"""
 
 import logging
 import os
@@ -595,7 +593,6 @@ def error_scenarios():
 @pytest.fixture(autouse=True)
 def test_environment():
     """设置测试环境变量"""
-
     os.environ["PYTHONUNBUFFERED"] = "1"
     # 设置测试模式，避免实际API调用
     os.environ["TESTING"] = "1"

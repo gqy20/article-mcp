@@ -7,22 +7,21 @@ FastMCP规范合规性测试脚本
 """
 
 import asyncio
-import json
 import logging
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
-from contextlib import AsyncExitStack
+from typing import Any
 
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 try:
-    from article_mcp.cli import create_mcp_server
     from fastmcp.client import Client
     from fastmcp.exceptions import ToolError
+
+    from article_mcp.cli import create_mcp_server
 except ImportError as e:
     print(f"❌ 导入失败: {e}")
     print("请确保已安装fastmcp: pip install fastmcp")
@@ -37,7 +36,7 @@ class FastMCPComplianceTester:
         self.test_results = {
             "stdio": {"status": "pending", "tests": [], "score": 0},
             "http": {"status": "pending", "tests": [], "score": 0},
-            "sse": {"status": "pending", "tests": [], "score": 0}
+            "sse": {"status": "pending", "tests": [], "score": 0},
         }
 
     def _setup_logger(self) -> logging.Logger:
@@ -46,15 +45,13 @@ class FastMCPComplianceTester:
         logger.setLevel(logging.INFO)
 
         handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
         return logger
 
-    async def test_stdio_compliance(self) -> Dict[str, Any]:
+    async def test_stdio_compliance(self) -> dict[str, Any]:
         """测试STDIO传输模式的MCP合规性"""
         self.logger.info("🚀 开始STDIO模式MCP合规性测试")
 
@@ -65,7 +62,7 @@ class FastMCPComplianceTester:
             "error_handling": False,
             "resource_access": False,
             "response_format": False,
-            "annotations": False
+            "annotations": False,
         }
 
         try:
@@ -83,7 +80,7 @@ class FastMCPComplianceTester:
                 "get_references",
                 "get_literature_relations",
                 "get_journal_quality",
-                "export_batch_results"
+                "export_batch_results",
             ]
 
             # 获取工具列表
@@ -112,10 +109,10 @@ class FastMCPComplianceTester:
             try:
                 tools = await mcp._list_tools(None)
                 for tool in tools:
-                    if hasattr(tool, 'annotations') and tool.annotations:
+                    if hasattr(tool, "annotations") and tool.annotations:
                         self.logger.info(f"✅ 工具 {tool.name} 有annotations")
                         results["tool_metadata"] = True
-                    if hasattr(tool, 'tags') and tool.tags:
+                    if hasattr(tool, "tags") and tool.tags:
                         self.logger.info(f"✅ 工具 {tool.name} 有tags: {tool.tags}")
 
             except Exception as e:
@@ -132,15 +129,15 @@ class FastMCPComplianceTester:
                     "config://status",
                     "config://tools",
                     "journals://{journal_name}/quality",
-                    "stats://cache"
+                    "stats://cache",
                 ]
 
                 found_resources = []
                 for expected_resource in expected_resources:
                     for resource_uri in resource_uris:
                         if expected_resource in resource_uri or (
-                            '{' in expected_resource and
-                            expected_resource.split('{')[0] in resource_uri
+                            "{" in expected_resource
+                            and expected_resource.split("{")[0] in resource_uri
                         ):
                             found_resources.append(expected_resource)
                             self.logger.info(f"✅ 找到资源: {expected_resource}")
@@ -176,7 +173,7 @@ class FastMCPComplianceTester:
 
         return results
 
-    async def test_http_compliance(self) -> Dict[str, Any]:
+    async def test_http_compliance(self) -> dict[str, Any]:
         """测试HTTP传输模式的MCP合规性"""
         self.logger.info("🌐 开始HTTP模式MCP合规性测试")
 
@@ -185,7 +182,7 @@ class FastMCPComplianceTester:
             "http_transport": False,
             "tool_access": False,
             "resource_access": False,
-            "error_handling": False
+            "error_handling": False,
         }
 
         try:
@@ -193,14 +190,25 @@ class FastMCPComplianceTester:
             self.logger.info("测试1: HTTP服务器启动")
 
             # 启动HTTP服务器
-            mcp = create_mcp_server()
+            create_mcp_server()
 
             # 在后台启动HTTP服务器
-            process = subprocess.Popen([
-                sys.executable, "-m", "article_mcp",
-                "server", "--transport", "streamable-http",
-                "--host", "localhost", "--port", "9001"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "article_mcp",
+                    "server",
+                    "--transport",
+                    "streamable-http",
+                    "--host",
+                    "localhost",
+                    "--port",
+                    "9001",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
             # 等待服务器启动
             time.sleep(3)
@@ -253,26 +261,33 @@ class FastMCPComplianceTester:
 
         return results
 
-    async def test_sse_compliance(self) -> Dict[str, Any]:
+    async def test_sse_compliance(self) -> dict[str, Any]:
         """测试SSE传输模式的MCP合规性"""
         self.logger.info("🌊 开始SSE模式MCP合规性测试")
 
-        results = {
-            "server_startup": False,
-            "sse_transport": False,
-            "basic_functionality": False
-        }
+        results = {"server_startup": False, "sse_transport": False, "basic_functionality": False}
 
         try:
             # 测试1: SSE服务器启动
             self.logger.info("测试1: SSE服务器启动")
 
             # 启动SSE服务器
-            process = subprocess.Popen([
-                sys.executable, "-m", "article_mcp",
-                "server", "--transport", "sse",
-                "--host", "localhost", "--port", "9002"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "article_mcp",
+                    "server",
+                    "--transport",
+                    "sse",
+                    "--host",
+                    "localhost",
+                    "--port",
+                    "9002",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
             # 等待服务器启动
             time.sleep(3)
@@ -307,7 +322,7 @@ class FastMCPComplianceTester:
 
         return results
 
-    def calculate_compliance_score(self, results: Dict[str, bool]) -> int:
+    def calculate_compliance_score(self, results: dict[str, bool]) -> int:
         """计算合规性得分"""
         passed_tests = sum(1 for passed in results.values() if passed)
         total_tests = len(results)
@@ -315,9 +330,9 @@ class FastMCPComplianceTester:
 
     def generate_report(self) -> str:
         """生成测试报告"""
-        report = ["\n" + "="*60]
+        report = ["\n" + "=" * 60]
         report.append("🧪 FastMCP规范合规性测试报告")
-        report.append("="*60)
+        report.append("=" * 60)
         report.append("")
 
         for transport, data in self.test_results.items():
@@ -342,7 +357,9 @@ class FastMCPComplianceTester:
             for data in self.test_results.values()
             if data.get("status") == "completed"
         )
-        completed_tests = len([data for data in self.test_results.values() if data.get("status") == "completed"])
+        completed_tests = len(
+            [data for data in self.test_results.values() if data.get("status") == "completed"]
+        )
         avg_score = total_score // completed_tests if completed_tests > 0 else 0
 
         report.append(f"📊 总体合规性得分: {avg_score}/100")
@@ -399,7 +416,7 @@ class FastMCPComplianceTester:
 
             # 保存报告到文件
             report_file = Path(__file__).parent / "fastmcp_compliance_report.txt"
-            with open(report_file, 'w', encoding='utf-8') as f:
+            with open(report_file, "w", encoding="utf-8") as f:
                 f.write(report)
 
             self.logger.info(f"📄 报告已保存到: {report_file}")
@@ -415,6 +432,7 @@ class FastMCPComplianceTester:
         except Exception as e:
             self.logger.error(f"❌ 测试执行失败: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -424,7 +442,7 @@ async def main():
     tester = FastMCPComplianceTester()
 
     print("🧪 FastMCP规范合规性测试工具")
-    print("="*50)
+    print("=" * 50)
     print("测试Article MCP服务器在不同传输模式下的MCP规范符合性")
     print("")
 

@@ -1,5 +1,4 @@
-"""
-CrossRef 和 OpenAlex 服务异步实现测试
+"""CrossRef 和 OpenAlex 服务异步实现测试
 
 这个测试文件为 CrossRef 和 OpenAlex 服务定义异步接口的测试用例。
 这两个服务使用统一的 api_client，所以可以共享测试逻辑。
@@ -13,7 +12,6 @@ CrossRef 和 OpenAlex 服务异步实现测试
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -33,6 +31,7 @@ class TestCrossRefServiceAsyncMethods:
         """创建 CrossRef 服务实例"""
         try:
             from article_mcp.services.crossref_service import CrossRefService
+
             return CrossRefService(logger=Mock())
         except ImportError:
             pytest.skip("CrossRefService 未找到")
@@ -41,10 +40,12 @@ class TestCrossRefServiceAsyncMethods:
     async def test_crossref_search_works_async_exists(self, crossref_service):
         """测试：CrossRef search_works_async 方法存在"""
         # 检查方法是否存在
-        if hasattr(crossref_service, 'search_works_async'):
+        if hasattr(crossref_service, "search_works_async"):
             import inspect
-            assert inspect.iscoroutinefunction(crossref_service.search_works_async), \
+
+            assert inspect.iscoroutinefunction(crossref_service.search_works_async), (
                 "search_works_async 应该是异步函数"
+            )
         else:
             pytest.skip("search_works_async 方法尚未实现")
 
@@ -52,10 +53,7 @@ class TestCrossRefServiceAsyncMethods:
     async def test_crossref_search_works_async_basic(self, crossref_service):
         """测试：CrossRef 异步搜索基本功能"""
         try:
-            result = await crossref_service.search_works_async(
-                "machine learning",
-                max_results=5
-            )
+            result = await crossref_service.search_works_async("machine learning", max_results=5)
 
             assert isinstance(result, dict), "结果应该是字典"
             assert "articles" in result or "success" in result, "结果应该包含 articles 或 success"
@@ -77,15 +75,15 @@ class TestCrossRefServiceAsyncMethods:
                             "title": ["Test Article"],
                             "DOI": "10.1234/test.doi",
                             "author": [{"given": "John", "family": "Doe"}],
-                            "created": {"date-time": "2023-01-01T00:00:00Z"}
+                            "created": {"date-time": "2023-01-01T00:00:00Z"},
                         }
-                    ]
+                    ],
                 }
-            }
+            },
         }
 
         # Mock 异步 api_client
-        with patch('article_mcp.services.crossref_service.get_async_api_client') as mock_get_client:
+        with patch("article_mcp.services.crossref_service.get_async_api_client") as mock_get_client:
             mock_client = Mock()
             mock_client.get = AsyncMock(return_value=mock_api_response)
             mock_get_client.return_value = mock_client
@@ -110,6 +108,7 @@ class TestOpenAlexServiceAsyncMethods:
         """创建 OpenAlex 服务实例"""
         try:
             from article_mcp.services.openalex_service import OpenAlexService
+
             return OpenAlexService(logger=Mock())
         except ImportError:
             pytest.skip("OpenAlexService 未找到")
@@ -117,10 +116,12 @@ class TestOpenAlexServiceAsyncMethods:
     @pytest.mark.asyncio
     async def test_openalex_search_works_async_exists(self, openalex_service):
         """测试：OpenAlex search_works_async 方法存在"""
-        if hasattr(openalex_service, 'search_works_async'):
+        if hasattr(openalex_service, "search_works_async"):
             import inspect
-            assert inspect.iscoroutinefunction(openalex_service.search_works_async), \
+
+            assert inspect.iscoroutinefunction(openalex_service.search_works_async), (
                 "search_works_async 应该是异步函数"
+            )
         else:
             pytest.skip("search_works_async 方法尚未实现")
 
@@ -128,10 +129,7 @@ class TestOpenAlexServiceAsyncMethods:
     async def test_openalex_search_works_async_basic(self, openalex_service):
         """测试：OpenAlex 异步搜索基本功能"""
         try:
-            result = await openalex_service.search_works_async(
-                "neural networks",
-                max_results=5
-            )
+            result = await openalex_service.search_works_async("neural networks", max_results=5)
 
             assert isinstance(result, dict), "结果应该是字典"
             assert "articles" in result or "success" in result
@@ -152,15 +150,13 @@ class TestOpenAlexServiceAsyncMethods:
                         "title": "Test Article",
                         "doi": "10.1234/openalex.test",
                         "publication_year": 2023,
-                        "primary_location": {
-                            "source": {"display_name": "Test Journal"}
-                        }
+                        "primary_location": {"source": {"display_name": "Test Journal"}},
                     }
-                ]
-            }
+                ],
+            },
         }
 
-        with patch('article_mcp.services.openalex_service.get_async_api_client') as mock_get_client:
+        with patch("article_mcp.services.openalex_service.get_async_api_client") as mock_get_client:
             mock_client = Mock()
             mock_client.get = AsyncMock(return_value=mock_api_response)
             mock_get_client.return_value = mock_client
@@ -190,12 +186,13 @@ class TestCrossRefOpenAlexParallelSearch:
 
             # 并行搜索
             import time
+
             start = time.time()
 
             results = await asyncio.gather(
                 crossref.search_works_async("test", max_results=5),
                 openalex.search_works_async("test", max_results=5),
-                return_exceptions=True
+                return_exceptions=True,
             )
 
             elapsed = time.time() - start
@@ -215,19 +212,21 @@ class TestCrossRefOpenAlexParallelSearch:
 # 实现检查
 # ============================================================================
 
+
 def test_crossref_async_signature():
     """测试：检查 CrossRef 异步方法签名"""
     try:
-        from article_mcp.services.crossref_service import CrossRefService
         import inspect
+
+        from article_mcp.services.crossref_service import CrossRefService
 
         service = CrossRefService(logger=Mock())
 
-        if hasattr(service, 'search_works_async'):
+        if hasattr(service, "search_works_async"):
             sig = inspect.signature(service.search_works_async)
             params = list(sig.parameters.keys())
 
-            expected_params = ['self', 'query', 'max_results']
+            expected_params = ["self", "query", "max_results"]
             for param in expected_params:
                 assert param in params
 
@@ -240,16 +239,17 @@ def test_crossref_async_signature():
 def test_openalex_async_signature():
     """测试：检查 OpenAlex 异步方法签名"""
     try:
-        from article_mcp.services.openalex_service import OpenAlexService
         import inspect
+
+        from article_mcp.services.openalex_service import OpenAlexService
 
         service = OpenAlexService(logger=Mock())
 
-        if hasattr(service, 'search_works_async'):
+        if hasattr(service, "search_works_async"):
             sig = inspect.signature(service.search_works_async)
             params = list(sig.parameters.keys())
 
-            expected_params = ['self', 'query', 'max_results']
+            expected_params = ["self", "query", "max_results"]
             for param in expected_params:
                 assert param in params
 

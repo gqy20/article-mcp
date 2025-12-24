@@ -1,6 +1,4 @@
-"""
-期刊质量评估工具 - 核心工具5（统一质量评估工具）
-"""
+"""期刊质量评估工具 - 核心工具5（统一质量评估工具）"""
 
 import json
 import time
@@ -22,12 +20,8 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
     @mcp.tool(
         description="期刊质量评估工具。评估期刊的学术质量和影响力指标。",
-        annotations=ToolAnnotations(
-            title="期刊质量评估",
-            readOnlyHint=True,
-            openWorldHint=False
-        ),
-        tags={"quality", "journal", "metrics", "ranking"}
+        annotations=ToolAnnotations(title="期刊质量评估", readOnlyHint=True, openWorldHint=False),
+        tags={"quality", "journal", "metrics", "ranking"},
     )
     def get_journal_quality(
         journal_name: str,
@@ -50,6 +44,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
         Returns:
             包含期刊质量评估结果的字典，包括影响因子、分区等
+
         """
         try:
             # 根据操作类型分发到具体处理函数
@@ -80,7 +75,9 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             elif operation in ["ranking", "field_ranking"]:
                 # 学科领域期刊排名
                 field_name = (
-                    journal_name if isinstance(journal_name, str) else (journal_name[0] if journal_name else "")
+                    journal_name
+                    if isinstance(journal_name, str)
+                    else (journal_name[0] if journal_name else "")
                 )
                 return _get_field_ranking(field_name, ranking_type, limit, logger)
 
@@ -103,7 +100,6 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                 "data_source": None,
             }
 
-    
 
 def _single_journal_quality(
     journal_name: str, include_metrics: list[str], use_cache: bool, logger
@@ -112,6 +108,7 @@ def _single_journal_quality(
     try:
         if not journal_name or not journal_name.strip():
             from fastmcp.exceptions import ToolError
+
             raise ToolError("期刊名称不能为空")
 
         # 处理None值的include_metrics参数

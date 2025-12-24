@@ -1,10 +1,9 @@
-"""
-OpenAlex 服务单元测试 (异步版本)
-"""
+"""OpenAlex 服务单元测试 (异步版本)"""
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from article_mcp.services.openalex_service import OpenAlexService
 
 

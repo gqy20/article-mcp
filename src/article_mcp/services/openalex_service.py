@@ -1,12 +1,9 @@
-"""
-OpenAlex API服务 - 使用统一API调用
-"""
+"""OpenAlex API服务 - 使用统一API调用"""
 
-import asyncio
 import logging
 from typing import Any
 
-from .api_utils import get_api_client, get_async_api_client
+from .api_utils import get_async_api_client
 
 
 class OpenAlexService:
@@ -15,12 +12,15 @@ class OpenAlexService:
         self.base_url = "https://api.openalex.org"
         # OpenAlex需要特定的User-Agent以避免403错误
         from .api_utils import UnifiedAPIClient
+
         self.api_client = UnifiedAPIClient(logger)
         # 添加符合OpenAlex要求的User-Agent
-        self.api_client.session.headers.update({
-            "User-Agent": "Article-MCP/2.0 (mailto:user@example.com)",
-            "Accept": "application/json"
-        })
+        self.api_client.session.headers.update(
+            {
+                "User-Agent": "Article-MCP/2.0 (mailto:user@example.com)",
+                "Accept": "application/json",
+            }
+        )
         # 异步客户端（延迟初始化）
         self._async_api_client = None
 
@@ -50,7 +50,7 @@ class OpenAlexService:
             # OpenAlex 需要特定的 User-Agent
             headers = {
                 "User-Agent": "Article-MCP/2.0-Async (mailto:user@example.com)",
-                "Accept": "application/json"
+                "Accept": "application/json",
             }
 
             api_result = await self._get_async_client().get(url, params=params, headers=headers)
@@ -131,7 +131,7 @@ class OpenAlexService:
                     "citations": [],
                     "total_count": 0,
                     "source": "openalex",
-                    "error": f"无法找到DOI {doi} 对应的OpenAlex ID"
+                    "error": f"无法找到DOI {doi} 对应的OpenAlex ID",
                 }
 
             # 使用OpenAlex ID查询引用文献（需要W前缀）
@@ -172,11 +172,7 @@ class OpenAlexService:
         """通过DOI查找OpenAlex Work ID"""
         try:
             url = f"{self.base_url}/works"
-            params = {
-                "filter": f"doi:{doi}",
-                "select": "id",
-                "per-page": 1
-            }
+            params = {"filter": f"doi:{doi}", "select": "id", "per-page": 1}
 
             api_result = self.api_client.get(url, params=params)
 

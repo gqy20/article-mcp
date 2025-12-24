@@ -1,5 +1,4 @@
-"""
-arXiv 文献搜索服务
+"""arXiv 文献搜索服务
 基于 arXiv API 的学术文献搜索功能
 """
 
@@ -124,8 +123,7 @@ def search_arxiv(
     end_date: str | None = None,
     max_results: int = 10,
 ) -> dict[str, Any]:
-    """
-    搜索 arXiv 文献数据库
+    """搜索 arXiv 文献数据库
 
     参数:
         keyword: 搜索关键词
@@ -328,8 +326,7 @@ async def search_arxiv_async(
     max_results: int = 10,
     logger: logging.Logger | None = None,
 ) -> dict[str, Any]:
-    """
-    异步搜索 arXiv 文献数据库
+    """异步搜索 arXiv 文献数据库
 
     参数:
         keyword: 搜索关键词
@@ -550,10 +547,7 @@ class ArXivSearchService:
     async def search_async(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
         """异步搜索arXiv文献"""
         return await search_arxiv_async(
-            keyword=keyword,
-            max_results=max_results,
-            logger=self.logger,
-            **kwargs
+            keyword=keyword, max_results=max_results, logger=self.logger, **kwargs
         )
 
     def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs) -> dict[str, Any]:

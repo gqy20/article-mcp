@@ -1,5 +1,4 @@
-"""
-Article MCP 工具层
+"""Article MCP 工具层
 包含所有MCP工具的实现和注册逻辑
 """
 

@@ -1,6 +1,4 @@
-"""
-核心工具模块 - 新版6个统一工具
-"""
+"""核心工具模块 - 新版6个统一工具"""
 
 from .article_tools import register_article_tools
 from .batch_tools import register_batch_tools

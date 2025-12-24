@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-工具核心逻辑单元测试
+"""工具核心逻辑单元测试
 测试6工具架构的核心业务逻辑
 """
 
@@ -38,9 +37,9 @@ class TestSearchToolsCore:
 
         for identifier, expected_type in test_cases:
             result = _extract_identifier_type(identifier)
-            assert (
-                result == expected_type
-            ), f"Failed for {identifier}: expected {expected_type}, got {result}"
+            assert result == expected_type, (
+                f"Failed for {identifier}: expected {expected_type}, got {result}"
+            )
 
     @pytest.mark.unit
     def test_search_results_merging(self):

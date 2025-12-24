@@ -1,5 +1,4 @@
-"""
-统一的参考文献获取服务
+"""统一的参考文献获取服务
 整合同步和异步功能，减少代码重复
 """
 
@@ -397,7 +396,9 @@ class UnifiedReferenceService:
                 "processing_time": round(processing_time, 2),
             }
 
-    async def batch_search_europe_pmc_by_dois_async(self, dois: list[str]) -> dict[str, dict[str, Any]]:
+    async def batch_search_europe_pmc_by_dois_async(
+        self, dois: list[str]
+    ) -> dict[str, dict[str, Any]]:
         """异步批量搜索 Europe PMC"""
         if not dois:
             return {}

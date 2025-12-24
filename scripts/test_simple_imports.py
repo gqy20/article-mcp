@@ -3,9 +3,10 @@
 简单测试：验证新创建的模块文件存在且基本结构正确
 """
 
-import sys
 import ast
+import sys
 from pathlib import Path
+
 
 def test_module_exists(module_name, file_path):
     """测试模块文件是否存在且基本结构正确"""
@@ -16,7 +17,7 @@ def test_module_exists(module_name, file_path):
             return False
 
         # 尝试解析Python语法
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         try:
@@ -28,7 +29,11 @@ def test_module_exists(module_name, file_path):
 
         # 检查关键内容
         if module_name == "middleware":
-            required_classes = ["MCPErrorHandlingMiddleware", "LoggingMiddleware", "TimingMiddleware"]
+            required_classes = [
+                "MCPErrorHandlingMiddleware",
+                "LoggingMiddleware",
+                "TimingMiddleware",
+            ]
             for cls in required_classes:
                 if f"class {cls}" in content:
                     print(f"✅ 找到 {cls} 类")
@@ -50,13 +55,21 @@ def test_module_exists(module_name, file_path):
         print(f"❌ {module_name} 测试失败: {e}")
         return False
 
+
 def test_csv_export_updated():
     """测试CSV导出功能已更新"""
     print("🔧 测试CSV导出功能更新...")
     try:
-        batch_tools_path = Path(__file__).parent.parent / "src" / "article_mcp" / "tools" / "core" / "batch_tools.py"
+        batch_tools_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "article_mcp"
+            / "tools"
+            / "core"
+            / "batch_tools.py"
+        )
 
-        with open(batch_tools_path, 'r', encoding='utf-8') as f:
+        with open(batch_tools_path, encoding="utf-8") as f:
             content = f.read()
 
         # 检查是否移除了Excel相关代码
@@ -65,7 +78,7 @@ def test_csv_export_updated():
             "_export_excel_with_pandas",
             "_export_excel_with_openpyxl",
             "pandas",
-            "openpyxl"
+            "openpyxl",
         ]
 
         excel_found = False
@@ -96,13 +109,14 @@ def test_csv_export_updated():
         print(f"❌ CSV导出功能测试失败: {e}")
         return False
 
+
 def test_cli_imports_updated():
     """测试CLI导入是否正确"""
     print("🔧 测试CLI导入更新...")
     try:
         cli_path = Path(__file__).parent.parent / "src" / "article_mcp" / "cli.py"
 
-        with open(cli_path, 'r', encoding='utf-8') as f:
+        with open(cli_path, encoding="utf-8") as f:
             content = f.read()
 
         # 检查是否正确导入新模块
@@ -134,6 +148,7 @@ def test_cli_imports_updated():
         print(f"❌ CLI导入测试失败: {e}")
         return False
 
+
 def main():
     """主测试函数"""
     print("🚀 Article MCP 架构修复验证")
@@ -145,7 +160,7 @@ def main():
         ("middleware", test_module_exists("middleware", base_path / "middleware.py")),
         ("resources", test_module_exists("resources", base_path / "resources.py")),
         ("CSV导出更新", test_csv_export_updated()),
-        ("CLI导入更新", test_cli_imports_updated())
+        ("CLI导入更新", test_cli_imports_updated()),
     ]
 
     passed = 0
@@ -172,6 +187,7 @@ def main():
     else:
         print("⚠️ 部分测试失败，请检查具体问题")
         return False
+
 
 if __name__ == "__main__":
     success = main()

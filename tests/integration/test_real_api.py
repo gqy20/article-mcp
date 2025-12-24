@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-真实API集成测试
+"""真实API集成测试
 测试与真实外部API的集成
 注意：这些测试需要网络连接，可能会比较慢
 """
@@ -9,6 +8,7 @@ import asyncio
 import os
 
 import pytest
+
 from article_mcp.tests.test_helpers import (
     TestTimer,
     assert_valid_search_results,

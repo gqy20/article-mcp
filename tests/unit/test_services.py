@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-服务层单元测试
+"""服务层单元测试
 测试各个服务类的基本功能
 """
 
@@ -22,11 +21,13 @@ from article_mcp.services.crossref_service import CrossRefService  # noqa: E402
 from article_mcp.services.europe_pmc import EuropePMCService  # noqa: E402
 from article_mcp.services.openalex_service import OpenAlexService  # noqa: E402
 from article_mcp.services.reference_service import create_reference_service  # noqa: E402
-from tests.utils.test_helpers import MockDataGenerator  # noqa: E402
-from tests.utils.test_helpers import TestTimer
-from tests.utils.test_helpers import assert_valid_article_structure
-from tests.utils.test_helpers import assert_valid_search_results
-from tests.utils.test_helpers import create_mock_service
+from tests.utils.test_helpers import (
+    MockDataGenerator,  # noqa: E402
+    TestTimer,
+    assert_valid_article_structure,
+    assert_valid_search_results,
+    create_mock_service,
+)
 
 
 class TestEuropePMCService:

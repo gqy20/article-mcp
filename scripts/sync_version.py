@@ -14,7 +14,7 @@ from pathlib import Path
 def get_version_from_pyproject():
     """从pyproject.toml获取版本号"""
     pyproject_path = Path("pyproject.toml")
-    content = pyproject_path.read_text(encoding='utf-8')
+    content = pyproject_path.read_text(encoding="utf-8")
     match = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
     return match.group(1) if match else None
 
@@ -24,20 +24,21 @@ def update_file_content(file_path: Path, old_pattern: str, new_content: str):
     if not file_path.exists():
         return False
 
-    content = file_path.read_text(encoding='utf-8')
+    content = file_path.read_text(encoding="utf-8")
 
     # 使用正则表达式进行更精确的替换
     import re
+
     # 转义特殊字符
     escaped_pattern = re.escape(old_pattern)
     # 创建正则表达式，匹配版本号部分
-    pattern = f'{escaped_pattern}["\'][^"\']*["\']'
+    pattern = f"{escaped_pattern}[\"'][^\"']*[\"']"
     new_pattern = new_content
 
     new_content = re.sub(pattern, new_pattern, content)
 
     if new_content != content:
-        file_path.write_text(new_content, encoding='utf-8')
+        file_path.write_text(new_content, encoding="utf-8")
         return True
     return False
 
@@ -54,46 +55,45 @@ def sync_version():
     # 定义文件更新规则
     updates = [
         # __init__.py文件
-        (Path("src/article_mcp/__init__.py"),
-         f'__version__ = "',
-         f'__version__ = "{version}"'),
-
+        (Path("src/article_mcp/__init__.py"), '__version__ = "', f'__version__ = "{version}"'),
         # cli.py文件
-        (Path("src/article_mcp/cli.py"),
-         'FastMCP("Article MCP Server", version="',
-         f'FastMCP("Article MCP Server", version="{version}"'),
-
+        (
+            Path("src/article_mcp/cli.py"),
+            'FastMCP("Article MCP Server", version="',
+            f'FastMCP("Article MCP Server", version="{version}"',
+        ),
         # config_resources.py文件
-        (Path("src/article_mcp/resources/config_resources.py"),
-         '"version": "',
-         f'"version": "{version}"'),
-
+        (
+            Path("src/article_mcp/resources/config_resources.py"),
+            '"version": "',
+            f'"version": "{version}"',
+        ),
         # tests/__init__.py文件
-        (Path("tests/__init__.py"),
-         f'__version__ = "',
-         f'__version__ = "{version}"'),
+        (Path("tests/__init__.py"), '__version__ = "', f'__version__ = "{version}"'),
     ]
 
     success_count = 0
     for file_path, old_start, new_content in updates:
         try:
-            content = file_path.read_text(encoding='utf-8')
+            content = file_path.read_text(encoding="utf-8")
             # 查找包含旧模式的行
-            lines = content.split('\n')
+            lines = content.split("\n")
             updated = False
             new_lines = []
 
             for line in lines:
                 if old_start in line and ('"' in line or '"' in line):
                     # 替换版本号
-                    new_line = re.sub(rf'{re.escape(old_start)}["\'][^"\']*["\']', new_content, line)
+                    new_line = re.sub(
+                        rf'{re.escape(old_start)}["\'][^"\']*["\']', new_content, line
+                    )
                     new_lines.append(new_line)
                     updated = True
                 else:
                     new_lines.append(line)
 
             if updated:
-                file_path.write_text('\n'.join(new_lines), encoding='utf-8')
+                file_path.write_text("\n".join(new_lines), encoding="utf-8")
                 print(f"✅ {file_path}")
                 success_count += 1
             else:
@@ -129,7 +129,7 @@ def check_version():
             continue
 
         try:
-            content = path.read_text(encoding='utf-8')
+            content = path.read_text(encoding="utf-8")
             match = re.search(pattern, content, re.MULTILINE)
             if match:
                 file_version = match.group(1)

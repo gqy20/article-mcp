@@ -1,5 +1,4 @@
-"""
-search_literature 工具改进实现
+"""search_literature 工具改进实现
 基于 TDD 驱动开发，实现以下改进:
 1. asyncio 并行搜索
 2. search_type 搜索策略
@@ -17,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 from fastmcp.exceptions import ToolError
-
 
 # ============================================================================
 # 搜索策略配置
@@ -64,6 +62,7 @@ def get_search_strategy_config(search_type: str) -> dict[str, Any]:
 
     Returns:
         策略配置字典
+
     """
     strategy = SEARCH_STRATEGIES.get(search_type)
     if strategy is None:
@@ -76,6 +75,7 @@ def get_search_strategy_config(search_type: str) -> dict[str, Any]:
 # 缓存机制
 # ============================================================================
 
+
 class SearchCache:
     """搜索缓存管理器"""
 
@@ -85,6 +85,7 @@ class SearchCache:
         Args:
             cache_dir: 缓存目录路径，默认为 ~/.article_mcp_cache
             ttl: 缓存过期时间（秒），默认 24 小时
+
         """
         if cache_dir is None:
             cache_dir = Path.home() / ".article_mcp_cache"
@@ -115,6 +116,7 @@ class SearchCache:
 
         Returns:
             缓存的结果，如果不存在或已过期则返回 None
+
         """
         cache_path = self._get_cache_path(cache_key)
 
@@ -123,7 +125,7 @@ class SearchCache:
             return None
 
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, encoding="utf-8") as f:
                 cache_data = json.load(f)
 
             # 检查是否过期
@@ -151,6 +153,7 @@ class SearchCache:
         Args:
             cache_key: 缓存键
             result: 要缓存的结果
+
         """
         cache_path = self._get_cache_path(cache_key)
 
@@ -161,9 +164,9 @@ class SearchCache:
         }
 
         try:
-            with open(cache_path, 'w', encoding='utf-8') as f:
+            with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
-        except (OSError, IOError) as e:
+        except OSError as e:
             logging.getLogger(__name__).warning(f"保存缓存失败: {e}")
 
     def clear(self, pattern: str | None = None) -> int:
@@ -174,6 +177,7 @@ class SearchCache:
 
         Returns:
             清理的缓存文件数量
+
         """
         cleared = 0
         for cache_file in self.cache_dir.rglob("*.json"):
@@ -190,6 +194,7 @@ class SearchCache:
 
         Returns:
             包含 hits, misses, total_keys 的字典
+
         """
         total_keys = sum(1 for _ in self.cache_dir.rglob("*.json"))
         return {
@@ -208,6 +213,7 @@ class SearchCache:
 
         Returns:
             缓存键（SHA256 哈希）
+
         """
         params = {
             "keyword": keyword.strip().lower(),
@@ -229,6 +235,7 @@ def get_cache_key(keyword: str, sources: list[str], max_results: int) -> str:
 
     Returns:
         缓存键（SHA256 哈希）
+
     """
     return SearchCache._generate_key(keyword, sources, max_results)
 
@@ -236,6 +243,7 @@ def get_cache_key(keyword: str, sources: list[str], max_results: int) -> str:
 # ============================================================================
 # 异步并行搜索
 # ============================================================================
+
 
 async def parallel_search_sources(
     services: dict[str, Any],
@@ -255,6 +263,7 @@ async def parallel_search_sources(
 
     Returns:
         数据源到搜索结果的映射
+
     """
     results = {}
 
@@ -322,6 +331,7 @@ async def parallel_search_sources(
 # 合并策略
 # ============================================================================
 
+
 def apply_merge_strategy(
     results_by_source: dict[str, list[dict[str, Any]]],
     merge_strategy: str,
@@ -336,6 +346,7 @@ def apply_merge_strategy(
 
     Returns:
         合并后的结果列表
+
     """
     if merge_strategy == "intersection":
         return _intersection_merge(results_by_source, logger)
@@ -350,6 +361,7 @@ def _union_merge(
 ) -> list[dict[str, Any]]:
     """并集合并：返回所有文章，去重"""
     from article_mcp.services.merged_results import merge_articles_by_doi
+
     return merge_articles_by_doi(results_by_source)
 
 
@@ -367,9 +379,7 @@ def _intersection_merge(
     # 收集每个源的 DOI 集合
     doi_sets = {}
     for source, articles in results_by_source.items():
-        doi_sets[source] = {
-            article.get("doi") for article in articles if article.get("doi")
-        }
+        doi_sets[source] = {article.get("doi") for article in articles if article.get("doi")}
 
     # 找出在所有源中都出现的 DOI
     if not doi_sets:
@@ -397,6 +407,7 @@ def _intersection_merge(
 # 完整的异步搜索函数
 # ============================================================================
 
+
 async def search_literature_async(
     keyword: str,
     sources: list[str] | None = None,
@@ -421,6 +432,7 @@ async def search_literature_async(
 
     Returns:
         搜索结果字典
+
     """
     if logger is None:
         logger = logging.getLogger(__name__)
@@ -498,6 +510,7 @@ async def search_literature_async(
 # 同步包装函数（向后兼容）
 # ============================================================================
 
+
 def search_literature_with_cache(
     keyword: str,
     sources: list[str] | None = None,
@@ -524,6 +537,7 @@ def search_literature_with_cache(
 
     Returns:
         搜索结果字典
+
     """
     if logger is None:
         logger = logging.getLogger(__name__)
@@ -630,6 +644,7 @@ def search_literature_with_cache(
 # 串行搜索函数（用于性能对比测试）
 # ============================================================================
 
+
 async def search_literature_serial(
     keyword: str,
     sources: list[str] | None = None,
@@ -652,6 +667,7 @@ async def search_literature_serial(
 
     Returns:
         搜索结果字典
+
     """
     if logger is None:
         logger = logging.getLogger(__name__)

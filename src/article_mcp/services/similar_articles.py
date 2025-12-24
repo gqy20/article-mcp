@@ -1,8 +1,7 @@
 import logging
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import requests

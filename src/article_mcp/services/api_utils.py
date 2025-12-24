@@ -1,6 +1,4 @@
-"""
-统一的API调用工具 - Linus风格：简单直接
-"""
+"""统一的API调用工具 - Linus风格：简单直接"""
 
 import logging
 from functools import lru_cache
@@ -53,8 +51,7 @@ class UnifiedAPIClient:
         headers: dict | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
-        """
-        统一的GET请求 - 一个方法搞定所有GET请求
+        """统一的GET请求 - 一个方法搞定所有GET请求
 
         Args:
             url: 请求URL
@@ -64,6 +61,7 @@ class UnifiedAPIClient:
 
         Returns:
             统一格式的响应
+
         """
         try:
             request_headers = self.session.headers.copy()
@@ -100,8 +98,7 @@ class UnifiedAPIClient:
         headers: dict | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
-        """
-        统一的POST请求 - 一个方法搞定所有POST请求
+        """统一的POST请求 - 一个方法搞定所有POST请求
 
         Args:
             url: 请求URL
@@ -112,6 +109,7 @@ class UnifiedAPIClient:
 
         Returns:
             统一格式的响应
+
         """
         try:
             request_headers = self.session.headers.copy()
@@ -160,8 +158,7 @@ def get_api_client(logger: logging.Logger | None = None) -> UnifiedAPIClient:
 
 @lru_cache(maxsize=5000)
 def cached_get(url: str, params: str | None = None) -> dict[str, Any]:
-    """
-    带缓存的GET请求 - 简单直接
+    """带缓存的GET请求 - 简单直接
 
     Args:
         url: 请求URL
@@ -169,6 +166,7 @@ def cached_get(url: str, params: str | None = None) -> dict[str, Any]:
 
     Returns:
         API响应
+
     """
     api_client = get_api_client()
 
@@ -179,8 +177,7 @@ def cached_get(url: str, params: str | None = None) -> dict[str, Any]:
 
 
 def make_api_request(method: str, url: str, **kwargs) -> dict[str, Any]:
-    """
-    统一的API请求接口 - 简单直接
+    """统一的API请求接口 - 简单直接
 
     Args:
         method: HTTP方法 ("GET" 或 "POST")
@@ -189,6 +186,7 @@ def make_api_request(method: str, url: str, **kwargs) -> dict[str, Any]:
 
     Returns:
         统一格式的响应
+
     """
     api_client = get_api_client()
 
@@ -242,7 +240,7 @@ class AsyncAPIClient:
                     "User-Agent": "Article-MCP/2.0-Async",
                     "Accept": "application/json",
                     "Accept-Encoding": "gzip, deflate",
-                }
+                },
             )
         return self._session
 
@@ -253,8 +251,7 @@ class AsyncAPIClient:
         headers: dict | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
-        """
-        异步 GET 请求
+        """异步 GET 请求
 
         Args:
             url: 请求URL
@@ -264,13 +261,16 @@ class AsyncAPIClient:
 
         Returns:
             统一格式的响应
+
         """
         try:
             session = await self._get_session()
 
             request_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else self.timeout
 
-            async with session.get(url, params=params, headers=headers, timeout=request_timeout) as response:
+            async with session.get(
+                url, params=params, headers=headers, timeout=request_timeout
+            ) as response:
                 if response.status >= 400:
                     error_msg = f"HTTP {response.status}: {response.reason}"
                     return {
@@ -278,7 +278,7 @@ class AsyncAPIClient:
                         "error": error_msg,
                         "error_type": "http_error",
                         "status_code": response.status,
-                        "url": url
+                        "url": url,
                     }
 
                 # 尝试解析 JSON
@@ -292,7 +292,7 @@ class AsyncAPIClient:
                     "status_code": response.status,
                     "data": data,
                     "headers": dict(response.headers),
-                    "url": str(response.url)
+                    "url": str(response.url),
                 }
 
         except asyncio.TimeoutError:
@@ -313,8 +313,7 @@ class AsyncAPIClient:
         headers: dict | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
-        """
-        异步 POST 请求
+        """异步 POST 请求
 
         Args:
             url: 请求URL
@@ -325,13 +324,16 @@ class AsyncAPIClient:
 
         Returns:
             统一格式的响应
+
         """
         try:
             session = await self._get_session()
 
             request_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else self.timeout
 
-            async with session.post(url, data=data, json=json, headers=headers, timeout=request_timeout) as response:
+            async with session.post(
+                url, data=data, json=json, headers=headers, timeout=request_timeout
+            ) as response:
                 if response.status >= 400:
                     error_msg = f"HTTP {response.status}: {response.reason}"
                     return {
@@ -339,7 +341,7 @@ class AsyncAPIClient:
                         "error": error_msg,
                         "error_type": "http_error",
                         "status_code": response.status,
-                        "url": url
+                        "url": url,
                     }
 
                 # 尝试解析 JSON
@@ -353,7 +355,7 @@ class AsyncAPIClient:
                     "status_code": response.status,
                     "data": data,
                     "headers": dict(response.headers),
-                    "url": str(response.url)
+                    "url": str(response.url),
                 }
 
         except asyncio.TimeoutError:

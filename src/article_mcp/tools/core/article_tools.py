@@ -1,6 +1,4 @@
-"""
-统一文献详情工具 - 核心工具2
-"""
+"""统一文献详情工具 - 核心工具2"""
 
 import asyncio
 import logging
@@ -24,12 +22,8 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
     @mcp.tool(
         description="获取文献详情工具。通过DOI、PMID等标识符获取文献的详细信息。",
-        annotations=ToolAnnotations(
-            title="文献详情",
-            readOnlyHint=True,
-            openWorldHint=False
-        ),
-        tags={"literature", "details", "metadata"}
+        annotations=ToolAnnotations(title="文献详情", readOnlyHint=True, openWorldHint=False),
+        tags={"literature", "details", "metadata"},
     )
     async def get_article_details(
         identifier: str,
@@ -47,6 +41,7 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
         Returns:
             包含文献详细信息的字典，包括标题、作者、摘要、期刊等
+
         """
         return await get_article_details_async(
             identifier=identifier,
@@ -72,6 +67,7 @@ async def get_article_details_async(
 
     Returns:
         包含文献详细信息的字典，包括标题、作者、摘要、期刊等
+
     """
     # 使用全局 logger 或创建默认 logger
     logger = _logger or logging.getLogger(__name__)
@@ -90,8 +86,10 @@ async def get_article_details_async(
                 "processing_time": 0,
             }
 
-        from article_mcp.services.merged_results import extract_identifier_type
-        from article_mcp.services.merged_results import merge_same_doi_articles
+        from article_mcp.services.merged_results import (
+            extract_identifier_type,
+            merge_same_doi_articles,
+        )
 
         start_time = time.time()
         details_by_source = {}
@@ -205,7 +203,7 @@ async def get_article_details_async(
         # 抛出MCP标准错误
         from mcp import McpError
         from mcp.types import ErrorData
-        raise McpError(ErrorData(
-            code=-32603,
-            message=f"获取文献详情失败: {type(e).__name__}: {str(e)}"
-        ))
+
+        raise McpError(
+            ErrorData(code=-32603, message=f"获取文献详情失败: {type(e).__name__}: {str(e)}")
+        )

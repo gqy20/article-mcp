@@ -1,6 +1,4 @@
-"""
-统一参考文献工具 - 核心工具3
-"""
+"""统一参考文献工具 - 核心工具3"""
 
 import asyncio
 import logging
@@ -24,12 +22,8 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
 
     @mcp.tool(
         description="获取参考文献工具。通过文献标识符获取完整参考文献列表。",
-        annotations=ToolAnnotations(
-            title="参考文献",
-            readOnlyHint=True,
-            openWorldHint=False
-        ),
-        tags={"references", "citations", "bibliography"}
+        annotations=ToolAnnotations(title="参考文献", readOnlyHint=True, openWorldHint=False),
+        tags={"references", "citations", "bibliography"},
     )
     async def get_references(
         identifier: str,
@@ -49,6 +43,7 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
 
         Returns:
             包含参考文献列表的字典，包括引用信息和统计
+
         """
         return await get_references_async(
             identifier=identifier,
@@ -58,7 +53,6 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
             include_metadata=include_metadata,
         )
 
-    
 
 def _extract_identifier_type(identifier: str) -> str:
     """提取标识符类型"""
@@ -160,6 +154,7 @@ async def get_references_async(
 
     Returns:
         包含参考文献列表的字典，包括引用信息和统计
+
     """
     # 使用全局 logger 或创建默认 logger
     logger = _logger or logging.getLogger(__name__)
@@ -270,7 +265,7 @@ async def get_references_async(
         # 抛出MCP标准错误
         from mcp import McpError
         from mcp.types import ErrorData
-        raise McpError(ErrorData(
-            code=-32603,
-            message=f"获取参考文献失败: {type(e).__name__}: {str(e)}"
-        ))
+
+        raise McpError(
+            ErrorData(code=-32603, message=f"获取参考文献失败: {type(e).__name__}: {str(e)}")
+        )

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""
-HTML转Markdown功能模块
+"""HTML转Markdown功能模块
 使用markdownify库实现专业的HTML到Markdown转换
 """
 

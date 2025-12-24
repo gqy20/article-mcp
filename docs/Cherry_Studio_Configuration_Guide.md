@@ -148,4 +148,4 @@ Connectivity check failed for europe-pmc-reference: Error: Error invoking remote
 - 尝试重启 Cherry Studio
 - 检查是否有其他MCP服务器冲突
 
-建议按顺序尝试三个配置文件，通常 `mcp_config.json` 应该能正常工作。 
+建议按顺序尝试三个配置文件，通常 `mcp_config.json` 应该能正常工作。

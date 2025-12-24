@@ -1,5 +1,4 @@
-"""
-验证 FastMCP 是否支持异步工具函数
+"""验证 FastMCP 是否支持异步工具函数
 
 这是方案A（直接替换）的关键验证点。
 如果 FastMCP 支持 async def 工具函数，我们可以直接使用异步实现。
@@ -9,7 +8,7 @@ import asyncio
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -23,6 +22,7 @@ if str(src_path) not in sys.path:
 # ============================================================================
 # 关键结论：FastMCP 异步支持验证
 # ============================================================================
+
 
 class TestFastMCPAsyncSupport:
     """测试 FastMCP 对异步工具函数的支持情况"""
@@ -94,7 +94,7 @@ class TestFastMCPAsyncSupport:
             "async_tool_registration": "supported",
             "async_tool_execution": "supported",
             "recommendation": "方案A可直接使用异步实现",
-            "implementation": "使用 async def 工具函数"
+            "implementation": "使用 async def 工具函数",
         }
 
         # 记录支持状态
@@ -105,19 +105,17 @@ class TestFastMCPAsyncSupport:
 # 异步实现模式测试
 # ============================================================================
 
+
 class TestAsyncImplementationPatterns:
     """测试异步实现的不同模式"""
 
     @pytest.mark.asyncio
     async def test_pattern_direct_async(self):
         """模式1：直接使用异步函数（推荐用于方案A）"""
+
         async def search_service(query: str) -> dict[str, Any]:
             await asyncio.sleep(0.01)
-            return {
-                "query": query,
-                "results": ["article1", "article2"],
-                "pattern": "direct_async"
-            }
+            return {"query": query, "results": ["article1", "article2"], "pattern": "direct_async"}
 
         result = await search_service("test")
         assert result["query"] == "test"
@@ -126,6 +124,7 @@ class TestAsyncImplementationPatterns:
     @pytest.mark.asyncio
     async def test_pattern_parallel_execution(self):
         """模式2：并行执行多个异步任务"""
+
         async def search_source_1(query: str) -> dict:
             await asyncio.sleep(0.02)
             return {"source": "europe_pmc", "results": ["a1", "a2"]}
@@ -140,11 +139,10 @@ class TestAsyncImplementationPatterns:
 
         # 并行执行
         import time
+
         start = time.time()
         results = await asyncio.gather(
-            search_source_1("test"),
-            search_source_2("test"),
-            search_source_3("test")
+            search_source_1("test"), search_source_2("test"), search_source_3("test")
         )
         elapsed = time.time() - start
 
@@ -155,6 +153,7 @@ class TestAsyncImplementationPatterns:
     @pytest.mark.asyncio
     async def test_pattern_parallel_with_error_handling(self):
         """模式3：并行执行与错误处理"""
+
         async def search_source_success(query: str) -> dict:
             await asyncio.sleep(0.01)
             return {"source": "success", "results": ["a1"]}
@@ -172,7 +171,7 @@ class TestAsyncImplementationPatterns:
             search_source_success("test"),
             search_source_failure("test"),
             search_source_another("test"),
-            return_exceptions=True
+            return_exceptions=True,
         )
 
         # 检查结果
@@ -207,6 +206,7 @@ class TestAsyncImplementationPatterns:
 # 搜索工具异步模式测试
 # ============================================================================
 
+
 class TestSearchToolsAsyncPatterns:
     """测试搜索工具的异步模式"""
 
@@ -224,28 +224,22 @@ class TestSearchToolsAsyncPatterns:
         async def mock_search_europe_pmc(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.02)
             return {
-                "articles": [
-                    {"title": f"EPMC: {query}", "doi": "10.1234/epmc.1"}
-                ],
-                "error": None
+                "articles": [{"title": f"EPMC: {query}", "doi": "10.1234/epmc.1"}],
+                "error": None,
             }
 
         async def mock_search_pubmed(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.015)
             return {
-                "articles": [
-                    {"title": f"PubMed: {query}", "doi": "10.1234/pubmed.1"}
-                ],
-                "error": None
+                "articles": [{"title": f"PubMed: {query}", "doi": "10.1234/pubmed.1"}],
+                "error": None,
             }
 
         async def mock_search_arxiv(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.025)
             return {
-                "articles": [
-                    {"title": f"arXiv: {query}", "doi": "10.1234/arxiv.1"}
-                ],
-                "error": None
+                "articles": [{"title": f"arXiv: {query}", "doi": "10.1234/arxiv.1"}],
+                "error": None,
             }
 
         # 添加异步方法到服务
@@ -285,11 +279,10 @@ class TestSearchToolsAsyncPatterns:
 
         # 执行并行搜索
         import time
+
         start = time.time()
         results = await parallel_search(
-            services,
-            ["europe_pmc", "pubmed", "arxiv"],
-            "machine learning"
+            services, ["europe_pmc", "pubmed", "arxiv"], "machine learning"
         )
         elapsed = time.time() - start
 
@@ -317,11 +310,7 @@ class TestSearchToolsAsyncPatterns:
 
             # 模拟API调用
             await asyncio.sleep(0.02)
-            result = {
-                "query": query,
-                "results": ["article1", "article2"],
-                "cached": False
-            }
+            result = {"query": query, "results": ["article1", "article2"], "cached": False}
 
             # 写入缓存
             cache[cache_key] = result
@@ -330,6 +319,7 @@ class TestSearchToolsAsyncPatterns:
 
         # 第一次搜索（未命中缓存）
         import time
+
         start = time.time()
         result1 = await cached_search("test", use_cache=True)
         time1 = time.time() - start
@@ -349,6 +339,7 @@ class TestSearchToolsAsyncPatterns:
 # ============================================================================
 # 结论总结
 # ============================================================================
+
 
 def test_fastmcp_async_support_summary():
     """测试总结：FastMCP 异步支持确认
@@ -375,8 +366,8 @@ def test_fastmcp_async_support_summary():
             "1. 为服务添加 search_async() 方法",
             "2. 修改 search_tools.py 使用异步并行搜索",
             "3. 集成缓存和搜索策略",
-            "4. 注册异步工具到 FastMCP"
-        ]
+            "4. 注册异步工具到 FastMCP",
+        ],
     }
 
     # 记录总结

@@ -1,6 +1,4 @@
-"""
-统一搜索工具 - 核心工具1
-"""
+"""统一搜索工具 - 核心工具1"""
 
 import asyncio
 import time
@@ -21,12 +19,8 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
 
     @mcp.tool(
         description="多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。",
-        annotations=ToolAnnotations(
-            title="文献搜索",
-            readOnlyHint=True,
-            openWorldHint=False
-        ),
-        tags={"search", "literature", "academic"}
+        annotations=ToolAnnotations(title="文献搜索", readOnlyHint=True, openWorldHint=False),
+        tags={"search", "literature", "academic"},
     )
     async def search_literature(
         keyword: str,
@@ -44,14 +38,18 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
 
         Returns:
             搜索结果字典，包含文章列表和统计信息
+
         """
         try:
             if not keyword or not keyword.strip():
                 from fastmcp.exceptions import ToolError
+
                 raise ToolError("搜索关键词不能为空")
 
-            from article_mcp.services.merged_results import merge_articles_by_doi
-            from article_mcp.services.merged_results import simple_rank_articles
+            from article_mcp.services.merged_results import (
+                merge_articles_by_doi,
+                simple_rank_articles,
+            )
 
             start_time = time.time()
             results_by_source = {}
@@ -144,7 +142,7 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
             # 抛出MCP标准错误
             from mcp import McpError
             from mcp.types import ErrorData
-            raise McpError(ErrorData(
-                code=-32603,
-                message=f"搜索失败: {type(e).__name__}: {str(e)}"
-            ))
+
+            raise McpError(
+                ErrorData(code=-32603, message=f"搜索失败: {type(e).__name__}: {str(e)}")
+            )

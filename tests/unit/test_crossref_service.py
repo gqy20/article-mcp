@@ -1,10 +1,9 @@
-"""
-CrossRef 服务单元测试 (异步版本)
-"""
+"""CrossRef 服务单元测试 (异步版本)"""
 
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from article_mcp.services.crossref_service import CrossRefService
 
 

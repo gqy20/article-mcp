@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""
-Article Tools 异步测试
+"""Article Tools 异步测试
 测试 get_article_details 工具的异步版本
 """
 
-import asyncio
 import logging
 import time
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -25,17 +23,19 @@ def mock_europe_pmc_service():
     """模拟 Europe PMC 服务"""
     service = Mock()
     # 异步方法
-    service.fetch = Mock(return_value={
-        "success": True,
-        "article": {
-            "title": "Test Article from Europe PMC",
-            "authors": ["Author One", "Author Two"],
-            "doi": "10.1234/test.article.2023",
-            "journal": "Test Journal",
-            "publication_date": "2023-01-01",
-            "abstract": "Test abstract",
+    service.fetch = Mock(
+        return_value={
+            "success": True,
+            "article": {
+                "title": "Test Article from Europe PMC",
+                "authors": ["Author One", "Author Two"],
+                "doi": "10.1234/test.article.2023",
+                "journal": "Test Journal",
+                "publication_date": "2023-01-01",
+                "abstract": "Test abstract",
+            },
         }
-    })
+    )
     return service
 
 
@@ -43,15 +43,17 @@ def mock_europe_pmc_service():
 def mock_crossref_service():
     """模拟 CrossRef 服务"""
     service = Mock()
-    service.get_work_by_doi = Mock(return_value={
-        "success": True,
-        "article": {
-            "title": "Test Article from CrossRef",
-            "authors": ["Author One"],
-            "doi": "10.1234/test.article.2023",
-            "journal": "Test Journal",
+    service.get_work_by_doi = Mock(
+        return_value={
+            "success": True,
+            "article": {
+                "title": "Test Article from CrossRef",
+                "authors": ["Author One"],
+                "doi": "10.1234/test.article.2023",
+                "journal": "Test Journal",
+            },
         }
-    })
+    )
     return service
 
 
@@ -59,15 +61,17 @@ def mock_crossref_service():
 def mock_openalex_service():
     """模拟 OpenAlex 服务"""
     service = Mock()
-    service.get_work_by_doi = Mock(return_value={
-        "success": True,
-        "article": {
-            "title": "Test Article from OpenAlex",
-            "authors": ["Author One"],
-            "doi": "10.1234/test.article.2023",
-            "journal": "Test Journal",
+    service.get_work_by_doi = Mock(
+        return_value={
+            "success": True,
+            "article": {
+                "title": "Test Article from OpenAlex",
+                "authors": ["Author One"],
+                "doi": "10.1234/test.article.2023",
+                "journal": "Test Journal",
+            },
         }
-    })
+    )
     return service
 
 
@@ -75,20 +79,24 @@ def mock_openalex_service():
 def mock_arxiv_service():
     """模拟 arXiv 服务"""
     service = Mock()
-    service.fetch = Mock(return_value={
-        "success": True,
-        "article": {
-            "title": "Test Article from arXiv",
-            "authors": ["Author One"],
-            "arxiv_id": "2301.00001",
-            "abstract": "Test abstract",
+    service.fetch = Mock(
+        return_value={
+            "success": True,
+            "article": {
+                "title": "Test Article from arXiv",
+                "authors": ["Author One"],
+                "arxiv_id": "2301.00001",
+                "abstract": "Test abstract",
+            },
         }
-    })
+    )
     return service
 
 
 @pytest.fixture
-def mock_services(mock_europe_pmc_service, mock_crossref_service, mock_openalex_service, mock_arxiv_service):
+def mock_services(
+    mock_europe_pmc_service, mock_crossref_service, mock_openalex_service, mock_arxiv_service
+):
     """模拟服务字典"""
     return {
         "europe_pmc": mock_europe_pmc_service,
@@ -164,6 +172,7 @@ class TestGetArticleDetailsAsync:
         for identifier, expected_type in test_cases:
             # 测试标识符类型提取
             from article_mcp.services.merged_results import extract_identifier_type
+
             extracted_type = extract_identifier_type(identifier)
             assert extracted_type == expected_type
 
@@ -224,9 +233,7 @@ class TestGetArticleDetailsAsync:
         assert result["total_count"] == 0
         assert result["sources_found"] == []
 
-    async def test_get_article_details_default_sources(
-        self, mock_services, logger
-    ):
+    async def test_get_article_details_default_sources(self, mock_services, logger):
         """测试默认数据源"""
         article_tools._article_services = mock_services
         article_tools._logger = logger
@@ -239,12 +246,9 @@ class TestGetArticleDetailsAsync:
         # 验证默认使用 europe_pmc 和 crossref
         assert "europe_pmc" in result["sources_found"] or "crossref" in result["sources_found"]
 
-    async def test_get_article_details_parallel_execution(
-        self, mock_services, logger
-    ):
+    async def test_get_article_details_parallel_execution(self, mock_services, logger):
         """测试并行执行多个数据源"""
         # 设置延迟以验证并行执行
-        import time
 
         original_europe_pmc_fetch = mock_services["europe_pmc"].fetch
         original_crossref_fetch = mock_services["crossref"].get_work_by_doi
@@ -274,9 +278,7 @@ class TestGetArticleDetailsAsync:
         assert elapsed < 0.12, f"Parallel execution took {elapsed}s, expected < 0.12s"
         assert result["total_count"] == 2
 
-    async def test_get_article_details_arxiv_id(
-        self, mock_services, mock_arxiv_service, logger
-    ):
+    async def test_get_article_details_arxiv_id(self, mock_services, mock_arxiv_service, logger):
         """测试通过 arXiv ID 获取文献详情"""
         article_tools._article_services = mock_services
         article_tools._logger = logger
@@ -353,6 +355,7 @@ class TestHelperFunctions:
     def test_extract_identifier_type_doi(self):
         """测试 DOI 类型识别"""
         from article_mcp.services.merged_results import extract_identifier_type
+
         test_cases = [
             "10.1234/test.doi",
             "doi:10.1234/test.doi",
@@ -365,6 +368,7 @@ class TestHelperFunctions:
     def test_extract_identifier_type_pmid(self):
         """测试 PMID 类型识别"""
         from article_mcp.services.merged_results import extract_identifier_type
+
         test_cases = ["12345678", "pmid:12345678", "PMID:12345678"]
         for case in test_cases:
             result = extract_identifier_type(case)
@@ -373,6 +377,7 @@ class TestHelperFunctions:
     def test_extract_identifier_type_pmcid(self):
         """测试 PMCID 类型识别"""
         from article_mcp.services.merged_results import extract_identifier_type
+
         test_cases = ["PMC123456", "pmcid:PMC123456", "PMCID:PMC123456"]
         for case in test_cases:
             result = extract_identifier_type(case)
@@ -381,6 +386,7 @@ class TestHelperFunctions:
     def test_extract_identifier_type_arxiv(self):
         """测试 arXiv 类型识别"""
         from article_mcp.services.merged_results import extract_identifier_type
+
         test_cases = ["arXiv:2301.00001", "ARXIV:2301.00001"]
         for case in test_cases:
             result = extract_identifier_type(case)

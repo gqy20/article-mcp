@@ -1,5 +1,4 @@
-"""
-search_tools 异步集成测试
+"""search_tools 异步集成测试
 
 这是方案A（直接替换）的核心集成测试文件。
 测试异步版本的 search_literature 工具函数。
@@ -18,7 +17,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -48,20 +47,28 @@ class TestSearchLiteratureAsyncIntegration:
             await asyncio.sleep(0.02)
             return {
                 "articles": [
-                    {"title": f"EPMC: {query}", "doi": f"10.1234/epmc.{i}", "journal": "EPMC Journal"}
+                    {
+                        "title": f"EPMC: {query}",
+                        "doi": f"10.1234/epmc.{i}",
+                        "journal": "EPMC Journal",
+                    }
                     for i in range(max_results)
                 ],
-                "error": None
+                "error": None,
             }
 
         async def mock_pubmed_search(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.015)
             return {
                 "articles": [
-                    {"title": f"PubMed: {query}", "doi": f"10.1234/pubmed.{i}", "journal": "PubMed Journal"}
+                    {
+                        "title": f"PubMed: {query}",
+                        "doi": f"10.1234/pubmed.{i}",
+                        "journal": "PubMed Journal",
+                    }
                     for i in range(max_results)
                 ],
-                "error": None
+                "error": None,
             }
 
         async def mock_arxiv_search(query: str, max_results: int = 10) -> dict:
@@ -71,27 +78,35 @@ class TestSearchLiteratureAsyncIntegration:
                     {"title": f"arXiv: {query}", "doi": f"10.1234/arxiv.{i}", "journal": "arXiv"}
                     for i in range(max_results)
                 ],
-                "error": None
+                "error": None,
             }
 
         async def mock_crossref_search(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.018)
             return {
                 "articles": [
-                    {"title": f"CrossRef: {query}", "doi": f"10.1234/crossref.{i}", "journal": "CrossRef Journal"}
+                    {
+                        "title": f"CrossRef: {query}",
+                        "doi": f"10.1234/crossref.{i}",
+                        "journal": "CrossRef Journal",
+                    }
                     for i in range(max_results)
                 ],
-                "error": None
+                "error": None,
             }
 
         async def mock_openalex_search(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.022)
             return {
                 "articles": [
-                    {"title": f"OpenAlex: {query}", "doi": f"10.1234/openalex.{i}", "journal": "OpenAlex Journal"}
+                    {
+                        "title": f"OpenAlex: {query}",
+                        "doi": f"10.1234/openalex.{i}",
+                        "journal": "OpenAlex Journal",
+                    }
                     for i in range(max_results)
                 ],
-                "error": None
+                "error": None,
             }
 
         # 添加异步方法到服务
@@ -111,9 +126,7 @@ class TestSearchLiteratureAsyncIntegration:
 
             start = time.time()
             result = await search_literature_async(
-                keyword="machine learning",
-                sources=["europe_pmc", "pubmed", "arxiv"],
-                max_results=5
+                keyword="machine learning", sources=["europe_pmc", "pubmed", "arxiv"], max_results=5
             )
             elapsed = time.time() - start
 
@@ -137,25 +150,23 @@ class TestSearchLiteratureAsyncIntegration:
 
             # 测试 fast 策略（只搜索2个数据源）
             result_fast = await search_literature_async(
-                keyword="test",
-                search_type="fast",
-                max_results=5
+                keyword="test", search_type="fast", max_results=5
             )
 
             assert result_fast["success"] is True
-            assert len(result_fast["sources_used"]) <= 2, \
+            assert len(result_fast["sources_used"]) <= 2, (
                 f"fast 策略应该最多搜索2个数据源，实际搜索了 {len(result_fast['sources_used'])} 个"
+            )
 
             # 测试 comprehensive 策略（搜索所有数据源）
             result_comprehensive = await search_literature_async(
-                keyword="test",
-                search_type="comprehensive",
-                max_results=5
+                keyword="test", search_type="comprehensive", max_results=5
             )
 
             assert result_comprehensive["success"] is True
-            assert len(result_comprehensive["sources_used"]) >= 3, \
+            assert len(result_comprehensive["sources_used"]) >= 3, (
                 "comprehensive 策略应该搜索多个数据源"
+            )
 
         except (ImportError, AttributeError):
             pytest.skip("search_literature_async 或策略功能尚未实现")
@@ -171,10 +182,7 @@ class TestSearchLiteratureAsyncIntegration:
             # 第一次搜索（缓存未命中）
             start = time.time()
             result1 = await search_literature_async(
-                keyword=keyword,
-                sources=["europe_pmc", "pubmed"],
-                max_results=5,
-                use_cache=True
+                keyword=keyword, sources=["europe_pmc", "pubmed"], max_results=5, use_cache=True
             )
             time1 = time.time() - start
 
@@ -185,10 +193,7 @@ class TestSearchLiteratureAsyncIntegration:
             # 第二次搜索（缓存命中）
             start = time.time()
             result2 = await search_literature_async(
-                keyword=keyword,
-                sources=["europe_pmc", "pubmed"],
-                max_results=5,
-                use_cache=True
+                keyword=keyword, sources=["europe_pmc", "pubmed"], max_results=5, use_cache=True
             )
             time2 = time.time() - start
 
@@ -210,7 +215,7 @@ class TestSearchLiteratureAsyncIntegration:
                 keyword="merging test",
                 sources=["europe_pmc", "pubmed", "arxiv"],
                 max_results=10,
-                search_type="comprehensive"
+                search_type="comprehensive",
             )
 
             assert result["success"] is True
@@ -232,6 +237,7 @@ class TestSearchLiteratureAsyncIntegration:
     @pytest.mark.asyncio
     async def test_async_search_error_handling(self, mock_search_services):
         """测试：异步搜索的错误处理"""
+
         # 让一个服务抛出异常
         async def failing_search(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.01)
@@ -245,7 +251,7 @@ class TestSearchLiteratureAsyncIntegration:
             result = await search_literature_async(
                 keyword="error test",
                 sources=["europe_pmc", "pubmed", "arxiv"],  # arxiv 会失败
-                max_results=5
+                max_results=5,
             )
 
             # 应该返回部分成功的结果
@@ -267,9 +273,7 @@ class TestSearchLiteratureAsyncIntegration:
             # 测试异步并行搜索
             start_async = time.time()
             result_async = await search_literature_async(
-                keyword="performance test",
-                sources=sources,
-                max_results=5
+                keyword="performance test", sources=sources, max_results=5
             )
             async_time = time.time() - start_async
 
@@ -284,7 +288,7 @@ class TestSearchLiteratureAsyncIntegration:
             speedup = estimated_serial_time / async_time
             assert speedup >= 2.0, f"异步加速比应该 >= 2x，实际为 {speedup:.1f}x"
 
-            print(f"\n异步搜索性能:")
+            print("\n异步搜索性能:")
             print(f"  并行耗时: {async_time:.3f}s")
             print(f"  估算串行: {estimated_serial_time:.3f}s")
             print(f"  加速比: {speedup:.1f}x")
@@ -304,21 +308,17 @@ class TestSearchLiteratureAsyncWithFastMCP:
 
         # 尝试注册异步工具
         try:
+
             @mcp.tool(description="异步文献搜索")
             async def search_literature(
                 keyword: str,
                 sources: list[str] | None = None,
                 max_results: int = 10,
-                search_type: str = "comprehensive"
+                search_type: str = "comprehensive",
             ) -> dict[str, Any]:
                 """多源文献搜索工具（异步版本）"""
                 await asyncio.sleep(0.01)
-                return {
-                    "success": True,
-                    "keyword": keyword,
-                    "total_count": 0,
-                    "async_tool": True
-                }
+                return {"success": True, "keyword": keyword, "total_count": 0, "async_tool": True}
 
             # 如果没有报错，说明 FastMCP 支持异步工具
             assert True
@@ -329,6 +329,7 @@ class TestSearchLiteratureAsyncWithFastMCP:
     @pytest.mark.asyncio
     async def test_async_tool_response_format(self):
         """测试：异步工具返回符合 MCP 工具规范的格式"""
+
         # 定义原始异步函数（不使用 @mcp.tool 装饰器）
         async def test_search_impl(keyword: str) -> dict[str, Any]:
             await asyncio.sleep(0.01)
@@ -336,13 +337,11 @@ class TestSearchLiteratureAsyncWithFastMCP:
                 "success": True,
                 "keyword": keyword,
                 "sources_used": ["test_source"],
-                "merged_results": [
-                    {"title": "Test Article", "doi": "10.1234/test"}
-                ],
+                "merged_results": [{"title": "Test Article", "doi": "10.1234/test"}],
                 "total_count": 1,
                 "search_time": 0.05,
                 "search_type": "comprehensive",
-                "cached": False
+                "cached": False,
             }
 
         # 验证返回格式
@@ -350,8 +349,12 @@ class TestSearchLiteratureAsyncWithFastMCP:
 
         # 检查必需字段
         required_fields = [
-            "success", "keyword", "sources_used",
-            "merged_results", "total_count", "search_time"
+            "success",
+            "keyword",
+            "sources_used",
+            "merged_results",
+            "total_count",
+            "search_time",
         ]
 
         for field in required_fields:
@@ -362,15 +365,18 @@ class TestSearchLiteratureAsyncWithFastMCP:
 # 实现检查
 # ============================================================================
 
+
 def test_async_search_literature_exists():
     """测试：检查异步搜索工具函数是否存在"""
     try:
-        from article_mcp.tools.core.search_tools import search_literature_async
         import inspect
 
+        from article_mcp.tools.core.search_tools import search_literature_async
+
         # 应该是异步函数
-        assert inspect.iscoroutinefunction(search_literature_async), \
+        assert inspect.iscoroutinefunction(search_literature_async), (
             "search_literature_async 应该是异步函数"
+        )
 
         # 检查函数签名
         sig = inspect.signature(search_literature_async)
@@ -378,8 +384,14 @@ def test_async_search_literature_exists():
 
         # 应该有的参数
         expected_params = [
-            'keyword', 'sources', 'max_results', 'search_type',
-            'use_cache', 'cache', 'services', 'logger'
+            "keyword",
+            "sources",
+            "max_results",
+            "search_type",
+            "use_cache",
+            "cache",
+            "services",
+            "logger",
         ]
         for param in expected_params:
             assert param in params, f"search_literature_async 应该有 {param} 参数"
@@ -391,14 +403,15 @@ def test_async_search_literature_exists():
 def test_async_search_imports():
     """测试：检查异步搜索的必要导入"""
     try:
-        import article_mcp.tools.core.search_tools as search_tools_module
         import inspect
+
+        import article_mcp.tools.core.search_tools as search_tools_module
 
         source = inspect.getsource(search_tools_module)
 
         # 检查是否有必要的异步导入
-        has_asyncio = 'asyncio' in source or 'import asyncio' in source
-        has_search_async = 'search_literature_async' in source
+        has_asyncio = "asyncio" in source or "import asyncio" in source
+        has_search_async = "search_literature_async" in source
 
         # 如果实现了异步搜索，应该有 asyncio
         if has_search_async:
@@ -411,6 +424,7 @@ def test_async_search_imports():
 # ============================================================================
 # 完整工作流测试
 # ============================================================================
+
 
 class TestSearchLiteratureAsyncWorkflow:
     """测试异步搜索的完整工作流"""
@@ -454,7 +468,7 @@ class TestSearchLiteratureAsyncWorkflow:
                 search_type="fast",
                 use_cache=True,
                 services=complete_services,
-                logger=Mock()
+                logger=Mock(),
             )
 
             # 2. 验证结果

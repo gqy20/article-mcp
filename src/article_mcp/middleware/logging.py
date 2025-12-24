@@ -1,10 +1,7 @@
-"""
-日志和计时中间件
-"""
+"""日志和计时中间件"""
 
 import logging
 import time
-from typing import Any
 
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 

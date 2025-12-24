@@ -1,6 +1,4 @@
-"""
-期刊资源 - 提供期刊相关的动态资源
-"""
+"""期刊资源 - 提供期刊相关的动态资源"""
 
 import json
 import time
@@ -18,10 +16,14 @@ def register_journal_resources(mcp: FastMCP) -> None:
         """获取期刊质量资源数据"""
         try:
             # 尝试从本地缓存获取
-            cache_file = Path.home() / ".article_mcp_cache" / f"journal_{journal_name.replace(' ', '_').lower()}.json"
+            cache_file = (
+                Path.home()
+                / ".article_mcp_cache"
+                / f"journal_{journal_name.replace(' ', '_').lower()}.json"
+            )
 
             if cache_file.exists():
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, encoding="utf-8") as f:
                     cached_data = json.load(f)
                     return {
                         "journal_name": journal_name,
@@ -29,7 +31,7 @@ def register_journal_resources(mcp: FastMCP) -> None:
                         "ranking_info": cached_data.get("ranking_info", {}),
                         "data_source": "cache",
                         "last_updated": cached_data.get("timestamp"),
-                        "resource_type": "journal_quality"
+                        "resource_type": "journal_quality",
                     }
 
             # 如果没有缓存，返回基础信息
@@ -39,14 +41,14 @@ def register_journal_resources(mcp: FastMCP) -> None:
                 "ranking_info": {},
                 "data_source": "none",
                 "message": "No cached data available. Use get_journal_quality tool to fetch data.",
-                "resource_type": "journal_quality"
+                "resource_type": "journal_quality",
             }
 
         except Exception as e:
             return {
                 "journal_name": journal_name,
                 "error": str(e),
-                "resource_type": "journal_quality"
+                "resource_type": "journal_quality",
             }
 
     @mcp.resource("stats://cache")
@@ -61,7 +63,7 @@ def register_journal_resources(mcp: FastMCP) -> None:
                     "cache_dir": str(cache_dir),
                     "total_files": 0,
                     "total_size_mb": 0,
-                    "last_accessed": None
+                    "last_accessed": None,
                 }
 
             # 统计缓存文件
@@ -81,13 +83,11 @@ def register_journal_resources(mcp: FastMCP) -> None:
                 "cache_dir": str(cache_dir),
                 "total_files": total_files,
                 "total_size_mb": round(total_size / (1024 * 1024), 2),
-                "last_accessed": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(newest_time)) if newest_time > 0 else None,
-                "resource_type": "cache_stats"
+                "last_accessed": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(newest_time))
+                if newest_time > 0
+                else None,
+                "resource_type": "cache_stats",
             }
 
         except Exception as e:
-            return {
-                "cache_enabled": False,
-                "error": str(e),
-                "resource_type": "cache_stats"
-            }
+            return {"cache_enabled": False, "error": str(e), "resource_type": "cache_stats"}

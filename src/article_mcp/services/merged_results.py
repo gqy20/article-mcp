@@ -1,6 +1,4 @@
-"""
-结果合并工具 - 简单直接的合并函数
-"""
+"""结果合并工具 - 简单直接的合并函数"""
 
 from functools import lru_cache
 from typing import Any
@@ -196,9 +194,7 @@ def extract_identifier_type(identifier: str) -> str:
         return "pmcid"
 
     # PMID检测 (支持 PMID: 前缀，或纯数字7-8位)
-    if identifier.startswith("PMID:") or (
-        original.isdigit() and 6 <= len(original) <= 8
-    ):
+    if identifier.startswith("PMID:") or (original.isdigit() and 6 <= len(original) <= 8):
         return "pmid"
 
     # arXiv ID检测 (支持 ARXIV: 前缀或 arXiv: 前缀)

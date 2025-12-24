@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""
-Relation Tools 异步测试
+"""Relation Tools 异步测试
 测试 get_literature_relations 工具的内部函数
 """
 
-import asyncio
 import logging
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -23,21 +21,23 @@ def logger():
 def mock_crossref_service():
     """模拟 CrossRef 服务"""
     service = Mock()
-    service.get_references = Mock(return_value={
-        "success": True,
-        "references": [
-            {
-                "title": "Reference 1",
-                "doi": "10.1111/ref1.2020",
-                "journal": "Journal One",
-            },
-            {
-                "title": "Reference 2",
-                "doi": "10.2222/ref2.2021",
-                "journal": "Journal Two",
-            },
-        ],
-    })
+    service.get_references = Mock(
+        return_value={
+            "success": True,
+            "references": [
+                {
+                    "title": "Reference 1",
+                    "doi": "10.1111/ref1.2020",
+                    "journal": "Journal One",
+                },
+                {
+                    "title": "Reference 2",
+                    "doi": "10.2222/ref2.2021",
+                    "journal": "Journal Two",
+                },
+            ],
+        }
+    )
     return service
 
 
@@ -45,15 +45,17 @@ def mock_crossref_service():
 def mock_openalex_service():
     """模拟 OpenAlex 服务"""
     service = Mock()
-    service.get_citations = Mock(return_value={
-        "success": True,
-        "citations": [
-            {
-                "title": "Citing Article 1",
-                "doi": "10.3333/cite1.2022",
-            }
-        ]
-    })
+    service.get_citations = Mock(
+        return_value={
+            "success": True,
+            "citations": [
+                {
+                    "title": "Citing Article 1",
+                    "doi": "10.3333/cite1.2022",
+                }
+            ],
+        }
+    )
     return service
 
 
@@ -123,9 +125,7 @@ class TestSingleLiteratureRelations:
         assert "citing" in result["relations"]
         assert result["statistics"]["total_relations"] == 3
 
-    async def test_single_literature_relations_auto_id_type(
-        self, mock_services, logger
-    ):
+    async def test_single_literature_relations_auto_id_type(self, mock_services, logger):
         """测试自动标识符类型识别"""
         relation_tools._relation_services = mock_services
 
@@ -147,9 +147,7 @@ class TestSingleLiteratureRelations:
             )
             assert result["id_type"] == expected_type
 
-    async def test_single_literature_relations_empty_identifier(
-        self, mock_services, logger
-    ):
+    async def test_single_literature_relations_empty_identifier(self, mock_services, logger):
         """测试空标识符错误处理"""
         relation_tools._relation_services = mock_services
 
@@ -221,9 +219,7 @@ class TestSingleLiteratureRelations:
         assert citing_1["publication_year"] == "2022"
 
         # 验证服务方法被调用
-        mock_openalex_service.get_citations.assert_called_once_with(
-            "10.1038/nature10144", 10
-        )
+        mock_openalex_service.get_citations.assert_called_once_with("10.1038/nature10144", 10)
 
 
 @pytest.mark.asyncio
@@ -254,9 +250,7 @@ class TestBatchLiteratureRelations:
         assert "batch_results" in result
         assert len(result["batch_results"]) == 2
 
-    async def test_batch_literature_relations_empty_list(
-        self, mock_services, logger
-    ):
+    async def test_batch_literature_relations_empty_list(self, mock_services, logger):
         """测试空列表错误处理"""
         relation_tools._relation_services = mock_services
 
@@ -278,9 +272,7 @@ class TestBatchLiteratureRelations:
 class TestAnalyzeLiteratureNetwork:
     """测试 _analyze_literature_network 函数"""
 
-    async def test_analyze_literature_network_success(
-        self, mock_services, logger
-    ):
+    async def test_analyze_literature_network_success(self, mock_services, logger):
         """测试文献网络分析"""
         relation_tools._relation_services = mock_services
 
@@ -303,9 +295,7 @@ class TestAnalyzeLiteratureNetwork:
         # 应该有至少2个种子节点
         assert len(result["network_data"]["nodes"]) >= 2
 
-    async def test_analyze_literature_network_comprehensive(
-        self, mock_services, logger
-    ):
+    async def test_analyze_literature_network_comprehensive(self, mock_services, logger):
         """测试综合网络分析"""
         relation_tools._relation_services = mock_services
 
@@ -397,10 +387,7 @@ class TestHelperFunctions:
 
     def test_deduplicate_references_max_results_limit(self):
         """测试最大结果数量限制"""
-        references = [
-            {"title": f"Article {i}", "doi": f"10.1234/art{i}.2023"}
-            for i in range(50)
-        ]
+        references = [{"title": f"Article {i}", "doi": f"10.1234/art{i}.2023"} for i in range(50)]
 
         max_results = 20
         result = relation_tools._deduplicate_references(references, max_results)

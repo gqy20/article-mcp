@@ -5,33 +5,32 @@
 """
 
 import sys
-import json
 from pathlib import Path
 
 # 添加src到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 
 def test_middleware_import():
     """测试中间件模块导入"""
     print("🔧 测试中间件模块导入...")
     try:
         from article_mcp.middleware import (
-            MCPErrorHandlingMiddleware,
-            LoggingMiddleware,
-            TimingMiddleware,
             create_error_handling_middleware,
             create_logging_middleware,
-            create_timing_middleware
+            create_timing_middleware,
         )
+
         print("✅ 中间件模块导入成功")
 
         # 测试创建中间件实例
         import logging
+
         logger = logging.getLogger(__name__)
 
-        error_middleware = create_error_handling_middleware(logger)
-        logging_middleware = create_logging_middleware(logger)
-        timing_middleware = create_timing_middleware()
+        create_error_handling_middleware(logger)
+        create_logging_middleware(logger)
+        create_timing_middleware()
 
         print("✅ 中间件实例创建成功")
         return True
@@ -40,17 +39,16 @@ def test_middleware_import():
         print(f"❌ 中间件模块测试失败: {e}")
         return False
 
+
 def test_resources_import():
     """测试资源模块导入"""
     print("🔧 测试资源模块导入...")
     try:
         from article_mcp.resources import (
-            register_config_resources,
-            register_journal_resources,
-            register_all_resources,
             get_available_resources,
-            get_resource_description
+            get_resource_description,
         )
+
         print("✅ 资源模块导入成功")
 
         # 测试获取可用资源
@@ -68,11 +66,13 @@ def test_resources_import():
         print(f"❌ 资源模块测试失败: {e}")
         return False
 
+
 def test_csv_export_function():
     """测试CSV导出功能"""
     print("🔧 测试CSV导出功能...")
     try:
         from article_mcp.tools.core.batch_tools import _export_to_csv
+
         print("✅ CSV导出函数导入成功")
 
         # 创建测试数据
@@ -85,7 +85,7 @@ def test_csv_export_function():
                     "publication_date": "2023-01-01",
                     "doi": "10.1000/test1",
                     "abstract": "这是一个测试摘要",
-                    "source": "test"
+                    "source": "test",
                 },
                 {
                     "title": "测试文章2",
@@ -94,14 +94,15 @@ def test_csv_export_function():
                     "publication_date": "2023-02-01",
                     "doi": "10.1000/test2",
                     "abstract": "这是另一个测试摘要",
-                    "source": "test"
-                }
+                    "source": "test",
+                },
             ]
         }
 
         # 测试CSV导出（创建临时文件）
-        import tempfile
         import logging
+        import tempfile
+
         logger = logging.getLogger(__name__)
 
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
@@ -129,6 +130,7 @@ def test_csv_export_function():
         print(f"❌ CSV导出功能测试失败: {e}")
         return False
 
+
 def test_mcp_server_creation():
     """测试MCP服务器创建（不启动）"""
     print("🔧 测试MCP服务器创建...")
@@ -145,32 +147,41 @@ def test_mcp_server_creation():
 
             def tool(self, description=None, annotations=None, tags=None):
                 def decorator(func):
-                    self.tools[func.__name__] = type('MockTool', (), {'description': description or ''})()
+                    self.tools[func.__name__] = type(
+                        "MockTool", (), {"description": description or ""}
+                    )()
                     return func
+
                 return decorator
 
             def resource(self, uri):
                 def decorator(func):
                     return func
+
                 return decorator
 
         # 临时替换fastmcp导入
-        import article_mcp.cli
-        original_fastmcp = None
-
         # 保存原始导入并替换
         import sys
-        sys.modules['fastmcp'] = type('MockModule', (), {'FastMCP': MockFastMCP})()
-        sys.modules['mcp'] = type('MockModule', (), {
-            'types': type('MockTypes', (), {
-                'ToolAnnotations': type('MockAnnotations', (), {})
-            })(),
-            'McpError': Exception,
-            'ErrorData': type('MockErrorData', (), {})
-        })()
+
+        import article_mcp.cli
+
+        sys.modules["fastmcp"] = type("MockModule", (), {"FastMCP": MockFastMCP})()
+        sys.modules["mcp"] = type(
+            "MockModule",
+            (),
+            {
+                "types": type(
+                    "MockTypes", (), {"ToolAnnotations": type("MockAnnotations", (), {})}
+                )(),
+                "McpError": Exception,
+                "ErrorData": type("MockErrorData", (), {}),
+            },
+        )()
 
         # 重新导入以使用模拟的fastmcp
         import importlib
+
         importlib.reload(article_mcp.cli)
 
         # 测试服务器创建
@@ -183,6 +194,7 @@ def test_mcp_server_creation():
         print(f"❌ MCP服务器创建测试失败: {e}")
         return False
 
+
 def main():
     """主测试函数"""
     print("🚀 Article MCP 架构问题修复验证")
@@ -192,7 +204,7 @@ def main():
         ("中间件模块", test_middleware_import),
         ("资源模块", test_resources_import),
         ("CSV导出功能", test_csv_export_function),
-        ("MCP服务器创建", test_mcp_server_creation)
+        ("MCP服务器创建", test_mcp_server_creation),
     ]
 
     passed = 0
@@ -219,6 +231,7 @@ def main():
     else:
         print("⚠️ 部分测试失败，请检查具体错误")
         return False
+
 
 if __name__ == "__main__":
     success = main()

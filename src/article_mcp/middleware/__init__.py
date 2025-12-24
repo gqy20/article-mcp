@@ -1,16 +1,13 @@
-"""
-MCP标准错误处理中间件
-"""
+"""MCP标准错误处理中间件"""
 
 import logging as std_logging
 import time
 from typing import Any
 
+from fastmcp.exceptions import ToolError
+from fastmcp.server.middleware import Middleware, MiddlewareContext
 from mcp import McpError
 from mcp.types import ErrorData
-from fastmcp.exceptions import ToolError
-
-from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 # 导入具体的中间件实现
 from .logging import LoggingMiddleware, TimingMiddleware
@@ -43,16 +40,19 @@ class MCPErrorHandlingMiddleware(Middleware):
             else:
                 # 系统错误，转换为MCP标准错误
                 error_code = self._get_error_code(e)
-                raise McpError(ErrorData(
-                    code=error_code,
-                    message=f"系统错误: {type(e).__name__}: {str(e)}"
-                ))
+                raise McpError(
+                    ErrorData(code=error_code, message=f"系统错误: {type(e).__name__}: {str(e)}")
+                )
 
     def _is_user_input_error(self, error: Exception) -> bool:
         """判断是否为用户输入错误"""
         user_error_types = (
-            ValueError, TypeError, AttributeError,
-            KeyError, IndexError, AssertionError
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            AssertionError,
         )
         return isinstance(error, user_error_types)
 
@@ -65,7 +65,10 @@ class MCPErrorHandlingMiddleware(Middleware):
         if "timeout" in str(type(error).__name__).lower():
             return -32603  # Internal error
         # 参数错误
-        if "value" in str(type(error).__name__).lower() or "type" in str(type(error).__name__).lower():
+        if (
+            "value" in str(type(error).__name__).lower()
+            or "type" in str(type(error).__name__).lower()
+        ):
             return -32602  # Invalid params
         # 默认内部错误
         return -32603
@@ -77,29 +80,27 @@ class StandardErrorWrapper:
     @staticmethod
     def wrap_tool_function(tool_func):
         """包装工具函数以提供标准错误处理"""
+
         async def wrapper(*args, **kwargs):
             try:
                 return await tool_func(*args, **kwargs)
             except McpError:
                 raise
             except Exception as e:
-                raise McpError(ErrorData(
-                    code=-32603,
-                    message=f"{type(e).__name__}: {str(e)}"
-                ))
+                raise McpError(ErrorData(code=-32603, message=f"{type(e).__name__}: {str(e)}"))
+
         return wrapper
 
     @staticmethod
     def wrap_sync_tool_function(tool_func):
         """包装同步工具函数以提供标准错误处理"""
+
         def wrapper(*args, **kwargs):
             try:
                 return tool_func(*args, **kwargs)
             except McpError:
                 raise
             except Exception as e:
-                raise McpError(ErrorData(
-                    code=-32603,
-                    message=f"{type(e).__name__}: {str(e)}"
-                ))
+                raise McpError(ErrorData(code=-32603, message=f"{type(e).__name__}: {str(e)}"))
+
         return wrapper

@@ -4,12 +4,13 @@
 不依赖fastmcp等外部库
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
 
 # 添加src到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 
 def test_middleware_basic_import():
     """测试中间件模块基本导入"""
@@ -20,24 +21,25 @@ def test_middleware_basic_import():
             create_error_handling_middleware,
             create_logging_middleware,
             create_timing_middleware,
-            get_global_timing_middleware,
             get_global_performance_stats,
-            reset_global_performance_stats
+            get_global_timing_middleware,
+            reset_global_performance_stats,
         )
+
         print("✅ 中间件模块基本导入成功")
 
         # 测试创建实例
         logger = logging.getLogger(__name__)
 
-        error_middleware = create_error_handling_middleware(logger)
-        logging_middleware = create_logging_middleware(logger)
-        timing_middleware = create_timing_middleware()
+        create_error_handling_middleware(logger)
+        create_logging_middleware(logger)
+        create_timing_middleware()
 
         print("✅ 中间件实例创建成功")
 
         # 测试全局性能统计功能
-        global_timing = get_global_timing_middleware()
-        stats = get_global_performance_stats()
+        get_global_timing_middleware()
+        get_global_performance_stats()
         reset_global_performance_stats()
 
         print("✅ 全局性能统计功能正常")
@@ -47,14 +49,13 @@ def test_middleware_basic_import():
         print(f"❌ 中间件模块测试失败: {e}")
         return False
 
+
 def test_resources_basic_import():
     """测试资源模块基本导入"""
     print("🔧 测试资源模块基本导入...")
     try:
-        from article_mcp.resources import (
-            get_available_resources,
-            get_resource_description
-        )
+        from article_mcp.resources import get_available_resources, get_resource_description
+
         print("✅ 资源模块基本导入成功")
 
         # 测试获取可用资源
@@ -72,11 +73,13 @@ def test_resources_basic_import():
         print(f"❌ 资源模块测试失败: {e}")
         return False
 
+
 def test_csv_export_basic_import():
     """测试CSV导出基本功能"""
     print("🔧 测试CSV导出基本功能...")
     try:
         from article_mcp.tools.core.batch_tools import _export_to_csv
+
         print("✅ CSV导出函数导入成功")
 
         # 创建测试数据
@@ -89,13 +92,14 @@ def test_csv_export_basic_import():
                     "publication_date": "2023-01-01",
                     "doi": "10.1000/test1",
                     "abstract": "这是一个测试摘要",
-                    "source": "test"
+                    "source": "test",
                 }
             ]
         }
 
         # 测试CSV导出（创建临时文件）
         import tempfile
+
         logger = logging.getLogger(__name__)
 
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
@@ -111,7 +115,7 @@ def test_csv_export_basic_import():
                 print(f"✅ CSV文件创建成功，大小: {file_size} 字节")
 
                 # 读取文件内容验证
-                with open(tmp_path, 'r', encoding='utf-8') as f:
+                with open(tmp_path, encoding="utf-8") as f:
                     content = f.read()
                     if "测试文章1" in content and "作者1" in content:
                         print("✅ CSV文件内容验证成功")
@@ -132,6 +136,7 @@ def test_csv_export_basic_import():
         print(f"❌ CSV导出功能测试失败: {e}")
         return False
 
+
 def main():
     """主测试函数"""
     print("🚀 Article MCP 新模块基本功能验证")
@@ -140,7 +145,7 @@ def main():
     tests = [
         ("中间件模块", test_middleware_basic_import),
         ("资源模块", test_resources_basic_import),
-        ("CSV导出功能", test_csv_export_basic_import)
+        ("CSV导出功能", test_csv_export_basic_import),
     ]
 
     passed = 0
@@ -168,6 +173,7 @@ def main():
     else:
         print("⚠️ 部分测试失败，请检查具体错误")
         return False
+
 
 if __name__ == "__main__":
     success = main()

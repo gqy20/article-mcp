@@ -1,5 +1,4 @@
-"""
-arXiv 服务异步实现测试
+"""arXiv 服务异步实现测试
 
 这个测试文件为 arXiv 服务定义异步接口的测试用例。
 按照 TDD 原则，先编写测试，然后实现功能。
@@ -14,9 +13,7 @@ arXiv 服务异步实现测试
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
-from xml.etree import ElementTree as ET
 
 import pytest
 
@@ -42,12 +39,12 @@ class TestArXivServiceAsyncMethods:
         """测试：异步搜索返回文章列表"""
         # 检查异步函数是否存在
         try:
-            from article_mcp.services.arxiv_search import search_async
-
             # 应该是异步函数
             import inspect
-            assert inspect.iscoroutinefunction(search_async), \
-                "search_async 应该是异步函数"
+
+            from article_mcp.services.arxiv_search import search_async
+
+            assert inspect.iscoroutinefunction(search_async), "search_async 应该是异步函数"
 
         except ImportError:
             pytest.skip("search_async 函数尚未实现")
@@ -85,8 +82,11 @@ class TestArXivServiceAsyncMethods:
                 assert "authors" in article, "应该有作者"
                 assert "abstract" in article, "应该有摘要"
                 # arXiv 特有的分类字段
-                assert "category" in article or "categories" in article or "primary_category" in article, \
-                    "应该有分类信息"
+                assert (
+                    "category" in article
+                    or "categories" in article
+                    or "primary_category" in article
+                ), "应该有分类信息"
 
         except (ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现")
@@ -113,10 +113,7 @@ class TestArXivServiceAsyncMethods:
 
             # arXiv API 支持日期过滤
             result = await search_async(
-                "deep learning",
-                start_date="2022-01-01",
-                end_date="2023-12-31",
-                max_results=10
+                "deep learning", start_date="2022-01-01", end_date="2023-12-31", max_results=10
             )
 
             assert "articles" in result
@@ -128,8 +125,9 @@ class TestArXivServiceAsyncMethods:
                 for article in articles[:3]:  # 检查前3篇
                     pub_date = article.get("publication_date")
                     if pub_date:
-                        assert "2022" <= pub_date[:4] <= "2023", \
+                        assert "2022" <= pub_date[:4] <= "2023", (
                             f"文章日期 {pub_date} 应该在 2022-2023 范围内"
+                        )
 
         except (ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现")
@@ -173,7 +171,7 @@ class TestArXivServiceAsyncWithMocking:
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value=mock_arxiv_xml_response)
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = Mock()
             mock_session.get = AsyncMock(return_value=mock_response)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -207,7 +205,7 @@ class TestArXivServiceAsyncErrorHandling:
         try:
             from article_mcp.services.arxiv_search import search_async
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
                 # Mock 超时
@@ -235,7 +233,7 @@ class TestArXivServiceAsyncErrorHandling:
         try:
             from article_mcp.services.arxiv_search import search_async
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
                 async def mock_get_with_error(*args, **kwargs):
@@ -272,7 +270,7 @@ class TestArXivServiceAsyncErrorHandling:
             mock_response.status = 200
             mock_response.text = AsyncMock(return_value=empty_xml)
 
-            with patch('aiohttp.ClientSession') as mock_session_class:
+            with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
                 mock_session.get = AsyncMock(return_value=mock_response)
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -301,11 +299,11 @@ class TestArXivServiceAsyncPerformance:
             keywords = ["machine learning", "neural networks", "deep learning"]
 
             import time
+
             start = time.time()
-            results = await asyncio.gather(*[
-                search_async(keyword, max_results=5)
-                for keyword in keywords
-            ])
+            results = await asyncio.gather(
+                *[search_async(keyword, max_results=5) for keyword in keywords]
+            )
             elapsed = time.time() - start
 
             # 验证所有任务完成
@@ -327,19 +325,19 @@ class TestArXivServiceAsyncPerformance:
         arXiv API 要求每 3 秒最多 1 个请求
         """
         try:
-            from article_mcp.services.arxiv_search import search_async
-
             # arXiv 的速率限制是 1 请求 / 3 秒
             # 如果并行发送多个请求，应该有限制
-
             import time
+
+            from article_mcp.services.arxiv_search import search_async
+
             start = time.time()
 
             # 尝试并行发送多个请求
-            results = await asyncio.gather(*[
-                search_async(f"test {i}", max_results=3)
-                for i in range(3)
-            ], return_exceptions=True)
+            await asyncio.gather(
+                *[search_async(f"test {i}", max_results=3) for i in range(3)],
+                return_exceptions=True,
+            )
 
             elapsed = time.time() - start
 
@@ -356,23 +354,23 @@ class TestArXivServiceAsyncPerformance:
 # 实现检查
 # ============================================================================
 
+
 def test_arxiv_async_function_exists():
     """测试：检查 arXiv 异步函数是否存在"""
-
     try:
-        from article_mcp.services.arxiv_search import search_async
         import inspect
 
+        from article_mcp.services.arxiv_search import search_async
+
         # 检查是异步函数
-        assert inspect.iscoroutinefunction(search_async), \
-            "search_async 应该是异步函数"
+        assert inspect.iscoroutinefunction(search_async), "search_async 应该是异步函数"
 
         # 检查函数签名
         sig = inspect.signature(search_async)
         params = list(sig.parameters.keys())
 
         # 应该有的参数
-        expected_params = ['query', 'max_results']
+        expected_params = ["query", "max_results"]
         for param in expected_params:
             assert param in params, f"search_async 应该有 {param} 参数"
 
@@ -382,19 +380,18 @@ def test_arxiv_async_function_exists():
 
 def test_arxiv_async_imports():
     """测试：检查 arXiv 服务是否有必要的异步导入"""
-
     try:
-        import article_mcp.services.arxiv_search as arxiv_module
         import inspect
+
+        import article_mcp.services.arxiv_search as arxiv_module
 
         source = inspect.getsource(arxiv_module)
 
         # 检查是否有必要的异步导入
-        has_aiohttp = 'aiohttp' in source or 'import aiohttp' in source
-        has_asyncio = 'asyncio' in source or 'import asyncio' in source
+        has_asyncio = "asyncio" in source or "import asyncio" in source
 
         # 如果实现了异步函数，应该有这些导入
-        if hasattr(arxiv_module, 'search_async'):
+        if hasattr(arxiv_module, "search_async"):
             assert has_asyncio, "实现异步函数需要 asyncio"
 
     except ImportError:

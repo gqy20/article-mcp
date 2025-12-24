@@ -33,7 +33,7 @@ def create_mock_services_with_delay(delay: float = 0.05):
         return {
             "articles": [
                 {
-                    "title": f"Article from async",
+                    "title": "Article from async",
                     "doi": f"10.1234/async.{time.time()}",
                     "journal": "Test Journal",
                 }
@@ -46,7 +46,7 @@ def create_mock_services_with_delay(delay: float = 0.05):
         return {
             "articles": [
                 {
-                    "title": f"Article from sync",
+                    "title": "Article from sync",
                     "doi": f"10.1234/sync.{time.time()}",
                     "journal": "Test Journal",
                 }
@@ -88,11 +88,11 @@ def test_serial_vs_parallel_performance():
     sources = ["europe_pmc", "pubmed", "arxiv", "crossref", "openalex"]
     num_sources = len(sources)
 
-    print(f"\n测试配置:")
+    print("\n测试配置:")
     print(f"  - 数据源数量: {num_sources}")
     print(f"  - 每个请求延迟: {delay * 1000}ms (模拟网络请求)")
-    print(f"  - 测试关键词: 'machine learning'")
-    print(f"  - 最大结果数: 10")
+    print("  - 测试关键词: 'machine learning'")
+    print("  - 最大结果数: 10")
 
     # 测试 1: 串行搜索
     print(f"\n{'-' * 50}")
@@ -122,15 +122,17 @@ def test_serial_vs_parallel_performance():
     print("-" * 50)
 
     start = time.time()
-    result_async_serial = asyncio.run(search_literature_serial(
-        keyword="machine learning",
-        sources=sources,
-        max_results=10,
-        use_cache=False,
-        cache=cache,
-        services=services,
-        logger=logger,
-    ))
+    result_async_serial = asyncio.run(
+        search_literature_serial(
+            keyword="machine learning",
+            sources=sources,
+            max_results=10,
+            use_cache=False,
+            cache=cache,
+            services=services,
+            logger=logger,
+        )
+    )
     async_serial_time = time.time() - start
 
     print(f"  耗时: {async_serial_time:.3f}s ({async_serial_time * 1000:.0f}ms)")
@@ -142,13 +144,15 @@ def test_serial_vs_parallel_performance():
     print("-" * 50)
 
     start = time.time()
-    result_parallel = asyncio.run(parallel_search_sources(
-        services=services,
-        sources=sources,
-        query="machine learning",
-        max_results=10,
-        logger=logger,
-    ))
+    result_parallel = asyncio.run(
+        parallel_search_sources(
+            services=services,
+            sources=sources,
+            query="machine learning",
+            max_results=10,
+            logger=logger,
+        )
+    )
     parallel_time = time.time() - start
 
     print(f"  耗时: {parallel_time:.3f}s ({parallel_time * 1000:.0f}ms)")
@@ -163,38 +167,42 @@ def test_serial_vs_parallel_performance():
 
     # 第一次：缓存未命中
     start = time.time()
-    result_full1 = asyncio.run(search_literature_async(
-        keyword="machine learning",
-        sources=None,  # 使用策略默认
-        max_results=10,
-        search_type="comprehensive",
-        use_cache=True,
-        cache=cache,
-        services=services,
-        logger=logger,
-    ))
+    result_full1 = asyncio.run(
+        search_literature_async(
+            keyword="machine learning",
+            sources=None,  # 使用策略默认
+            max_results=10,
+            search_type="comprehensive",
+            use_cache=True,
+            cache=cache,
+            services=services,
+            logger=logger,
+        )
+    )
     full_time_miss = time.time() - start
 
-    print(f"  第一次搜索 (缓存未命中):")
+    print("  第一次搜索 (缓存未命中):")
     print(f"    耗时: {full_time_miss:.3f}s ({full_time_miss * 1000:.0f}ms)")
     print(f"    缓存: {result_full1['cached']}")
     print(f"    找到文章: {result_full1['total_count']} 篇")
 
     # 第二次：缓存命中
     start = time.time()
-    result_full2 = asyncio.run(search_literature_async(
-        keyword="machine learning",
-        sources=None,
-        max_results=10,
-        search_type="comprehensive",
-        use_cache=True,
-        cache=cache,
-        services=services,
-        logger=logger,
-    ))
+    result_full2 = asyncio.run(
+        search_literature_async(
+            keyword="machine learning",
+            sources=None,
+            max_results=10,
+            search_type="comprehensive",
+            use_cache=True,
+            cache=cache,
+            services=services,
+            logger=logger,
+        )
+    )
     full_time_hit = time.time() - start
 
-    print(f"  第二次搜索 (缓存命中):")
+    print("  第二次搜索 (缓存命中):")
     print(f"    耗时: {full_time_hit:.3f}s ({full_time_hit * 1000:.1f}ms)")
     print(f"    缓存: {result_full2['cached']}")
     print(f"    缓存命中: {result_full2['cache_hit']}")
@@ -228,7 +236,7 @@ def test_serial_vs_parallel_performance():
     serial_real = real_delay * num_sources
     parallel_real = real_delay * 1.1  # 并行取最慢的 + 开销
 
-    print(f"\n  5 个数据源搜索:")
+    print("\n  5 个数据源搜索:")
     print(f"    串行搜索: {serial_real:.1f}s (~{int(serial_real)} 秒)")
     print(f"    并行搜索: {parallel_real:.1f}s (~{int(parallel_real)} 秒)")
     print(f"    加速比: {serial_real / parallel_real:.1f}x")
@@ -254,16 +262,18 @@ def test_search_strategies():
 
     for strategy in strategies:
         start = time.time()
-        result = asyncio.run(search_literature_async(
-            keyword="test",
-            sources=None,  # 使用策略默认
-            max_results=10,
-            search_type=strategy,
-            use_cache=False,
-            cache=cache,
-            services=services,
-            logger=logger,
-        ))
+        result = asyncio.run(
+            search_literature_async(
+                keyword="test",
+                sources=None,  # 使用策略默认
+                max_results=10,
+                search_type=strategy,
+                use_cache=False,
+                cache=cache,
+                services=services,
+                logger=logger,
+            )
+        )
         elapsed = time.time() - start
 
         print(f"\n  {strategy.upper():15} - {result.get('search_type', 'unknown')}")
@@ -333,14 +343,14 @@ def test_cache_efficiency():
 
     # 性能对比
     print(f"\n{'-' * 50}")
-    print(f"  缓存性能提升:")
+    print("  缓存性能提升:")
     print(f"    加速比: {time_no_cache / time_with_cache:.1f}x")
     print(f"    节省时间: {(time_no_cache - time_with_cache) * 1000:.0f}ms")
     print(f"    效率提升: {((1 - time_with_cache / time_no_cache) * 100):.1f}%")
 
     # 缓存统计
     stats = cache.get_stats()
-    print(f"\n  缓存统计:")
+    print("\n  缓存统计:")
     print(f"    命中次数: {stats['hits']}")
     print(f"    未命中次数: {stats['misses']}")
     print(f"    缓存键数量: {stats['total_keys']}")

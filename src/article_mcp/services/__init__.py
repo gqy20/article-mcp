@@ -1,21 +1,19 @@
-"""
-Article MCP 服务层
+"""Article MCP 服务层
 包含所有外部API集成和业务逻辑服务
 """
 
-from .arxiv_search import create_arxiv_service
-from .arxiv_search import search_arxiv
+from .arxiv_search import create_arxiv_service, search_arxiv
 from .crossref_service import CrossRefService
 
 # 导入核心服务
-from .europe_pmc import EuropePMCService
-from .europe_pmc import create_europe_pmc_service
-from .literature_relation_service import LiteratureRelationService
-from .literature_relation_service import create_literature_relation_service
+from .europe_pmc import EuropePMCService, create_europe_pmc_service
+from .literature_relation_service import (
+    LiteratureRelationService,
+    create_literature_relation_service,
+)
 from .openalex_service import OpenAlexService
 from .pubmed_search import create_pubmed_service
-from .reference_service import UnifiedReferenceService
-from .reference_service import create_reference_service
+from .reference_service import UnifiedReferenceService, create_reference_service
 from .similar_articles import get_similar_articles_by_doi
 
 __all__ = [

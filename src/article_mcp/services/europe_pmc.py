@@ -1,5 +1,4 @@
-"""
-精简版 Europe PMC 服务
+"""精简版 Europe PMC 服务
 保持核心功能，控制在500行以内
 """
 
@@ -7,8 +6,7 @@ import asyncio
 import logging
 import re
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp

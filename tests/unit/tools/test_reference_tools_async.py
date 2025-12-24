@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""
-Reference Tools 异步测试
+"""Reference Tools 异步测试
 测试 get_references 工具的异步版本
 """
 
 import asyncio
 import logging
 import time
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -25,34 +24,38 @@ def mock_reference_service():
     """模拟 reference 服务"""
     service = Mock()
     # 异步方法
-    service.get_references_by_doi_async = AsyncMock(return_value={
-        "success": True,
-        "references": [
-            {
-                "title": "Reference 1",
-                "authors": ["Author One"],
-                "doi": "10.1111/ref1.2020",
-                "journal": "Journal One",
-                "publication_date": "2020-01-01",
-            },
-            {
-                "title": "Reference 2",
-                "authors": ["Author Two"],
-                "doi": "10.2222/ref2.2021",
-                "journal": "Journal Two",
-                "publication_date": "2021-06-15",
-            },
-        ],
-    })
-    service.get_references_crossref_async = AsyncMock(return_value=[
-        {
-            "title": "CrossRef Reference 1",
-            "authors": ["CR Author"],
-            "doi": "10.3333/crref1.2022",
-            "journal": "CR Journal",
-            "publication_date": "2022-03-01",
+    service.get_references_by_doi_async = AsyncMock(
+        return_value={
+            "success": True,
+            "references": [
+                {
+                    "title": "Reference 1",
+                    "authors": ["Author One"],
+                    "doi": "10.1111/ref1.2020",
+                    "journal": "Journal One",
+                    "publication_date": "2020-01-01",
+                },
+                {
+                    "title": "Reference 2",
+                    "authors": ["Author Two"],
+                    "doi": "10.2222/ref2.2021",
+                    "journal": "Journal Two",
+                    "publication_date": "2021-06-15",
+                },
+            ],
         }
-    ])
+    )
+    service.get_references_crossref_async = AsyncMock(
+        return_value=[
+            {
+                "title": "CrossRef Reference 1",
+                "authors": ["CR Author"],
+                "doi": "10.3333/crref1.2022",
+                "journal": "CR Journal",
+                "publication_date": "2022-03-01",
+            }
+        ]
+    )
     return service
 
 
@@ -252,9 +255,7 @@ class TestGetReferencesAsync:
     ):
         """测试服务异常处理"""
         # 设置服务抛出异常
-        mock_reference_service.get_references_by_doi_async.side_effect = Exception(
-            "API Error"
-        )
+        mock_reference_service.get_references_by_doi_async.side_effect = Exception("API Error")
 
         reference_tools._reference_services = mock_services
 
@@ -380,7 +381,6 @@ class TestGetReferencesAsync:
         self, mock_services, mock_reference_service, logger
     ):
         """测试并行执行多个数据源"""
-        import time
 
         # 设置延迟以验证并行执行
         async def delayed_europe_pmc(doi):

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Article MCP CLI入口点
+"""Article MCP CLI入口点
 从main.py迁移的核心功能，保持完全兼容
 """
 
@@ -12,7 +11,7 @@ import re
 import sys
 
 # 设置编码环境，确保emoji字符正确处理
-os.environ['PYTHONIOENCODING'] = 'utf-8'
+os.environ["PYTHONIOENCODING"] = "utf-8"
 
 
 def safe_print(text):
@@ -21,11 +20,11 @@ def safe_print(text):
         print(text)
     except UnicodeEncodeError:
         # 移除或替换非ASCII字符
-        clean_text = re.sub(r'[^\x00-\x7F]+', '', text)
+        clean_text = re.sub(r"[^\x00-\x7F]+", "", text)
         print(clean_text)
     except UnicodeDecodeError:
         # 处理解码错误
-        clean_text = text.encode('ascii', 'ignore').decode('ascii')
+        clean_text = text.encode("ascii", "ignore").decode("ascii")
         print(clean_text)
 
 
@@ -60,7 +59,7 @@ def create_mcp_server():
     logger.setLevel(logging.INFO)
 
     # 添加中间件
-    from .middleware import MCPErrorHandlingMiddleware, LoggingMiddleware, TimingMiddleware
+    from .middleware import LoggingMiddleware, MCPErrorHandlingMiddleware, TimingMiddleware
 
     mcp.add_middleware(MCPErrorHandlingMiddleware(logger))
     mcp.add_middleware(LoggingMiddleware(logger))

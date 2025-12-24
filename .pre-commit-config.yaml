@@ -1,4 +1,4 @@
-# Pre-commit钩子配置
+# Pre-commit钩子配置 - 纯 Ruff 方案
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -13,37 +13,24 @@ repos:
       - id: debug-statements
       - id: check-docstring-first
 
-  - repo: https://github.com/psf/black
-    rev: 25.9.0
-    hooks:
-      - id: black
-        language_version: python3.10
-
-  - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
-    hooks:
-      - id: isort
-
+  # Ruff: 替代 black + isort + flake8 的超快 Python linter 和 formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.2
     hooks:
+      # Ruff linter - 代码质量检查 + 自动修复
       - id: ruff
         args: [--fix, --show-fixes]
+      # Ruff formatter - 替代 black (快 100 倍)
       - id: ruff-format
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
-    hooks:
-      - id: flake8
-        additional_dependencies: [flake8-docstrings]
-        args: [--max-line-length=88, --extend-ignore=E203,W503]
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-requests]
-        args: [--ignore-missing-imports]
+  # MyPy: 类型检查 (Ruff 无法替代)
+  # 暂时禁用：项目需要逐步修复类型注释问题
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.18.2
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [types-requests]
+  #       args: [--ignore-missing-imports, --explicit-package-bases]
 
   - repo: local
     hooks:

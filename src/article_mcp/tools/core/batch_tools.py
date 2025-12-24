@@ -1,6 +1,4 @@
-"""
-批量处理工具 - 核心工具6（通用导出工具）
-"""
+"""批量处理工具 - 核心工具6（通用导出工具）"""
 
 import json
 import time
@@ -22,12 +20,8 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
 
     @mcp.tool(
         description="通用结果导出工具。导出批量处理结果为JSON或CSV格式文件。",
-        annotations=ToolAnnotations(
-            title="批量结果导出",
-            readOnlyHint=False,
-            openWorldHint=True
-        ),
-        tags={"export", "batch", "json", "csv"}
+        annotations=ToolAnnotations(title="批量结果导出", readOnlyHint=False, openWorldHint=True),
+        tags={"export", "batch", "json", "csv"},
     )
     def export_batch_results(
         results: dict[str, Any],
@@ -45,6 +39,7 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
 
         Returns:
             包含导出结果的字典，包括文件路径、记录数量和文件大小
+
         """
         try:
             # 检查输入数据的有效性
@@ -140,7 +135,6 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
                 "file_size": None,
             }
 
-    
 
 def _export_to_json(
     results: dict[str, Any], output_path: Path, include_metadata: bool, logger
@@ -196,7 +190,7 @@ def _export_to_csv(
             articles = results["merged_results"]
         elif "batch_results" in results and isinstance(results["batch_results"], dict):
             # 从batch_results中提取文章数据
-            for key, value in results["batch_results"].items():
+            for _key, value in results["batch_results"].items():
                 if isinstance(value, dict) and "success" in value and value.get("success"):
                     if "article" in value:
                         articles.append(value["article"])
@@ -248,5 +242,3 @@ def _export_to_csv(
     except Exception as e:
         logger.error(f"导出CSV异常: {e}")
         raise
-
-

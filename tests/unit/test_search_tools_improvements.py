@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-search_literature 工具改进测试 - TDD 驱动
+"""search_literature 工具改进测试 - TDD 驱动
 测试方案 A 的三个改进:
 1. asyncio 并行搜索
 2. search_type 搜索策略
@@ -10,11 +9,9 @@ search_literature 工具改进测试 - TDD 驱动
 import asyncio
 import json
 import sys
-import tempfile
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
-from typing import Any
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -32,14 +29,13 @@ from article_mcp.tools.core.search_tools_improvements import (
     get_search_strategy_config,
     parallel_search_sources,
     search_literature_async,
-    search_literature_serial,
     search_literature_with_cache,
 )
-
 
 # ============================================================================
 # Fixture 定义
 # ============================================================================
+
 
 @pytest.fixture
 def mock_logger():
@@ -59,146 +55,166 @@ def mock_search_services():
 
     # Europe PMC 服务
     europe_pmc = Mock()
-    europe_pmc.search = Mock(return_value={
-        "articles": [
-            {
-                "title": "Machine Learning in Healthcare from Europe PMC",
-                "authors": ["AI Researcher"],
-                "doi": "10.1234/ml.health.epmc.2023",
-                "journal_name": "Health AI Journal",
-                "publication_date": "2023-06-15",
-                "pmid": "37891234",
-            }
-        ],
-        "total_count": 1,
-    })
-    europe_pmc.search_async = AsyncMock(return_value={
-        "articles": [
-            {
-                "title": "Machine Learning in Healthcare from Europe PMC",
-                "authors": ["AI Researcher"],
-                "doi": "10.1234/ml.health.epmc.2023",
-                "journal_name": "Health AI Journal",
-                "publication_date": "2023-06-15",
-                "pmid": "37891234",
-            }
-        ],
-        "total_count": 1,
-    })
+    europe_pmc.search = Mock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Machine Learning in Healthcare from Europe PMC",
+                    "authors": ["AI Researcher"],
+                    "doi": "10.1234/ml.health.epmc.2023",
+                    "journal_name": "Health AI Journal",
+                    "publication_date": "2023-06-15",
+                    "pmid": "37891234",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
+    europe_pmc.search_async = AsyncMock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Machine Learning in Healthcare from Europe PMC",
+                    "authors": ["AI Researcher"],
+                    "doi": "10.1234/ml.health.epmc.2023",
+                    "journal_name": "Health AI Journal",
+                    "publication_date": "2023-06-15",
+                    "pmid": "37891234",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
     services["europe_pmc"] = europe_pmc
 
     # PubMed 服务
     pubmed = Mock()
-    pubmed.search = Mock(return_value={
-        "articles": [
-            {
-                "title": "Deep Learning Applications from PubMed",
-                "authors": ["ML Specialist"],
-                "doi": "10.5678/dl.apps.pubmed.2023",
-                "journal": "Machine Learning Today",
-                "publication_date": "2023-05-20",
-                "pmid": "37654321",
-            }
-        ],
-        "total_count": 1,
-    })
-    pubmed.search_async = AsyncMock(return_value={
-        "articles": [
-            {
-                "title": "Deep Learning Applications from PubMed",
-                "authors": ["ML Specialist"],
-                "doi": "10.5678/dl.apps.pubmed.2023",
-                "journal": "Machine Learning Today",
-                "publication_date": "2023-05-20",
-                "pmid": "37654321",
-            }
-        ],
-        "total_count": 1,
-    })
+    pubmed.search = Mock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Deep Learning Applications from PubMed",
+                    "authors": ["ML Specialist"],
+                    "doi": "10.5678/dl.apps.pubmed.2023",
+                    "journal": "Machine Learning Today",
+                    "publication_date": "2023-05-20",
+                    "pmid": "37654321",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
+    pubmed.search_async = AsyncMock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Deep Learning Applications from PubMed",
+                    "authors": ["ML Specialist"],
+                    "doi": "10.5678/dl.apps.pubmed.2023",
+                    "journal": "Machine Learning Today",
+                    "publication_date": "2023-05-20",
+                    "pmid": "37654321",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
     services["pubmed"] = pubmed
 
     # arXiv 服务
     arxiv = Mock()
-    arxiv.search = Mock(return_value={
-        "articles": [
-            {
-                "title": "Neural Network Theory from arXiv",
-                "authors": ["Theory Expert"],
-                "doi": "10.9999/nn.theory.arxiv.2023",
-                "journal": "arXiv preprint",
-                "publication_date": "2023",
-            }
-        ],
-        "total_count": 1,
-    })
-    arxiv.search_async = AsyncMock(return_value={
-        "articles": [
-            {
-                "title": "Neural Network Theory from arXiv",
-                "authors": ["Theory Expert"],
-                "doi": "10.9999/nn.theory.arxiv.2023",
-                "journal": "arXiv preprint",
-                "publication_date": "2023",
-            }
-        ],
-        "total_count": 1,
-    })
+    arxiv.search = Mock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Neural Network Theory from arXiv",
+                    "authors": ["Theory Expert"],
+                    "doi": "10.9999/nn.theory.arxiv.2023",
+                    "journal": "arXiv preprint",
+                    "publication_date": "2023",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
+    arxiv.search_async = AsyncMock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Neural Network Theory from arXiv",
+                    "authors": ["Theory Expert"],
+                    "doi": "10.9999/nn.theory.arxiv.2023",
+                    "journal": "arXiv preprint",
+                    "publication_date": "2023",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
     services["arxiv"] = arxiv
 
     # CrossRef 服务
     crossref = Mock()
-    crossref.search_works = Mock(return_value={
-        "articles": [
-            {
-                "title": "AI Ethics from CrossRef",
-                "authors": ["Ethics Researcher"],
-                "doi": "10.3456/ai.ethics.crossref.2023",
-                "journal": "Ethics in AI Journal",
-                "publication_date": "2023",
-            }
-        ],
-        "total_count": 1,
-    })
-    crossref.search_works_async = AsyncMock(return_value={
-        "articles": [
-            {
-                "title": "AI Ethics from CrossRef",
-                "authors": ["Ethics Researcher"],
-                "doi": "10.3456/ai.ethics.crossref.2023",
-                "journal": "Ethics in AI Journal",
-                "publication_date": "2023",
-            }
-        ],
-        "total_count": 1,
-    })
+    crossref.search_works = Mock(
+        return_value={
+            "articles": [
+                {
+                    "title": "AI Ethics from CrossRef",
+                    "authors": ["Ethics Researcher"],
+                    "doi": "10.3456/ai.ethics.crossref.2023",
+                    "journal": "Ethics in AI Journal",
+                    "publication_date": "2023",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
+    crossref.search_works_async = AsyncMock(
+        return_value={
+            "articles": [
+                {
+                    "title": "AI Ethics from CrossRef",
+                    "authors": ["Ethics Researcher"],
+                    "doi": "10.3456/ai.ethics.crossref.2023",
+                    "journal": "Ethics in AI Journal",
+                    "publication_date": "2023",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
     services["crossref"] = crossref
 
     # OpenAlex 服务
     openalex = Mock()
-    openalex.search_works = Mock(return_value={
-        "articles": [
-            {
-                "title": "Computer Vision Advances from OpenAlex",
-                "authors": ["CV Expert"],
-                "doi": "10.7890/cv.adv.openalex.2023",
-                "journal": "Computer Vision Today",
-                "publication_date": "2023",
-            }
-        ],
-        "total_count": 1,
-    })
-    openalex.search_works_async = AsyncMock(return_value={
-        "articles": [
-            {
-                "title": "Computer Vision Advances from OpenAlex",
-                "authors": ["CV Expert"],
-                "doi": "10.7890/cv.adv.openalex.2023",
-                "journal": "Computer Vision Today",
-                "publication_date": "2023",
-            }
-        ],
-        "total_count": 1,
-    })
+    openalex.search_works = Mock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Computer Vision Advances from OpenAlex",
+                    "authors": ["CV Expert"],
+                    "doi": "10.7890/cv.adv.openalex.2023",
+                    "journal": "Computer Vision Today",
+                    "publication_date": "2023",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
+    openalex.search_works_async = AsyncMock(
+        return_value={
+            "articles": [
+                {
+                    "title": "Computer Vision Advances from OpenAlex",
+                    "authors": ["CV Expert"],
+                    "doi": "10.7890/cv.adv.openalex.2023",
+                    "journal": "Computer Vision Today",
+                    "publication_date": "2023",
+                }
+            ],
+            "total_count": 1,
+        }
+    )
     services["openalex"] = openalex
 
     return services
@@ -216,6 +232,7 @@ def search_cache(tmp_path):
 # 测试类 1: 异步并行搜索功能
 # ============================================================================
 
+
 class TestAsyncParallelSearch:
     """测试异步并行搜索功能"""
 
@@ -223,15 +240,12 @@ class TestAsyncParallelSearch:
     async def test_parallel_search_executes_concurrently(self, mock_search_services, mock_logger):
         """测试并行搜索是否真正并发执行"""
         # 导入需要测试的模块
-        from article_mcp.tools.core.search_tools_improvements import (
-            parallel_search_sources,
-        )
 
         # 为每个服务添加延迟，模拟真实 API 调用
         async def delayed_search(*args, **kwargs):
             await asyncio.sleep(0.1)  # 模拟网络延迟
             return {
-                "articles": [{"title": f"Delayed Result", "doi": "10.1234/delayed"}],
+                "articles": [{"title": "Delayed Result", "doi": "10.1234/delayed"}],
                 "total_count": 1,
             }
 
@@ -261,9 +275,6 @@ class TestAsyncParallelSearch:
     @pytest.mark.asyncio
     async def test_parallel_search_handles_partial_failure(self, mock_search_services, mock_logger):
         """测试并行搜索时部分服务失败的处理"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            parallel_search_sources,
-        )
 
         # 让 pubmed 搜索失败
         async def failing_search(*args, **kwargs):
@@ -288,10 +299,6 @@ class TestAsyncParallelSearch:
     @pytest.mark.asyncio
     async def test_parallel_search_with_unknown_source(self, mock_search_services, mock_logger):
         """测试并行搜索遇到未知数据源的处理"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            parallel_search_sources,
-        )
-
         sources = ["europe_pmc", "unknown_source", "arxiv"]
         query = "machine learning"
         max_results = 10
@@ -309,10 +316,6 @@ class TestAsyncParallelSearch:
     @pytest.mark.asyncio
     async def test_parallel_search_empty_sources_list(self, mock_search_services, mock_logger):
         """测试空的源列表"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            parallel_search_sources,
-        )
-
         sources = []
         query = "machine learning"
         max_results = 10
@@ -328,23 +331,24 @@ class TestAsyncParallelSearch:
 # 测试类 2: search_type 搜索策略
 # ============================================================================
 
+
 class TestSearchTypeStrategies:
     """测试 search_type 搜索策略"""
 
     @pytest.mark.unit
     def test_comprehensive_search_type(self, mock_search_services, mock_logger):
         """测试 comprehensive 搜索类型：使用全部数据源"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_search_strategy_config,
-        )
-
         strategy = get_search_strategy_config("comprehensive")
 
         # 验证策略配置
         assert strategy["name"] == "comprehensive"
         assert strategy["description"] == "全面搜索，使用所有可用数据源"
         assert set(strategy["default_sources"]) == {
-            "europe_pmc", "pubmed", "arxiv", "crossref", "openalex"
+            "europe_pmc",
+            "pubmed",
+            "arxiv",
+            "crossref",
+            "openalex",
         }
         assert strategy["max_results_per_source"] == 10
         assert strategy["merge_strategy"] == "union"
@@ -352,10 +356,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_fast_search_type(self, mock_search_services, mock_logger):
         """测试 fast 搜索类型：只使用主要数据源"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_search_strategy_config,
-        )
-
         strategy = get_search_strategy_config("fast")
 
         # 验证策略配置
@@ -368,10 +368,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_precise_search_type(self, mock_search_services, mock_logger):
         """测试 precise 搜索类型：使用权威数据源，交集合并"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_search_strategy_config,
-        )
-
         strategy = get_search_strategy_config("precise")
 
         # 验证策略配置
@@ -384,10 +380,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_preprint_search_type(self, mock_search_services, mock_logger):
         """测试 preprint 搜索类型：只使用预印本平台"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_search_strategy_config,
-        )
-
         strategy = get_search_strategy_config("preprint")
 
         # 验证策略配置
@@ -399,10 +391,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_invalid_search_type_defaults_to_comprehensive(self, mock_search_services, mock_logger):
         """测试无效搜索类型回退到 comprehensive"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_search_strategy_config,
-        )
-
         strategy = get_search_strategy_config("invalid_type")
 
         # 应该回退到 comprehensive
@@ -411,10 +399,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_union_merge_strategy(self, mock_logger):
         """测试并集合并策略"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            apply_merge_strategy,
-        )
-
         results_by_source = {
             "europe_pmc": [
                 {"title": "Article 1", "doi": "10.1111/article1"},
@@ -434,10 +418,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_intersection_merge_strategy(self, mock_logger):
         """测试交集合并策略"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            apply_merge_strategy,
-        )
-
         # 模拟相同的文章出现在多个源
         results_by_source = {
             "europe_pmc": [
@@ -459,10 +439,6 @@ class TestSearchTypeStrategies:
     @pytest.mark.unit
     def test_search_type_affects_max_results_per_source(self, mock_search_services, mock_logger):
         """测试搜索类型影响每个源的最大结果数"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_search_strategy_config,
-        )
-
         comprehensive = get_search_strategy_config("comprehensive")
         fast = get_search_strategy_config("fast")
 
@@ -474,16 +450,13 @@ class TestSearchTypeStrategies:
 # 测试类 3: 缓存机制
 # ============================================================================
 
+
 class TestSearchCache:
     """测试搜索缓存机制"""
 
     @pytest.mark.unit
     def test_cache_key_generation(self):
         """测试缓存键生成"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            get_cache_key,
-        )
-
         # 相同参数应该生成相同的缓存键
         key1 = get_cache_key("machine learning", ["europe_pmc", "pubmed"], 10)
         key2 = get_cache_key("machine learning", ["europe_pmc", "pubmed"], 10)
@@ -519,9 +492,7 @@ class TestSearchCache:
             "success": True,
             "keyword": "machine learning",
             "sources_used": ["europe_pmc", "pubmed"],
-            "merged_results": [
-                {"title": "Test Article", "doi": "10.1234/test"}
-            ],
+            "merged_results": [{"title": "Test Article", "doi": "10.1234/test"}],
             "total_count": 1,
         }
 
@@ -542,10 +513,11 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_expiration(self, search_cache, mock_logger):
         """测试缓存过期"""
+        import time
+
         from article_mcp.tools.core.search_tools_improvements import (
             SearchCache,
         )
-        import time
 
         # 创建一个很快过期的缓存
         cache = SearchCache(cache_dir=str(search_cache), ttl=1)
@@ -659,10 +631,6 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_use_cache_parameter(self, mock_search_services, mock_logger, search_cache):
         """测试 use_cache 参数控制是否使用缓存"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            search_literature_with_cache,
-        )
-
         cache = SearchCache(cache_dir=str(search_cache), ttl=3600)
 
         # 预先填充缓存
@@ -707,10 +675,11 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_metadata(self, search_cache, mock_logger):
         """测试缓存元数据"""
+        import time
+
         from article_mcp.tools.core.search_tools_improvements import (
             SearchCache,
         )
-        import time
 
         cache = SearchCache(cache_dir=str(search_cache), ttl=3600)
 
@@ -723,7 +692,7 @@ class TestSearchCache:
 
         # 读取缓存文件验证元数据
         cache_file = search_cache / cache_key[:2] / f"{cache_key}.json"
-        with open(cache_file, 'r', encoding='utf-8') as f:
+        with open(cache_file, encoding="utf-8") as f:
             cache_data = json.load(f)
 
         assert "result" in cache_data
@@ -736,6 +705,7 @@ class TestSearchCache:
 # 测试类 4: 集成测试
 # ============================================================================
 
+
 class TestSearchImprovementsIntegration:
     """搜索改进功能的集成测试"""
 
@@ -744,9 +714,6 @@ class TestSearchImprovementsIntegration:
         self, mock_search_services, search_cache, mock_logger
     ):
         """测试完整的异步搜索流程：策略 + 缓存"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            search_literature_async,
-        )
         from article_mcp.tools.core.search_tools_improvements import SearchCache
 
         cache = SearchCache(cache_dir=str(search_cache), ttl=3600)
@@ -787,12 +754,9 @@ class TestSearchImprovementsIntegration:
         assert result2["cache_hit"] is True
 
     @pytest.mark.asyncio
-    async def test_search_strategies_affect_sources_used(
-        self, mock_search_services, mock_logger
-    ):
+    async def test_search_strategies_affect_sources_used(self, mock_search_services, mock_logger):
         """测试不同搜索策略使用不同的数据源"""
         from article_mcp.tools.core.search_tools_improvements import (
-            search_literature_async,
             SearchCache,
         )
 
@@ -832,8 +796,6 @@ class TestSearchImprovementsIntegration:
     ):
         """测试并行搜索的性能改进"""
         from article_mcp.tools.core.search_tools_improvements import (
-            search_literature_async,
-            search_literature_serial,
             SearchCache,
         )
 
@@ -874,16 +836,15 @@ class TestSearchImprovementsIntegration:
 # 测试类 5: 边界情况和错误处理
 # ============================================================================
 
+
 class TestSearchImprovementsEdgeCases:
     """测试边界情况和错误处理"""
 
     @pytest.mark.asyncio
     async def test_empty_keyword_raises_error(self, mock_search_services, mock_logger):
         """测试空关键词抛出错误"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            search_literature_async,
-        )
         from fastmcp.exceptions import ToolError
+
         from article_mcp.tools.core.search_tools_improvements import SearchCache
 
         cache = SearchCache(ttl=3600)
@@ -899,9 +860,6 @@ class TestSearchImprovementsEdgeCases:
     @pytest.mark.asyncio
     async def test_all_sources_fail_gracefully(self, mock_search_services, mock_logger):
         """测试所有数据源都失败时的优雅处理"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            search_literature_async,
-        )
         from article_mcp.tools.core.search_tools_improvements import SearchCache
 
         cache = SearchCache(ttl=3600)
@@ -942,7 +900,7 @@ class TestSearchImprovementsEdgeCases:
         cache_file = search_cache / cache_key[:2] / f"{cache_key}.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(cache_file, 'w') as f:
+        with open(cache_file, "w") as f:
             f.write("invalid json content {{{")
 
         # 读取损坏的缓存应该返回 None 而非抛出异常

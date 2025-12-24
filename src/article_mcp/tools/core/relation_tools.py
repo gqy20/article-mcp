@@ -1,6 +1,4 @@
-"""
-文献关系分析工具 - 核心工具4（统一关系分析工具）
-"""
+"""文献关系分析工具 - 核心工具4（统一关系分析工具）"""
 
 import asyncio
 import logging
@@ -24,12 +22,8 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
 
     @mcp.tool(
         description="文献关系分析工具。分析文献间的引用关系、相似性和合作网络。",
-        annotations=ToolAnnotations(
-            title="文献关系分析",
-            readOnlyHint=True,
-            openWorldHint=False
-        ),
-        tags={"relations", "network", "analysis", "citations"}
+        annotations=ToolAnnotations(title="文献关系分析", readOnlyHint=True, openWorldHint=False),
+        tags={"relations", "network", "analysis", "citations"},
     )
     async def get_literature_relations(
         identifier: str | list[str] | None = None,
@@ -55,6 +49,7 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
 
         Returns:
             包含文献关系网络的字典，支持引用链和相似文献分析
+
         """
         try:
             # 参数优先级：identifier > identifiers
@@ -109,7 +104,6 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
                 "relations": {},
             }
 
-    
 
 def _single_literature_relations(
     identifier: str,
@@ -399,7 +393,7 @@ def _get_references(
                         else:
                             logger.warning(f"CrossRef获取参考文献失败: {result.get('error')}")
                     else:
-                        logger.warning(f"无法转换标识符为DOI，跳过CrossRef查询")
+                        logger.warning("无法转换标识符为DOI，跳过CrossRef查询")
 
                 elif source == "europe_pmc" and "europe_pmc" in _relation_services:
                     # Europe PMC参考文献获取（第二阶段实现）
@@ -422,7 +416,7 @@ def _get_references(
         return unique_references
 
     except Exception as e:
-        if 'logger' in locals():
+        if "logger" in locals():
             logger.error(f"获取参考文献失败: {e}")
         else:
             print(f"获取参考文献失败: {e}")
@@ -452,7 +446,10 @@ def _get_similar_articles(
                     # 使用现有的相似文献服务（基于PubMed E-utilities）
                     logger.info(f"使用PubMed服务获取 {doi} 的相似文献")
                     try:
-                        from src.article_mcp.services.similar_articles import get_similar_articles_by_doi
+                        from src.article_mcp.services.similar_articles import (
+                            get_similar_articles_by_doi,
+                        )
+
                         result = get_similar_articles_by_doi(doi, max_results=max_results)
 
                         if result.get("similar_articles"):
@@ -460,7 +457,7 @@ def _get_similar_articles(
                             similar_articles.extend(pubmed_similar)
                             logger.info(f"PubMed返回 {len(pubmed_similar)} 篇相似文献")
                         else:
-                            logger.warning(f"PubMed相似文献查询无结果")
+                            logger.warning("PubMed相似文献查询无结果")
                     except ImportError:
                         logger.error("无法导入similar_articles模块")
                     except Exception as e:
@@ -468,14 +465,14 @@ def _get_similar_articles(
 
                 elif source == "openalex" and "openalex" in _relation_services:
                     # OpenAlex相似文献查询（第二阶段实现）
-                    service = _relation_services["openalex"]
+                    _relation_services["openalex"]
                     logger.info(f"使用OpenAlex查询 {doi} 的相似文献")
                     # TODO: 实现OpenAlex相似文献API集成
                     logger.debug("OpenAlex相似文献功能待实现")
 
                 elif source == "europe_pmc" and "europe_pmc" in _relation_services:
                     # Europe PMC相似文献查询（第二阶段实现）
-                    service = _relation_services["europe_pmc"]
+                    _relation_services["europe_pmc"]
                     logger.info(f"使用Europe PMC查询 {doi} 的相似文献")
                     # TODO: 实现Europe PMC相似文献API集成
                     logger.debug("Europe PMC相似文献功能待实现")
@@ -516,7 +513,7 @@ def _get_citing_articles(
                         else:
                             logger.warning(f"OpenAlex获取引用文献失败: {result.get('error')}")
                     else:
-                        logger.warning(f"无法转换标识符为DOI，跳过OpenAlex查询")
+                        logger.warning("无法转换标识符为DOI，跳过OpenAlex查询")
 
                 elif source == "crossref" and "crossref" in _relation_services:
                     # Crossref也提供引用文献查询（作为备用）
@@ -701,6 +698,7 @@ def _calculate_network_metrics(
 
 # ======== 辅助函数 ========
 
+
 def _ensure_doi_identifier(identifier: str, id_type: str, logger) -> str | None:
     """确保返回DOI标识符"""
     if id_type == "doi":
@@ -737,9 +735,6 @@ def _convert_to_doi(identifier: str, id_type: str, logger) -> str | None:
 def _pmid_to_doi(pmid: str, logger) -> str | None:
     """PMID转DOI（使用多种API策略）"""
     try:
-        import requests
-        import re
-
         # 确保PMID格式正确
         pmid = str(pmid).strip()
         if not pmid.isdigit():
@@ -773,16 +768,10 @@ def _pmid_to_doi_europe_pmc(pmid: str, logger) -> str | None:
     """使用Europe PMC API进行PMID到DOI转换"""
     try:
         import requests
-        import re
 
         # Europe PMC API: 通过PMID获取文章元数据
-        url = f"https://www.ebi.ac.uk/europepmc/api/search"
-        params = {
-            "query": f"ext_id:{pmid}",
-            "resulttype": "core",
-            "format": "json",
-            "size": 1
-        }
+        url = "https://www.ebi.ac.uk/europepmc/api/search"
+        params = {"query": f"ext_id:{pmid}", "resulttype": "core", "format": "json", "size": 1}
 
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
@@ -795,7 +784,7 @@ def _pmid_to_doi_europe_pmc(pmid: str, logger) -> str | None:
                 doi_fields = [
                     result.get("doi", ""),
                     result.get("pmcDoc", {}).get("doi", ""),
-                    result.get("fullTextUrlList", {}).get("fullTextUrl", [{}])[0].get("doi", "")
+                    result.get("fullTextUrlList", {}).get("fullTextUrl", [{}])[0].get("doi", ""),
                 ]
 
                 for doi in doi_fields:
@@ -817,15 +806,9 @@ def _pmid_to_doi_crossref(pmid: str, logger) -> str | None:
 
         # 方法1：查询PMID作为关键词
         url = "https://api.crossref.org/works"
-        params = {
-            "query.bibliographic": pmid,
-            "select": "DOI,title,author,member",
-            "rows": 10
-        }
+        params = {"query.bibliographic": pmid, "select": "DOI,title,author,member", "rows": 10}
 
-        headers = {
-            "User-Agent": "Article-MCP/1.0 (mailto:user@example.com)"
-        }
+        headers = {"User-Agent": "Article-MCP/1.0 (mailto:user@example.com)"}
 
         response = requests.get(url, params=params, headers=headers, timeout=10)
         if response.status_code == 200:
@@ -836,7 +819,7 @@ def _pmid_to_doi_crossref(pmid: str, logger) -> str | None:
             for item in items:
                 doi = item.get("DOI")
                 title = item.get("title", [])
-                authors = item.get("author", [])
+                item.get("author", [])
 
                 if doi:
                     # 检查标题是否包含PMID相关信息（提高准确性）
@@ -860,15 +843,10 @@ def _pmid_to_doi_ncbi(pmid: str, logger) -> str | None:
     """使用NCBI E-utilities进行PMID到DOI转换"""
     try:
         import requests
-        import re
 
         # NCBI E-utilities API
         url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-        params = {
-            "db": "pubmed",
-            "id": pmid,
-            "retmode": "json"
-        }
+        params = {"db": "pubmed", "id": pmid, "retmode": "json"}
 
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
@@ -893,9 +871,6 @@ def _pmid_to_doi_ncbi(pmid: str, logger) -> str | None:
 def _pmcid_to_doi(pmcid: str, logger) -> str | None:
     """PMCID转DOI（使用多种API策略）"""
     try:
-        import requests
-        import re
-
         # 确保PMCID格式正确
         pmcid = str(pmcid).strip()
         if not pmcid.upper().startswith("PMC"):
@@ -931,12 +906,7 @@ def _pmcid_to_doi_europe_pmc_json(pmcid: str, logger) -> str | None:
 
         # Europe PMC搜索API：JSON格式
         url = "https://www.ebi.ac.uk/europepmc/api/search"
-        params = {
-            "query": f"pmcid:{pmcid}",
-            "resulttype": "core",
-            "format": "json",
-            "size": 1
-        }
+        params = {"query": f"pmcid:{pmcid}", "resulttype": "core", "format": "json", "size": 1}
 
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
@@ -949,7 +919,7 @@ def _pmcid_to_doi_europe_pmc_json(pmcid: str, logger) -> str | None:
                 doi_fields = [
                     result.get("doi", ""),
                     result.get("pmcDoc", {}).get("doi", ""),
-                    result.get("fullTextUrlList", {}).get("fullTextUrl", [{}])[0].get("doi", "")
+                    result.get("fullTextUrlList", {}).get("fullTextUrl", [{}])[0].get("doi", ""),
                 ]
 
                 for doi in doi_fields:
@@ -967,8 +937,9 @@ def _pmcid_to_doi_europe_pmc_json(pmcid: str, logger) -> str | None:
 def _pmcid_to_doi_europe_pmc_xml(pmcid: str, logger) -> str | None:
     """使用Europe PMC XML API进行PMCID到DOI转换"""
     try:
-        import requests
         import re
+
+        import requests
 
         # Europe PMC metadata API：XML格式
         url = f"https://www.ebi.ac.uk/europepmc/api/metadata/{pmcid}"
@@ -979,11 +950,11 @@ def _pmcid_to_doi_europe_pmc_xml(pmcid: str, logger) -> str | None:
 
             # 更全面的DOI模式匹配
             doi_patterns = [
-                r'<DOI>([^<]+)</DOI>',
+                r"<DOI>([^<]+)</DOI>",
                 r'<article-id[^>]*pub-id-type="doi"[^>]*>([^<]+)</article-id>',
                 r'10\.\d+/[^\s<">]+',
                 r'doi:\s*(10\.\d+/[^\s<">]+)',
-                r'https?://doi\.org/(10\.\d+/[^\s<">]+)'
+                r'https?://doi\.org/(10\.\d+/[^\s<">]+)',
             ]
 
             for pattern in doi_patterns:
@@ -991,7 +962,7 @@ def _pmcid_to_doi_europe_pmc_xml(pmcid: str, logger) -> str | None:
                 if doi_match:
                     doi = doi_match.group(1).strip()
                     # 清理DOI格式
-                    doi = re.sub(r'[^0-9a-zA-Z._/-]', '', doi)
+                    doi = re.sub(r"[^0-9a-zA-Z._/-]", "", doi)
 
                     if doi.startswith("10."):
                         logger.info(f"Europe PMC XML找到PMCID {pmcid} 对应的DOI: {doi}")
@@ -1011,11 +982,7 @@ def _pmcid_to_doi_ncbi(pmcid: str, logger) -> str | None:
 
         # 首先通过PMCID找到PMID，然后通过PMID找DOI
         url = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/.fcgi"
-        params = {
-            "id": pmcid,
-            "format": "json",
-            "format": "json"
-        }
+        params = {"id": pmcid, "format": "json"}
 
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
@@ -1050,7 +1017,9 @@ def _pmcid_to_doi_ncbi(pmcid: str, logger) -> str | None:
         return None
 
 
-def _deduplicate_references(references: list[dict[str, Any]], max_results: int) -> list[dict[str, Any]]:
+def _deduplicate_references(
+    references: list[dict[str, Any]], max_results: int
+) -> list[dict[str, Any]]:
     """参考文献去重和限制数量"""
     try:
         seen_dois = set()

@@ -422,25 +422,19 @@ class PubMedService:
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     # ESEARCH
                     async with session.get(
-                        self.base_url + "esearch.fcgi",
-                        params=esearch_params,
-                        headers=self.headers
+                        self.base_url + "esearch.fcgi", params=esearch_params, headers=self.headers
                     ) as response:
                         if response.status != 200:
                             return {
                                 "articles": [],
                                 "error": f"ESearch HTTP {response.status}",
-                                "message": None
+                                "message": None,
                             }
                         esearch_content = await response.text()
 
                     ids = ET.fromstring(esearch_content).findall(".//Id")
                     if not ids:
-                        return {
-                            "articles": [],
-                            "message": "未找到相关文献",
-                            "error": None
-                        }
+                        return {"articles": [], "message": "未找到相关文献", "error": None}
                     pmids = [elem.text for elem in ids[:max_results]]
 
                     # EFETCH 请求参数
@@ -457,15 +451,13 @@ class PubMedService:
 
                     # EFETCH
                     async with session.get(
-                        self.base_url + "efetch.fcgi",
-                        params=efetch_params,
-                        headers=self.headers
+                        self.base_url + "efetch.fcgi", params=efetch_params, headers=self.headers
                     ) as response:
                         if response.status != 200:
                             return {
                                 "articles": [],
                                 "error": f"EFetch HTTP {response.status}",
-                                "message": None
+                                "message": None,
                             }
                         efetch_content = await response.text()
 
@@ -480,7 +472,9 @@ class PubMedService:
                     return {
                         "articles": articles,
                         "error": None,
-                        "message": f"找到 {len(articles)} 篇相关文献" if articles else "未找到相关文献",
+                        "message": f"找到 {len(articles)} 篇相关文献"
+                        if articles
+                        else "未找到相关文献",
                         "processing_time": round(time.time() - start_time, 2),
                     }
 

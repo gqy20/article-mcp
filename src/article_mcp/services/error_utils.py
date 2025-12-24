@@ -1,6 +1,4 @@
-"""
-统一的错误处理工具 - Linus风格：简单直接
-"""
+"""统一的错误处理工具 - Linus风格：简单直接"""
 
 import logging
 import time
@@ -8,8 +6,7 @@ from typing import Any
 
 
 def format_error(operation: str, error: Exception, context: dict | None = None) -> dict[str, Any]:
-    """
-    统一的错误格式 - 一个函数搞定所有错误
+    """统一的错误格式 - 一个函数搞定所有错误
 
     Args:
         operation: 操作名称
@@ -18,6 +15,7 @@ def format_error(operation: str, error: Exception, context: dict | None = None) 
 
     Returns:
         标准化的错误响应
+
     """
     return {
         "success": False,
@@ -36,8 +34,7 @@ def format_response(
     message: str = "",
     context: dict | None = None,
 ) -> dict[str, Any]:
-    """
-    统一的响应格式 - 一个函数搞定所有响应
+    """统一的响应格式 - 一个函数搞定所有响应
 
     Args:
         success: 是否成功
@@ -48,6 +45,7 @@ def format_response(
 
     Returns:
         标准化的响应
+
     """
     response = {"success": success, "operation": operation, "timestamp": time.time()}
 
@@ -64,8 +62,7 @@ def format_response(
 
 
 def safe_execute(operation: str, func, *args, **kwargs):
-    """
-    安全执行函数 - 自动处理异常
+    """安全执行函数 - 自动处理异常
 
     Args:
         operation: 操作名称
@@ -74,6 +71,7 @@ def safe_execute(operation: str, func, *args, **kwargs):
 
     Returns:
         格式化的响应
+
     """
     try:
         result = func(*args, **kwargs)

@@ -1,8 +1,5 @@
-"""
-CrossRef API服务 - 使用统一API调用
-"""
+"""CrossRef API服务 - 使用统一API调用"""
 
-import asyncio
 import logging
 from typing import Any
 
@@ -61,7 +58,7 @@ class CrossRefService:
             import urllib.parse
 
             # 对DOI进行URL编码处理，保留斜杠
-            encoded_doi = urllib.parse.quote(doi, safe='/')
+            encoded_doi = urllib.parse.quote(doi, safe="/")
             url = f"{self.base_url}/works/{encoded_doi}"
             api_result = self.api_client.get(url)
 
@@ -88,7 +85,7 @@ class CrossRefService:
 
             # CrossRef API: 参考文献数据包含在主查询结果中
             # 对DOI进行URL编码处理，保留斜杠
-            encoded_doi = urllib.parse.quote(doi, safe='/')
+            encoded_doi = urllib.parse.quote(doi, safe="/")
             url = f"{self.base_url}/works/{encoded_doi}"
             # 简化API调用，不使用select参数避免400错误
             api_result = self.api_client.get(url)
@@ -194,7 +191,7 @@ class CrossRefService:
                         if "given" in author and "family" in author:
                             authors.append(f"{author.get('given', '')} {author.get('family', '')}")
                         elif "family" in author:
-                            authors.append(author.get('family', ''))
+                            authors.append(author.get("family", ""))
                         elif "name" in author:
                             authors.append(author["name"])
         return authors
