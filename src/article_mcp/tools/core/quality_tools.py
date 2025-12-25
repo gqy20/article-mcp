@@ -24,21 +24,24 @@ _CACHE_TTL = int(os.getenv("JOURNAL_CACHE_TTL", "86400"))
 _CACHE_ENABLED = os.getenv("JOURNAL_CACHE_ENABLED", "true").lower() == "true"
 
 
-def _parse_json_list_param(value: Any) -> Any:
-    """解析可能是字符串形式的 JSON 数组参数
+def _parse_json_param(value: Any) -> Any:
+    """解析可能是字符串形式的 JSON 参数
 
-    某些 MCP 客户端会将列表参数序列化为字符串（如 '["a", "b"]'）。
-    此函数检测并解析这种情况，如果是字符串则尝试解析为列表。
+    某些 MCP 客户端会将列表/字典参数序列化为字符串：
+    - 列表: '["a", "b"]' -> ["a", "b"]
+    - 字典: '{"key": "value"}' -> {"key": "value"}
+
+    此函数检测并解析这种情况。
 
     Args:
-        value: 参数值（可能是字符串、列表或其他类型）
+        value: 参数值（可能是字符串、列表、字典或其他类型）
 
     Returns:
-        解析后的值：如果是有效的 JSON 数组字符串则返回列表，否则返回原值
+        解析后的值：如果是有效的 JSON 字符串则返回解析后的对象，否则返回原值
     """
     if isinstance(value, str):
-        # 尝试解析 JSON 数组字符串
-        if value.startswith("[") and value.endswith("]"):
+        # 尝试解析 JSON 字符串
+        if value.startswith("[") or value.startswith("{"):
             try:
                 import json
 
@@ -63,10 +66,10 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     def get_journal_quality(
         journal_name: str | list[str],
         operation: str = "quality",
-        evaluation_criteria: list[str] | None = None,
-        include_metrics: list[str] | None = None,
+        evaluation_criteria: str | list[str] | None = None,
+        include_metrics: str | list[str] | None = None,
         use_cache: bool = True,
-        weight_config: dict[str, float] | None = None,
+        weight_config: str | dict[str, float] | None = None,
         ranking_type: str = "journal_impact",
         limit: int = 50,
     ) -> dict[str, Any]:
@@ -84,11 +87,12 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
         """
         try:
-            # ========== 参数预处理：解析字符串形式的 JSON 数组 ==========
-            # 某些 MCP 客户端会将列表参数序列化为字符串
-            journal_name = _parse_json_list_param(journal_name)
-            include_metrics = _parse_json_list_param(include_metrics)
-            evaluation_criteria = _parse_json_list_param(evaluation_criteria)
+            # ========== 参数预处理：解析字符串形式的 JSON 参数 ==========
+            # 某些 MCP 客户端会将列表/字典参数序列化为字符串
+            journal_name = _parse_json_param(journal_name)
+            include_metrics = _parse_json_param(include_metrics)
+            evaluation_criteria = _parse_json_param(evaluation_criteria)
+            weight_config = _parse_json_param(weight_config)
 
             # 根据操作类型分发到具体处理函数
             if operation == "quality":
