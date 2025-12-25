@@ -29,6 +29,48 @@ _CACHE_TTL = int(os.getenv("JOURNAL_CACHE_TTL", "86400"))
 # 是否启用缓存
 _CACHE_ENABLED = os.getenv("JOURNAL_CACHE_ENABLED", "true").lower() == "true"
 
+# ========== EasyScholar API + OpenAlex 支持的指标 ==========
+# 定义实际提供的指标，用于用户提示和验证
+
+# EasyScholar API 提供的指标
+_EASYSCHOLAR_METRICS = {
+    "impact_factor": "影响因子（Impact Factor）",
+    "quartile": "SCI分区（Q1-Q4）",
+    "jci": "JCI指数",
+    "cas_zone": "中科院分区（完整）",
+    "cas_zone_base": "中科院基础版分区",
+    "cas_zone_small": "中科院小类分区",
+    "cas_zone_top": "TOP期刊标识",
+}
+
+# OpenAlex API 提供的指标
+_OPENALEX_METRICS = {
+    "h_index": "h指数（来自 OpenAlex）",
+    "citation_rate": "引用率（2年平均，来自 OpenAlex）",
+    "cited_by_count": "总引用数（来自 OpenAlex）",
+    "works_count": "总文章数（来自 OpenAlex）",
+    "i10_index": "i10指数（来自 OpenAlex）",
+}
+
+# 合并的可用指标
+_AVAILABLE_METRICS = {**_EASYSCHOLAR_METRICS, **_OPENALEX_METRICS}
+
+# 预留但当前不可用的指标（为未来扩展预留）
+_RESERVED_METRICS = {
+    "acceptance_rate": "录用率（暂无免费 API）",
+    "eigenfactor": "特征因子（需付费数据源）",
+    "sjr": "SJR排名（需 Scopus 数据源）",
+    "snip": "SNIP指标（需 Scopus 数据源）",
+    "issn": "ISSN号（计划中）",
+    "publisher": "出版社（计划中）",
+    "country": "出版国家（计划中）",
+    "is_oa": "开放获取标识（计划中）",
+    "risk_level": "风险等级（计划中）",
+    "etc_fat_score": "ETC FAT分数（计划中）",
+    "category_rank": "分类排名（计划中）",
+    "percentile": "百分位（已在 ranking_info 中提供）",
+}
+
 
 def _parse_json_param(value: Any) -> Any:
     """解析可能是字符串形式的 JSON 参数
@@ -220,9 +262,11 @@ async def _single_journal_quality(
                 "data_source": None,
             }
 
-        # 过滤用户请求的指标
+        # 过滤用户请求的指标，并跟踪不可用指标
         quality_metrics = result.get("quality_metrics", {})
         filtered_metrics = {}
+        unavailable_metrics = []
+
         for metric in include_metrics:
             if metric in quality_metrics:
                 filtered_metrics[metric] = quality_metrics[metric]
@@ -231,10 +275,14 @@ async def _single_journal_quality(
                 filtered_metrics[metric] = quality_metrics[metric]
             elif metric == "chinese_academy_sciences_zone" and "cas_zone" in quality_metrics:
                 filtered_metrics[metric] = quality_metrics["cas_zone"]
+            else:
+                # 记录不可用的指标
+                if metric not in unavailable_metrics:
+                    unavailable_metrics.append(metric)
 
         processing_time = round(time.time() - start_time, 2)
 
-        return {
+        response = {
             "success": True,
             "journal_name": normalized_name,
             "quality_metrics": filtered_metrics,
@@ -243,6 +291,24 @@ async def _single_journal_quality(
             "cache_hit": cache_hit,
             "processing_time": processing_time,
         }
+
+        # 添加指标可用性信息
+        if unavailable_metrics:
+            response["metrics_info"] = {
+                "unavailable_metrics": unavailable_metrics,
+                "available_metrics": list(_AVAILABLE_METRICS.keys()),
+                "note": "某些请求的指标在当前数据源中不可用",
+            }
+
+        # 集成 OpenAlex 指标补充（在当前异步上下文中运行）
+        try:
+            openalex_service = _get_openalex_service(logger)
+            response = await openalex_service.enhance_quality_result(response, use_cache)
+        except Exception as e:
+            # OpenAlex 补充失败不影响主流程
+            logger.debug(f"OpenAlex 指标补充失败（非致命）: {e}")
+
+        return response
 
     except Exception as e:
         logger.error(f"单个期刊质量评估异常: {e}")
@@ -310,15 +376,21 @@ def _batch_journal_quality(
 
             # 处理每个期刊的结果
             for journal_name, (result, is_cached) in all_results.items():
-                # 过滤请求的指标
+                # 过滤请求的指标，并跟踪不可用指标
                 if result.get("success", False):
                     quality_metrics = result.get("quality_metrics", {})
                     filtered_metrics = {}
+                    unavailable_metrics = []
+
                     for metric in include_metrics:
                         if metric in quality_metrics:
                             filtered_metrics[metric] = quality_metrics[metric]
+                        else:
+                            # 记录不可用的指标
+                            if metric not in unavailable_metrics:
+                                unavailable_metrics.append(metric)
 
-                    journal_results[journal_name] = {
+                    journal_entry = {
                         "success": True,
                         "journal_name": journal_name,
                         "quality_metrics": filtered_metrics,
@@ -328,6 +400,25 @@ def _batch_journal_quality(
                         else result.get("data_source", "easyscholar"),
                         "cache_hit": is_cached,
                     }
+
+                    # 为每个期刊添加指标可用性信息
+                    if unavailable_metrics:
+                        journal_entry["metrics_info"] = {
+                            "unavailable_metrics": unavailable_metrics,
+                            "available_metrics": list(_AVAILABLE_METRICS.keys()),
+                        }
+
+                    # 集成 OpenAlex 指标补充
+                    try:
+                        openalex_service = _get_openalex_service(logger)
+                        journal_entry = await openalex_service.enhance_quality_result(
+                            journal_entry, use_cache
+                        )
+                    except Exception as e:
+                        # OpenAlex 补充失败不影响主流程
+                        logger.debug(f"OpenAlex 指标补充失败（非致命）: {e}")
+
+                    journal_results[journal_name] = journal_entry
                     successful_evaluations += 1
 
                     # 保存到缓存（仅限新获取的数据）
@@ -394,6 +485,13 @@ def _get_easyscholar_service(logger: Any) -> Any:
     from article_mcp.services.easyscholar_service import create_easyscholar_service
 
     return create_easyscholar_service(logger)
+
+
+def _get_openalex_service(logger: Any) -> Any:
+    """获取 OpenAlex 指标补充服务实例"""
+    from article_mcp.services.openalex_metrics_service import create_openalex_metrics_service
+
+    return create_openalex_metrics_service(logger)
 
 
 # ========== 缓存辅助函数 ==========
