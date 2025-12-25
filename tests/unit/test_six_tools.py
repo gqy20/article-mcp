@@ -359,7 +359,13 @@ class TestGetLiteratureRelationsTool:
 
 
 class TestGetJournalQualityTool:
-    """测试工具5: get_journal_quality - 期刊质量评估工具"""
+    """测试工具5: get_journal_quality - 期刊质量评估工具
+
+    简化后的测试：
+    - 移除了 evaluation 模式测试
+    - 移除了 field_analysis/ranking 模式测试
+    - 只保留期刊质量查询的核心功能测试
+    """
 
     @pytest.fixture
     def mock_quality_services(self):
@@ -371,8 +377,6 @@ class TestGetJournalQualityTool:
     @pytest.mark.unit
     def test_get_journal_quality_single(self, mock_quality_services):
         """测试单个期刊质量评估"""
-        # 模拟期刊质量响应
-
         with patch("article_mcp.tools.core.quality_tools.register_quality_tools") as mock_register:
             create_mcp_server()
 
@@ -387,34 +391,30 @@ class TestGetJournalQualityTool:
         """测试批量期刊质量评估"""
         journals = ["Nature", "Science", "Cell"]
 
-        # 测试批量评估参数
+        # 简化后的参数：只有 journal_name、include_metrics、use_cache
         params = {
-            "journals": journals,
-            "operation": "quality",
-            "evaluation_criteria": ["journal_quality", "citation_count", "open_access"],
+            "journal_name": journals,
             "include_metrics": ["impact_factor", "quartile", "jci"],
+            "use_cache": True,
         }
 
-        assert isinstance(params["journals"], list)
-        assert len(params["journals"]) == 3
-        assert params["operation"] == "quality"
-        assert "journal_quality" in params["evaluation_criteria"]
+        assert isinstance(params["journal_name"], list)
+        assert len(params["journal_name"]) == 3
+        assert "impact_factor" in params["include_metrics"]
+        assert params["use_cache"] is True
 
     @pytest.mark.unit
-    def test_get_journal_quality_field_ranking(self):
-        """测试领域排名功能"""
-        field_name = "Biology"
-
-        # 测试领域排名参数
+    def test_get_journal_quality_single_with_metrics(self):
+        """测试单个期刊质量评估（指定返回指标）"""
+        # 简化后的参数
         params = {
-            "journals": field_name,  # 单个字符串作为期刊名传入
-            "operation": "ranking",
-            "evaluation_criteria": ["journal_impact"],
-            "include_metrics": ["impact_factor", "quartile"],
+            "journal_name": "Nature",
+            "include_metrics": ["impact_factor", "cas_zone"],
+            "use_cache": True,
         }
 
-        assert params["operation"] == "ranking"
-        assert params["journals"] == field_name
+        assert isinstance(params["journal_name"], str)
+        assert params["include_metrics"] == ["impact_factor", "cas_zone"]
 
 
 class TestExportBatchResultsTool:

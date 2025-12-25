@@ -1,4 +1,10 @@
-"""期刊质量评估工具 - 核心工具5（统一质量评估工具）"""
+"""期刊质量评估工具 - 核心工具5
+
+简化版本：
+- 只保留期刊质量查询功能（单个/批量）
+- 移除了 evaluation、field_analysis、ranking 模式
+- 移除了模拟数据和降级机制
+"""
 
 import asyncio
 import json
@@ -61,97 +67,95 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     @mcp.tool(
         description="期刊质量评估工具。评估期刊的学术质量和影响力指标。",
         annotations=ToolAnnotations(title="期刊质量评估", readOnlyHint=True, openWorldHint=False),
-        tags={"quality", "journal", "metrics", "ranking"},
+        tags={"quality", "journal", "metrics"},
     )
     def get_journal_quality(
         journal_name: str | list[str],
-        operation: str = "quality",
-        evaluation_criteria: str | list[str] | None = None,
         include_metrics: str | list[str] | None = None,
         use_cache: bool = True,
-        weight_config: str | dict[str, float] | None = None,
-        ranking_type: str = "journal_impact",
-        limit: int = 50,
     ) -> dict[str, Any]:
         """期刊质量评估工具。评估期刊的学术质量和影响力指标。
 
         Args:
-            journal_name: 期刊名称（支持中英文）
-            operation: 操作类型 ["quality", "ranking", "field_analysis"]
-            evaluation_criteria: 评估标准 ["impact_factor", "quartile", "jci"]
-            include_metrics: 包含的质量指标类型
+            journal_name: 期刊名称（单个期刊或期刊列表）
+            include_metrics: 返回的质量指标类型（如 ["impact_factor", "quartile", "jci"]）
             use_cache: 是否使用缓存数据
 
         Returns:
             包含期刊质量评估结果的字典，包括影响因子、分区等
 
+        Examples:
+            # 单个期刊查询
+            get_journal_quality("Nature")
+
+            # 批量期刊查询
+            get_journal_quality(["Nature", "Science", "Cell"])
+
+            # 指定返回指标
+            get_journal_quality("Nature", include_metrics=["impact_factor", "cas_zone"])
         """
         try:
             # ========== 参数预处理：解析字符串形式的 JSON 参数 ==========
             # 某些 MCP 客户端会将列表/字典参数序列化为字符串
             journal_name = _parse_json_param(journal_name)
             include_metrics = _parse_json_param(include_metrics)
-            evaluation_criteria = _parse_json_param(evaluation_criteria)
-            weight_config = _parse_json_param(weight_config)
 
-            # 根据操作类型分发到具体处理函数
-            if operation == "quality":
-                if isinstance(journal_name, list):
-                    # 批量期刊质量评估
-                    return _batch_journal_quality(
-                        journal_name, include_metrics or [], use_cache, logger
-                    )
-                else:
-                    # 单个期刊质量评估
-                    import asyncio
-                    import threading
+            # 处理 None 值的 include_metrics 参数
+            if include_metrics is None:
+                include_metrics = ["impact_factor", "quartile", "jci"]
 
-                    # 检查是否在事件循环中运行
-                    try:
-                        asyncio.get_running_loop()
-                        # 在事件循环中，在新线程中运行
-                        result_container = {"result": None}
+            # 判断是单个期刊还是批量期刊
+            if isinstance(journal_name, list):
+                # 批量期刊质量评估
+                if not journal_name:
+                    return {
+                        "success": False,
+                        "error": "期刊名称列表不能为空",
+                        "total_journals": 0,
+                        "successful_evaluations": 0,
+                        "journal_results": {},
+                        "processing_time": 0,
+                    }
+                return _batch_journal_quality(journal_name, include_metrics, use_cache, logger)
+            else:
+                # 单个期刊质量评估
+                import threading
 
-                        def run_in_new_loop():
-                            new_loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(new_loop)
-                            try:
-                                result_container["result"] = new_loop.run_until_complete(
-                                    _single_journal_quality(
-                                        journal_name, include_metrics, use_cache, logger
-                                    )
+                # 检查是否在事件循环中运行
+                try:
+                    asyncio.get_running_loop()
+                    # 在事件循环中，在新线程中运行
+                    result_container = {"result": None}
+
+                    def run_in_new_loop():
+                        new_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(new_loop)
+                        try:
+                            result_container["result"] = new_loop.run_until_complete(
+                                _single_journal_quality(
+                                    journal_name, include_metrics, use_cache, logger
                                 )
-                            finally:
-                                new_loop.close()
-
-                        thread = threading.Thread(target=run_in_new_loop)
-                        thread.start()
-                        thread.join(timeout=60)
-
-                        return result_container["result"]
-                    except RuntimeError:
-                        # 没有运行的事件循环，使用 asyncio.run
-                        return asyncio.run(
-                            _single_journal_quality(
-                                journal_name, include_metrics, use_cache, logger
                             )
-                        )
+                        finally:
+                            new_loop.close()
 
-            elif operation == "evaluation":
-                return {
-                    "success": False,
-                    "error": f"不支持的操作类型: {operation}",
-                    "journal_name": journal_name,
-                    "quality_metrics": {},
-                    "data_source": None,
-                }
+                    thread = threading.Thread(target=run_in_new_loop)
+                    thread.start()
+                    thread.join(timeout=60)
+
+                    return result_container["result"]
+                except RuntimeError:
+                    # 没有运行的事件循环，使用 asyncio.run
+                    return asyncio.run(
+                        _single_journal_quality(journal_name, include_metrics, use_cache, logger)
+                    )
 
         except Exception as e:
             logger.error(f"期刊质量评估异常: {e}")
             return {
                 "success": False,
                 "error": str(e),
-                "journal_name": journal_name,
+                "journal_name": journal_name if isinstance(journal_name, str) else "multiple",
                 "quality_metrics": {},
                 "data_source": None,
             }
@@ -167,7 +171,7 @@ async def _single_journal_quality(
 
             raise ToolError("期刊名称不能为空")
 
-        # 处理None值的include_metrics参数
+        # 处理 None 值的 include_metrics 参数
         if include_metrics is None:
             include_metrics = ["impact_factor", "quartile", "jci"]
 
@@ -375,214 +379,6 @@ def _batch_journal_quality(
         }
 
 
-def _batch_articles_quality_evaluation(
-    articles: list[dict[str, Any]],
-    evaluation_criteria: list[str],
-    weight_config: dict[str, float] | None,
-    logger: Any,
-) -> dict[str, Any]:
-    """批量文献质量评估"""
-    try:
-        if not articles:
-            return {
-                "success": False,
-                "error": "文献列表不能为空",
-                "evaluated_articles": [],
-                "quality_distribution": {},
-                "ranking": [],
-                "evaluation_summary": {},
-                "processing_time": 0,
-            }
-
-        start_time = time.time()
-
-        # 设置默认权重
-        if weight_config is None:
-            weights = {
-                "journal_quality": 0.5,
-                "citation_count": 0.3,
-                "open_access": 0.2,
-            }
-        else:
-            weights = weight_config
-
-        evaluated_articles = []
-        quality_scores = []
-
-        for i, article in enumerate(articles):
-            try:
-                quality_evaluation = _evaluate_article_quality(
-                    article, evaluation_criteria, weights, logger
-                )
-                quality_score = quality_evaluation.get("overall_score", 0)
-
-                evaluated_articles.append(
-                    {
-                        "index": i,
-                        "article": article,
-                        "quality_evaluation": quality_evaluation,
-                    }
-                )
-                quality_scores.append(quality_score)
-
-            except Exception as e:
-                logger.error(f"评估第 {i + 1} 篇文献失败: {e}")
-                evaluated_articles.append(
-                    {
-                        "index": i,
-                        "article": article,
-                        "quality_evaluation": {
-                            "overall_score": 0,
-                            "evaluated_criteria": [],
-                        },
-                    }
-                )
-
-        # 计算质量分布
-        quality_distribution = _calculate_quality_distribution(quality_scores)
-
-        # 生成排名
-        ranking = sorted(
-            [(i, score) for i, score in enumerate(quality_scores)],
-            key=lambda x: x[1],
-            reverse=True,
-        )
-
-        # 统计信息
-        evaluation_summary = {
-            "total_articles": len(articles),
-            "successful_evaluations": sum(
-                1  # type: ignore[misc]
-                for eval_result in evaluated_articles
-                if isinstance(eval_result, dict)
-                and eval_result.get("quality_evaluation", {}).get("overall_score", 0) > 0  # type: ignore[attr-defined]
-            ),
-            "average_quality_score": (
-                sum(quality_scores) / len(quality_scores) if quality_scores else 0
-            ),
-            "highest_score": max(quality_scores) if quality_scores else 0,
-            "lowest_score": min(quality_scores) if quality_scores else 0,
-            "evaluation_criteria_used": evaluation_criteria,
-            "weights_applied": weights,
-        }
-
-        processing_time = round(time.time() - start_time, 2)
-
-        return {
-            "success": True,
-            "evaluated_articles": evaluated_articles,
-            "quality_distribution": quality_distribution,
-            "ranking": [
-                {"article_index": idx, "rank": i + 1, "score": score}
-                for i, (idx, score) in enumerate(ranking)
-            ],
-            "evaluation_summary": evaluation_summary,
-            "processing_time": processing_time,
-        }
-
-    except Exception as e:
-        logger.error(f"批量评估文献质量异常: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "evaluated_articles": [],
-            "quality_distribution": {},
-            "ranking": [],
-            "evaluation_summary": {},
-            "processing_time": 0,
-        }
-
-
-def _get_field_ranking(
-    field_name: str, ranking_type: str, limit: int, logger: Any
-) -> dict[str, Any]:
-    """获取学科领域期刊排名"""
-    try:
-        if not field_name or not field_name.strip():
-            return {
-                "success": False,
-                "error": "学科领域名称不能为空",
-                "field_name": field_name,
-                "ranking_type": ranking_type,
-                "top_journals": [],
-                "field_statistics": {},
-            }
-
-        start_time = time.time()
-
-        # 预定义的学科领域期刊排名（示例数据）
-        field_rankings = _get_predefined_field_rankings()
-
-        # 查找匹配的领域排名
-        field_data = None
-        for field in field_rankings:
-            if (
-                field_name.lower() in field["name"].lower()
-                or field["name"].lower() in field_name.lower()
-            ):
-                field_data = field
-                break
-
-        if not field_data:
-            return {
-                "success": False,
-                "error": f"未找到学科领域 '{field_name}' 的排名数据",
-                "field_name": field_name,
-                "ranking_type": ranking_type,
-                "top_journals": [],
-                "field_statistics": {},
-            }
-
-        # 根据排名类型排序
-        journals = field_data.get("journals", [])
-        if ranking_type == "journal_impact":
-            journals.sort(key=lambda x: x.get("impact_factor", 0), reverse=True)
-        elif ranking_type == "jci":
-            journals.sort(key=lambda x: x.get("jci", 0), reverse=True)
-        elif ranking_type == "citation_score":
-            journals.sort(key=lambda x: x.get("citation_score", 0), reverse=True)
-
-        # 限制返回数量
-        top_journals = journals[:limit]
-
-        # 计算统计信息
-        field_statistics = {
-            "total_journals": len(journals),
-            "ranking_type": ranking_type,
-            "average_impact_factor": (
-                sum(j.get("impact_factor", 0) for j in journals) / len(journals) if journals else 0
-            ),
-            "highest_impact_factor": (
-                max(j.get("impact_factor", 0) for j in journals) if journals else 0
-            ),
-            "lowest_impact_factor": (
-                min(j.get("impact_factor", 0) for j in journals) if journals else 0
-            ),
-        }
-
-        processing_time = round(time.time() - start_time, 2)
-
-        return {
-            "success": True,
-            "field_name": field_name.strip(),
-            "ranking_type": ranking_type,
-            "top_journals": top_journals,
-            "field_statistics": field_statistics,
-            "processing_time": processing_time,
-        }
-
-    except Exception as e:
-        logger.error(f"获取学科领域期刊排名异常: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "field_name": field_name,
-            "ranking_type": ranking_type,
-            "top_journals": [],
-            "field_statistics": {},
-        }
-
-
 # 辅助函数
 def _get_easyscholar_service(logger: Any) -> Any:
     """获取 EasyScholar 服务实例"""
@@ -661,174 +457,3 @@ def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) ->
         logger.debug(f"已保存到文件缓存: {journal_name}")
     except Exception as e:
         logger.error(f"写入文件缓存失败: {e}")
-
-
-def _evaluate_article_quality(
-    article: dict[str, Any], criteria: list[str], weights: dict[str, float], logger: Any
-) -> dict[str, Any]:
-    """评估单篇文献的质量"""
-    try:
-        scores = {}
-        total_score = 0
-
-        for criterion in criteria:
-            if criterion == "journal_quality":
-                # 基于期刊名称评估质量
-                journal = article.get("journal", "")
-                if journal:
-                    import asyncio
-
-                    service = _get_easyscholar_service(logger)
-                    quality_result = asyncio.run(service.get_journal_quality(journal))
-                    impact_factor = quality_result.get("quality_metrics", {}).get(
-                        "impact_factor", 0
-                    )
-                    # 归一化影响因子到0-100分
-                    score = min(impact_factor * 10, 100)
-                    scores[criterion] = score
-                else:
-                    scores[criterion] = 0
-
-            elif criterion == "citation_count":
-                # 基于引用数量评估（这里使用模拟值）
-                scores[criterion] = 50  # 模拟分数
-
-            elif criterion == "open_access":
-                # 检查是否为开放获取
-                scores[criterion] = 80 if article.get("open_access", False) else 30
-
-            else:
-                scores[criterion] = 0
-
-        # 计算加权总分
-        for criterion, score in scores.items():
-            weight = weights.get(criterion, 0)
-            total_score += score * weight
-
-        return {
-            "overall_score": round(total_score, 2),
-            "individual_scores": scores,
-            "weights_applied": weights,
-            "evaluated_criteria": criteria,
-        }
-
-    except Exception as e:
-        logger.error(f"评估文献质量失败: {e}")
-        return {
-            "overall_score": 0,
-            "individual_scores": {},
-            "weights_applied": {},
-            "evaluated_criteria": [],
-        }
-
-
-def _calculate_quality_distribution(scores: list[float]) -> dict[str, Any]:
-    """计算质量分布"""
-    try:
-        if not scores:
-            return {}
-
-        distribution = {
-            "excellent": sum(1 for score in scores if score >= 80),
-            "good": sum(1 for score in scores if 60 <= score < 80),
-            "average": sum(1 for score in scores if 40 <= score < 60),
-            "poor": sum(1 for score in scores if score < 40),
-        }
-
-        distribution["total"] = len(scores)
-
-        # 计算百分比
-        for category in ["excellent", "good", "average", "poor"]:
-            if distribution["total"] > 0:
-                distribution[f"{category}_percentage"] = round(  # type: ignore[assignment]
-                    (distribution[category] / distribution["total"]) * 100, 2
-                )
-            else:
-                distribution[f"{category}_percentage"] = 0
-
-        return distribution
-
-    except Exception:
-        # 由于这是内部函数，我们不使用logger，而是静默处理异常
-        return {}
-
-
-def _get_predefined_field_rankings() -> list[dict[str, Any]]:
-    """获取预定义的学科领域排名数据"""
-    return [
-        {
-            "name": "Biology",
-            "journals": [
-                {"name": "Nature", "impact_factor": 69.504, "jci": 25.8, "citation_score": 89.2},
-                {"name": "Science", "impact_factor": 63.714, "jci": 24.1, "citation_score": 87.5},
-                {"name": "Cell", "impact_factor": 66.850, "jci": 23.9, "citation_score": 85.3},
-                {"name": "PNAS", "impact_factor": 12.779, "jci": 8.5, "citation_score": 65.2},
-                {
-                    "name": "Nature Communications",
-                    "impact_factor": 17.694,
-                    "jci": 12.3,
-                    "citation_score": 72.8,
-                },
-            ],
-        },
-        {
-            "name": "Medicine",
-            "journals": [
-                {
-                    "name": "The Lancet",
-                    "impact_factor": 202.731,
-                    "jci": 45.2,
-                    "citation_score": 95.8,
-                },
-                {
-                    "name": "New England Journal of Medicine",
-                    "impact_factor": 158.432,
-                    "jci": 42.1,
-                    "citation_score": 94.2,
-                },
-                {
-                    "name": "Nature Medicine",
-                    "impact_factor": 82.889,
-                    "jci": 28.5,
-                    "citation_score": 88.9,
-                },
-                {"name": "BMJ", "impact_factor": 105.726, "jci": 32.4, "citation_score": 91.3},
-                {"name": "JAMA", "impact_factor": 120.754, "jci": 35.8, "citation_score": 92.7},
-            ],
-        },
-        {
-            "name": "Computer Science",
-            "journals": [
-                {
-                    "name": "Nature Machine Intelligence",
-                    "impact_factor": 25.898,
-                    "jci": 15.2,
-                    "citation_score": 78.5,
-                },
-                {
-                    "name": "IEEE Transactions on Pattern Analysis",
-                    "impact_factor": 24.314,
-                    "jci": 14.8,
-                    "citation_score": 76.2,
-                },
-                {
-                    "name": "Journal of Machine Learning Research",
-                    "impact_factor": 6.775,
-                    "jci": 8.9,
-                    "citation_score": 68.4,
-                },
-                {
-                    "name": "Nature Communications",
-                    "impact_factor": 17.694,
-                    "jci": 12.3,
-                    "citation_score": 72.8,
-                },
-                {
-                    "name": "Advanced Neural Networks",
-                    "impact_factor": 12.345,
-                    "jci": 9.8,
-                    "citation_score": 69.7,
-                },
-            ],
-        },
-    ]
