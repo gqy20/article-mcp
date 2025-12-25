@@ -578,29 +578,134 @@ class PubMedService:
         except Exception as e:
             return {"citing_articles": [], "error": f"处理错误: {e}", "message": None}
 
-    def get_pmc_fulltext_html(self, pmc_id: str) -> dict[str, Any]:
+    def _extract_sections_from_xml(
+        self,
+        xml_content: str,
+        requested_sections: list[str],
+        section_mapping: dict[str, list[str]],
+        sections_found: list[str],
+        sections_missing: list[str],
+    ) -> str:
+        """从 XML 中提取指定的章节内容
+
+        Args:
+            xml_content: 原始 XML 内容
+            requested_sections: 请求的章节名称列表（已转为小写）
+            section_mapping: 章节名称映射表
+            sections_found: 输出参数，找到的章节列表
+            sections_missing: 输出参数，未找到的章节列表
+
+        Returns:
+            只包含指定章节的 XML 内容
+        """
+        import xml.etree.ElementTree as ET
+
+        try:
+            # 解析 XML
+            root = ET.fromstring(xml_content)
+
+            # 查找 body 元素
+            body = root.find(".//body")
+            if body is None:
+                # 如果找不到 body，返回空内容
+                sections_missing.extend(requested_sections)
+                return ""
+
+            # 收集所有匹配的章节元素
+            matched_sections: list[ET.Element] = []
+
+            for section_elem in body.findall(".//sec"):
+                # 获取 sec-type 属性和标题
+                sec_type = section_elem.get("sec-type", "").lower()
+                title_elem = section_elem.find("./title")
+                title_text = (
+                    title_elem.text.lower() if title_elem is not None and title_elem.text else ""
+                )
+
+                # 检查此章节是否匹配任何请求的章节
+                for requested in requested_sections:
+                    # 获取该章节的所有可能名称
+                    possible_names = section_mapping.get(requested, [requested])
+
+                    # 检查是否匹配（通过 sec-type 或 title）
+                    if sec_type in possible_names or title_text in possible_names:
+                        matched_sections.append(section_elem)
+                        if requested not in sections_found:
+                            sections_found.append(requested)
+                        break
+
+            # 记录未找到的章节
+            for requested in requested_sections:
+                if requested not in sections_found:
+                    sections_missing.append(requested)
+
+            # 如果没有找到任何章节，返回空字符串
+            if not matched_sections:
+                return ""
+
+            # 构建只包含匹配章节的 XML
+            # 创建新的 body 元素
+            new_body = ET.Element("body")
+            for section in matched_sections:
+                new_body.append(section)
+
+            # 转换回字符串
+            return ET.tostring(new_body, encoding="unicode")
+
+        except ET.ParseError as e:
+            self.logger.warning(f"XML 解析失败: {e}")
+            sections_missing.extend(requested_sections)
+            return ""
+        except Exception as e:
+            self.logger.warning(f"章节提取失败: {e}")
+            sections_missing.extend(requested_sections)
+            return ""
+
+    def get_pmc_fulltext_html(
+        self, pmc_id: str, sections: list[str] | None = None
+    ) -> dict[str, Any]:
         """通过 PMC ID 获取全文内容（三种格式）
 
         设计原则：
         - 必须有 PMCID 才能获取全文
         - 无 PMCID 直接返回错误，不降级
         - 只返回全文格式，不返回元数据（其他工具负责）
+        - 支持按章节提取内容
 
         参数说明：
         - pmc_id: 必需，PMC 标识符（如："PMC1234567" 或 "1234567"）
+        - sections: 可选，要提取的章节名称列表（如：["methods", "discussion"]）
+                   None 表示返回全部章节（默认）
 
         返回值说明：
         - pmc_id: PMC 标识符（标准化格式）
-        - fulltext_xml: 原始 XML 格式
+        - fulltext_xml: 原始 XML 格式（或指定章节的 XML）
         - fulltext_markdown: Markdown 格式
         - fulltext_text: 纯文本格式
         - fulltext_available: 是否可获取全文
+        - sections_requested: 请求的章节列表（仅在指定章节时返回）
+        - sections_found: 找到的章节列表（仅在指定章节时返回）
+        - sections_missing: 未找到的章节列表（仅在指定章节时返回）
         - error: 错误信息（如果有）
 
         使用场景：
         - 获取开放获取文章的全文内容
         - 与 get_article_details 配合获取完整信息
+        - 提取特定章节（如 Methods、Discussion）
         """
+
+        # 章节名称映射表：处理命名变体
+        SECTION_MAPPING = {
+            # 方法类
+            "methods": ["methods", "methodology", "materials and methods", "materials"],
+            "introduction": ["introduction", "intro", "background"],
+            "results": ["results", "findings"],
+            "discussion": ["discussion", "conclusions"],
+            "conclusion": ["conclusion", "conclusions"],
+            "abstract": ["abstract", "summary"],
+            "references": ["references", "bibliography"],
+            "appendix": ["appendix", "supplementary"],
+        }
         import requests
 
         try:
@@ -642,40 +747,71 @@ class PubMedService:
                     "error": "PMC 返回内容为空",
                 }
 
+            # ==================== 章节提取逻辑 ====================
+            sections_requested: list[str] | None = None
+            sections_found: list[str] = []
+            sections_missing: list[str] = []
+
+            if sections is not None:
+                # 规范化请求的章节名称（转为小写）
+                sections_requested = [s.strip().lower() for s in sections if s and s.strip()]
+
+                # 如果请求了章节，进行提取
+                # 注意：空列表被视为有效的"请求空章节"，应该返回空内容
+                if sections_requested or sections == []:
+                    # 空列表直接返回空内容
+                    if sections == []:
+                        fulltext_xml = ""
+                        sections_requested = []
+                    else:
+                        fulltext_xml = self._extract_sections_from_xml(
+                            fulltext_xml,
+                            sections_requested,
+                            SECTION_MAPPING,
+                            sections_found,
+                            sections_missing,
+                        )
+
             # 转换为 Markdown 和 纯文本
             fulltext_markdown = None
             fulltext_text = None
 
-            try:
-                # 抑制 BeautifulSoup 的 XML 解析警告
-                import re
-                import warnings
+            # 如果 XML 为空（如请求空章节列表），直接设置空字符串
+            if not fulltext_xml or not fulltext_xml.strip():
+                fulltext_markdown = ""
+                fulltext_text = ""
+            else:
+                try:
+                    # 抑制 BeautifulSoup 的 XML 解析警告
+                    import re
+                    import warnings
 
-                from bs4 import XMLParsedAsHTMLWarning
+                    from bs4 import XMLParsedAsHTMLWarning
 
-                warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+                    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
-                from article_mcp.services.html_to_markdown import (
-                    html_to_markdown,
-                    html_to_text,
-                )
+                    from article_mcp.services.html_to_markdown import (
+                        html_to_markdown,
+                        html_to_text,
+                    )
 
-                # 只提取正文部分（<body>），不包含标题、作者、摘要等元数据
-                body_match = re.search(r"<body[^>]*>(.*?)</body>", fulltext_xml, re.DOTALL)
-                body_content = body_match.group(1) if body_match else fulltext_xml
+                    # 只提取正文部分（<body>），不包含标题、作者、摘要等元数据
+                    body_match = re.search(r"<body[^>]*>(.*?)</body>", fulltext_xml, re.DOTALL)
+                    body_content = body_match.group(1) if body_match else fulltext_xml
 
-                # 转换为 Markdown（只包含正文）
-                fulltext_markdown = html_to_markdown(body_content)
+                    # 转换为 Markdown（只包含正文）
+                    fulltext_markdown = html_to_markdown(body_content)
 
-                # 转换为纯文本（也只包含正文）
-                fulltext_text = html_to_text(body_content)
+                    # 转换为纯文本（也只包含正文）
+                    fulltext_text = html_to_text(body_content)
 
-            except Exception as conversion_error:
-                self.logger.warning(f"全文格式转换失败，使用原始 XML: {conversion_error}")
-                fulltext_markdown = fulltext_xml
-                fulltext_text = fulltext_xml
+                except Exception as conversion_error:
+                    self.logger.warning(f"全文格式转换失败，使用原始 XML: {conversion_error}")
+                    fulltext_markdown = fulltext_xml
+                    fulltext_text = fulltext_xml
 
-            return {
+            # 构建返回值
+            result = {
                 "pmc_id": normalized_pmc_id,
                 "fulltext_xml": fulltext_xml,
                 "fulltext_markdown": fulltext_markdown,
@@ -683,6 +819,14 @@ class PubMedService:
                 "fulltext_available": True,
                 "error": None,
             }
+
+            # 如果请求了特定章节，添加章节信息
+            if sections_requested is not None:
+                result["sections_requested"] = sections_requested
+                result["sections_found"] = sections_found
+                result["sections_missing"] = sections_missing
+
+            return result
 
         except requests.exceptions.RequestException as e:
             return {

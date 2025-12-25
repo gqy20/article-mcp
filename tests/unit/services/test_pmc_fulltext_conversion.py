@@ -5,6 +5,7 @@
 2. 无 PMCID 直接报错，不降级
 3. 只返回全文格式（XML/Markdown/Text），不返回元数据
 4. 职责单一，与其他工具配合
+5. 支持按章节提取内容
 """
 
 import sys
@@ -24,6 +25,7 @@ if str(src_path) not in sys.path:
 # 测试数据 - 模拟 PMC XML 响应
 # ============================================================================
 
+# 基础 XML（用于原有测试）
 SAMPLE_PMC_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <pmc-articleset>
   <article>
@@ -50,6 +52,41 @@ SAMPLE_PMC_XML = """<?xml version="1.0" encoding="UTF-8"?>
       <sec sec-type="methods">
         <title>Methods</title>
         <p>We collected data from 1000 patients.</p>
+      </sec>
+    </body>
+  </article>
+</pmc-articleset>
+"""
+
+# 完整 XML（用于章节提取测试）
+SAMPLE_PMC_XML_WITH_SECTIONS = """<?xml version="1.0" encoding="UTF-8"?>
+<pmc-articleset>
+  <article>
+    <article-meta>
+      <article-title>Machine Learning in Healthcare</article-title>
+    </article-meta>
+    <body>
+      <sec sec-type="intro">
+        <title>Introduction</title>
+        <p>This is the introduction section.</p>
+        <p>Machine learning is transforming healthcare.</p>
+      </sec>
+      <sec sec-type="methods">
+        <title>Methods</title>
+        <p>We collected data from 1000 patients.</p>
+        <p>The study was approved by the ethics committee.</p>
+      </sec>
+      <sec sec-type="results">
+        <title>Results</title>
+        <p>Our model achieved 95% accuracy.</p>
+      </sec>
+      <sec sec-type="discussion">
+        <title>Discussion</title>
+        <p>The results demonstrate the potential of ML in healthcare.</p>
+      </sec>
+      <sec sec-type="conclusion">
+        <title>Conclusion</title>
+        <p>Further research is needed to validate these findings.</p>
       </sec>
     </body>
   </article>
@@ -242,6 +279,175 @@ class TestPMCFulltextNormalization:
             # 应该自动添加 PMC 前缀
             assert result["pmc_id"] == "PMC1234567"
             assert result["fulltext_available"] is True
+
+
+# ============================================================================
+# 新增：章节提取测试
+# ============================================================================
+
+
+class TestPMCSectionExtraction:
+    """章节提取功能测试"""
+
+    @pytest.fixture
+    def pubmed_service(self):
+        """创建 PubMed 服务实例"""
+        from article_mcp.services.pubmed_search import PubMedService
+
+        return PubMedService(logger=Mock())
+
+    def test_extract_single_section_methods(self, pubmed_service):
+        """测试：提取单个章节（Methods）"""
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
+            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
+            mock_get.return_value = mock_response
+
+            result = pubmed_service.get_pmc_fulltext_html("PMC1234567", sections=["methods"])
+
+            # 验证返回值
+            assert result["fulltext_available"] is True
+            assert "fulltext_markdown" in result
+
+            markdown = result["fulltext_markdown"]
+
+            # 只包含 Methods 章节
+            assert "Methods" in markdown
+            assert "We collected data from 1000 patients" in markdown
+
+            # 不包含其他章节
+            assert "Introduction" not in markdown or markdown.index("Methods") < markdown.index(
+                "Introduction"
+            )
+            assert "Results" not in markdown
+            assert "Discussion" not in markdown
+            assert "Conclusion" not in markdown
+
+            # 验证章节信息
+            assert result.get("sections_requested") == ["methods"]
+            assert result.get("sections_found") == ["methods"]
+            assert result.get("sections_missing") == []
+
+    def test_extract_multiple_sections(self, pubmed_service):
+        """测试：提取多个章节（Methods + Discussion）"""
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
+            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
+            mock_get.return_value = mock_response
+
+            result = pubmed_service.get_pmc_fulltext_html(
+                "PMC1234567", sections=["methods", "discussion"]
+            )
+
+            markdown = result["fulltext_markdown"]
+
+            # 包含 Methods 和 Discussion
+            assert "Methods" in markdown
+            assert "Discussion" in markdown
+            assert "We collected data from 1000 patients" in markdown
+            assert "results demonstrate the potential" in markdown
+
+            # 不包含其他章节
+            assert "Results" not in markdown or markdown.index("Results") > markdown.index(
+                "Discussion"
+            )
+            assert "Conclusion" not in markdown
+
+            # 验证章节信息
+            assert set(result.get("sections_found", [])) == {"methods", "discussion"}
+            assert result.get("sections_missing") == []
+
+    def test_extract_nonexistent_section(self, pubmed_service):
+        """测试：提取不存在的章节"""
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
+            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
+            mock_get.return_value = mock_response
+
+            result = pubmed_service.get_pmc_fulltext_html(
+                "PMC1234567",
+                sections=["appendix"],  # 不存在的章节
+            )
+
+            # 仍然成功返回，但章节未找到
+            assert result["fulltext_available"] is True
+            assert result.get("sections_found") == []
+            assert result.get("sections_missing") == ["appendix"]
+
+            # Markdown 为空或只有占位符
+            markdown = result.get("fulltext_markdown", "")
+            assert len(markdown) == 0 or "appendix" not in markdown.lower()
+
+    def test_sections_none_returns_all(self, pubmed_service):
+        """测试：sections=None 返回全部章节"""
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
+            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
+            mock_get.return_value = mock_response
+
+            result = pubmed_service.get_pmc_fulltext_html("PMC1234567", sections=None)
+
+            markdown = result["fulltext_markdown"]
+
+            # 包含所有章节
+            assert "Introduction" in markdown
+            assert "Methods" in markdown
+            assert "Results" in markdown
+            assert "Discussion" in markdown
+            assert "Conclusion" in markdown
+
+            # 不包含章节信息字段（全部章节时不标记）
+            assert "sections_requested" not in result
+            assert "sections_found" not in result
+
+    def test_partial_sections_found(self, pubmed_service):
+        """测试：部分章节找到，部分未找到"""
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
+            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
+            mock_get.return_value = mock_response
+
+            result = pubmed_service.get_pmc_fulltext_html(
+                "PMC1234567", sections=["methods", "appendix"]
+            )
+
+            # Methods 找到了，Appendix 未找到
+            assert result.get("sections_found") == ["methods"]
+            assert result.get("sections_missing") == ["appendix"]
+
+            # Markdown 只包含 Methods
+            markdown = result.get("fulltext_markdown", "")
+            assert "Methods" in markdown
+            assert "appendix" not in markdown.lower()
+
+    def test_empty_sections_list(self, pubmed_service):
+        """测试：空章节列表"""
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
+            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
+            mock_get.return_value = mock_response
+
+            result = pubmed_service.get_pmc_fulltext_html("PMC1234567", sections=[])
+
+            # 返回空内容
+            assert result["fulltext_available"] is True
+            markdown = result.get("fulltext_markdown", "")
+            assert len(markdown) == 0 or markdown.strip() == ""
+
+            assert result.get("sections_found") == []
+            assert result.get("sections_requested") == []
 
 
 # ============================================================================

@@ -5,6 +5,7 @@
 2. 返回简单的 article 字典
 3. 失败时返回 None
 4. 有 PMCID 时自动获取全文
+5. 支持按章节提取全文内容
 """
 
 import logging
@@ -31,47 +32,78 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 主要参数：
 - identifier: 文献标识符（必填）：DOI、PMID、PMCID
 - id_type: 标识符类型（默认auto自动识别）：auto/doi/pmid/pmcid
+- sections: 要提取的全文章节（可选）：["methods", "discussion", "results"等]
+            None表示获取全部章节，空列表[]表示不获取全文
 
 数据源：Europe PMC（单一数据源）
 返回数据包含标题、作者、摘要、期刊、发表日期、DOI等完整信息
-注意：如果文献有 PMCID，会自动获取全文（XML/Markdown/Text 格式）""",
+全文功能：如果文献有 PMCID，会自动获取全文（XML/Markdown/Text 格式）
+章节提取：可通过 sections 参数只获取特定章节（如方法、讨论部分）
+
+支持的章节名称：
+- methods（方法）: methods, methodology, materials and methods
+- introduction（引言）: introduction, intro, background
+- results（结果）: results, findings
+- discussion（讨论）: discussion
+- conclusion（结论）: conclusion, conclusions
+- abstract（摘要）: abstract, summary
+- references（参考文献）: references, bibliography""",
         annotations=ToolAnnotations(title="文献详情", readOnlyHint=True, openWorldHint=False),
         tags={"literature", "details", "metadata"},
     )
     async def get_article_details(
         identifier: str,
         id_type: str = "auto",
+        sections: list[str] | None = None,
     ) -> dict[str, Any]:
         """获取文献详情工具。通过DOI、PMID、PMCID获取文献的详细信息。
 
         Args:
             identifier: 文献标识符 (DOI, PMID, PMCID)
             id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
+            sections: 要提取的全文章节列表，None表示全部，[]表示不获取全文
 
         Returns:
             文献详细信息字典
             如果有 PMCID，会自动附加 fulltext 字段
+            如果指定了 sections，fulltext 中会包含章节信息
+
+            fulltext 结构：
+            {
+                "pmc_id": "PMC1234567",
+                "fulltext_xml": "...",
+                "fulltext_markdown": "...",
+                "fulltext_text": "...",
+                "fulltext_available": True,
+                "sections_requested": ["methods"],  # 仅指定章节时返回
+                "sections_found": ["methods"],       # 仅指定章节时返回
+                "sections_missing": []               # 仅指定章节时返回
+            }
             如果获取失败则返回 None
 
         """
         return await get_article_details_async(
             identifier=identifier,
             id_type=id_type,
+            sections=sections,
         )
 
 
 async def get_article_details_async(
     identifier: str,
     id_type: str = "auto",
+    sections: list[str] | None = None,
 ) -> dict[str, Any] | None:
     """异步获取文献详情。
 
     Args:
         identifier: 文献标识符 (DOI, PMID, PMCID)
         id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
+        sections: 要提取的全文章节列表，None表示全部，[]表示不获取全文
 
     Returns:
         文献详细信息字典，有 PMCID 时附加 fulltext
+        如果指定了 sections，fulltext 中会包含章节信息
         如果获取失败则返回 None
 
     """
@@ -109,15 +141,28 @@ async def get_article_details_async(
         pmcid = article.get("pmcid")
         if pubmed_service and pmcid:
             try:
-                fulltext = pubmed_service.get_pmc_fulltext_html(pmcid)
-                if fulltext.get("fulltext_available"):
-                    article["fulltext"] = {
-                        "pmc_id": fulltext.get("pmc_id"),
-                        "fulltext_xml": fulltext.get("fulltext_xml"),
-                        "fulltext_markdown": fulltext.get("fulltext_markdown"),
-                        "fulltext_text": fulltext.get("fulltext_text"),
-                        "fulltext_available": True,
-                    }
+                # 如果 sections 是空列表，跳过全文获取
+                if sections == []:
+                    logger.info("sections 为空列表，跳过全文获取")
+                else:
+                    fulltext = pubmed_service.get_pmc_fulltext_html(pmcid, sections=sections)
+                    if fulltext.get("fulltext_available"):
+                        article["fulltext"] = {
+                            "pmc_id": fulltext.get("pmc_id"),
+                            "fulltext_xml": fulltext.get("fulltext_xml"),
+                            "fulltext_markdown": fulltext.get("fulltext_markdown"),
+                            "fulltext_text": fulltext.get("fulltext_text"),
+                            "fulltext_available": True,
+                        }
+                        # 添加章节信息（如果有）
+                        if "sections_requested" in fulltext:
+                            article["fulltext"]["sections_requested"] = fulltext.get(
+                                "sections_requested"
+                            )
+                            article["fulltext"]["sections_found"] = fulltext.get("sections_found")
+                            article["fulltext"]["sections_missing"] = fulltext.get(
+                                "sections_missing"
+                            )
             except Exception as e:
                 logger.warning(f"获取全文失败: {e}")
 
