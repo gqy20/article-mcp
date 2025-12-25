@@ -297,6 +297,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
+  python -m article_mcp                                  # 启动服务器 (默认, stdio模式)
   python -m article_mcp server                           # 启动服务器 (stdio模式)
   python -m article_mcp server --transport sse           # 启动SSE服务器
   python -m article_mcp server --transport streamable-http # 启动Streamable HTTP服务器
@@ -329,11 +330,19 @@ def main() -> None:
     # 信息命令
     subparsers.add_parser("info", help="显示项目信息")
 
-    args = parser.parse_args()
+    # 解析参数（如果没有参数，默认使用 server 命令）
+    args = parser.parse_args(args=None if len(sys.argv) > 1 else ["server"])
 
-    if args.command == "server":
+    # 默认启动服务器（当没有指定命令或指定了 server 命令）
+    if args.command == "server" or args.command is None:
+        # 处理默认参数
+        transport = getattr(args, "transport", "stdio")
+        host = getattr(args, "host", "localhost")
+        port = getattr(args, "port", 9000)
+        path = getattr(args, "path", "/mcp")
+
         try:
-            start_server(transport=args.transport, host=args.host, port=args.port, path=args.path)
+            start_server(transport=transport, host=host, port=port, path=path)
         except KeyboardInterrupt:
             print("\n服务器已停止")
             sys.exit(0)

@@ -41,17 +41,21 @@ pip install fastmcp requests python-dateutil aiohttp markdownify
 #### 使用 PyPI 包（推荐）
 
 ```bash
-# 直接运行 PyPI 包
+# 直接运行 PyPI 包（server 参数可省略）
+uvx article-mcp
+
+# 或显式指定 server 命令
 uvx article-mcp server
 ```
 
 #### 本地开发
 
 ```bash
-# 启动 MCP 服务器 (推荐新入口点)
-uv run python -m article_mcp server
+# 启动 MCP 服务器 (推荐新入口点，server 参数可省略)
+uv run python -m article_mcp
 
-# 或使用 Python
+# 或显式指定 server 命令
+uv run python -m article_mcp server
 python -m article_mcp server
 
 # 兼容性入口点 (仍然支持)
@@ -72,18 +76,13 @@ python main.py server
   "mcpServers": {
     "article-mcp": {
       "command": "uvx",
-      "args": [
-        "article-mcp",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "args": ["article-mcp"]
     }
   }
 }
 ```
+
+> **注意**：`server` 参数可以省略，程序会默认启动服务器。
 
 ##### 方式二：本地开发
 
@@ -96,13 +95,10 @@ python main.py server
         "run",
         "--directory",
         "/path/to/your/article-mcp",
-        "main.py",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
-      }
+        "python",
+        "-m",
+        "article_mcp"
+      ]
     }
   }
 }
@@ -115,22 +111,13 @@ python main.py server
   "mcpServers": {
     "article-mcp": {
       "command": "uvx",
-      "args": [
-        "article-mcp",
-        "server",
-        "--transport",
-        "stdio"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "args": ["article-mcp"]
     }
   }
 }
 ```
 
-> **重要提示**：为了确保在 Cherry Studio 中正常工作，必须设置 `PYTHONIOENCODING=utf-8` 环境变量以正确处理 Unicode 字符。
+> **注意**：如遇 Unicode 字符问题，可添加 `env` 配置：`{"PYTHONIOENCODING": "utf-8"}`。
 
 ### 4️⃣ 开始使用
 
@@ -415,22 +402,21 @@ export UV_LINK_MODE=copy      # uv链接模式(可选)
 export EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API密钥(可选)
 ```
 
-### MCP 配置集成 (v0.1.1 新功能)
+### MCP 配置集成
 
 现在支持从 MCP 客户端配置文件中读取 EasyScholar API 密钥，无需通过环境变量传递。
 
-#### Claude Desktop 配置
+#### 配置方式
 
-编辑 `~/.config/claude-desktop/config.json` 文件：
+编辑 Claude Desktop 配置文件（`~/.config/claude-desktop/config.json`）：
 
 ```json
 {
   "mcpServers": {
     "article-mcp": {
       "command": "uvx",
-      "args": ["article-mcp", "server"],
+      "args": ["article-mcp"],
       "env": {
-        "PYTHONUNBUFFERED": "1",
         "EASYSCHOLAR_SECRET_KEY": "your_easyscholar_api_key_here"
       }
     }
@@ -455,14 +441,16 @@ export EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API密钥(可选)
 
 ```bash
 # STDIO 模式 (推荐用于桌面AI客户端)
-uv run python -m article_mcp server --transport stdio
+uv run python -m article_mcp --transport stdio
 
 # SSE 模式 (用于Web应用)
-uv run python -m article_mcp server --transport sse --host 0.0.0.0 --port 9000
+uv run python -m article_mcp --transport sse --host 0.0.0.0 --port 9000
 
 # HTTP 模式 (用于API集成)
-uv run python -m article_mcp server --transport streamable-http --host 0.0.0.0 --port 9000
+uv run python -m article_mcp --transport streamable-http --host 0.0.0.0 --port 9000
 ```
+
+> **注意**：`server` 子命令可以省略，程序会默认启动服务器。显式使用 `server` 命令也完全支持。
 
 ### API 限制与优化
 
@@ -601,15 +589,15 @@ article-mcp/
 项目已发布到 PyPI，支持通过 `uvx` 命令直接运行：
 
 ```bash
-# 从PyPI安装后直接运行（推荐）
-uvx article-mcp server
+# 从PyPI直接运行（推荐）
+uvx article-mcp
 
 # 或先安装后运行
 pip install article-mcp
-article-mcp server
+article-mcp
 
 # 本地开发测试
-uvx --from . article-mcp server
+uvx --from . article-mcp
 ```
 
 ### 配置说明
@@ -625,14 +613,7 @@ uvx --from . article-mcp server
   "mcpServers": {
     "article-mcp": {
       "command": "uvx",
-      "args": [
-        "article-mcp",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "args": ["article-mcp"]
     }
   }
 }
@@ -653,13 +634,8 @@ uvx --from . article-mcp server
         "/path/to/your/article-mcp",
         "python",
         "-m",
-        "article_mcp",
-        "server"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
-      }
+        "article_mcp"
+      ]
     }
   }
 }
@@ -674,22 +650,13 @@ uvx --from . article-mcp server
   "mcpServers": {
     "article-mcp": {
       "command": "uvx",
-      "args": [
-        "article-mcp",
-        "server",
-        "--transport",
-        "stdio"
-      ],
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "args": ["article-mcp"]
     }
   }
 }
 ```
 
-> **编码兼容性说明**：Cherry Studio 需要 `PYTHONIOENCODING=utf-8` 环境变量来正确处理 Unicode 字符，避免工具列表加载失败。
+> **注意**：如需指定传输模式或解决编码问题，可添加额外参数或环境变量。
 
 ### 发布说明
 
