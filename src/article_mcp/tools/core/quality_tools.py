@@ -56,7 +56,11 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                     )
                 else:
                     # 单个期刊质量评估
-                    return _single_journal_quality(journal_name, include_metrics, use_cache, logger)
+                    import asyncio
+
+                    return asyncio.run(
+                        _single_journal_quality(journal_name, include_metrics, use_cache, logger)
+                    )
 
             elif operation == "evaluation":
                 # 批量文献质量评估
@@ -106,7 +110,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             }
 
 
-def _single_journal_quality(
+async def _single_journal_quality(
     journal_name: str, include_metrics: list[str] | None, use_cache: bool, logger: Any
 ) -> dict[str, Any]:
     """单个期刊质量评估"""
@@ -122,44 +126,31 @@ def _single_journal_quality(
 
         start_time = time.time()
 
-        # 尝试从多个数据源获取质量指标
-        quality_metrics = {}
-        ranking_info = {}
-        data_source = None
+        # 使用 EasyScholar 服务获取质量指标
+        easyscholar_service = _get_easyscholar_service(logger)
+        result = await easyscholar_service.get_journal_quality(journal_name.strip())
 
-        # 1. 尝试从EasyScholar获取
-        try:
-            easyscholar_result = _get_easyscholar_quality(journal_name.strip(), logger)
-            if easyscholar_result.get("success", False):
-                quality_metrics.update(easyscholar_result.get("quality_metrics", {}))
-                ranking_info.update(easyscholar_result.get("ranking_info", {}))
-                data_source = "easyscholar"
-                logger.info("从EasyScholar获取期刊质量信息成功")
-        except Exception as e:
-            logger.debug(f"EasyScholar获取失败: {e}")
-
-        # 2. 尝试从本地缓存获取
-        if not quality_metrics and use_cache:
-            cache_result = _get_cached_journal_quality(journal_name.strip(), logger)
-            if cache_result:
-                quality_metrics.update(cache_result.get("quality_metrics", {}))
-                ranking_info.update(cache_result.get("ranking_info", {}))
-                data_source = "local_cache"
-                logger.info("从本地缓存获取期刊质量信息")
-
-        # 3. 基于期刊名称的简单评估
-        if not quality_metrics:
-            simple_result = _simple_journal_assessment(journal_name.strip(), logger)
-            quality_metrics.update(simple_result.get("quality_metrics", {}))
-            ranking_info.update(simple_result.get("ranking_info", {}))
-            data_source = "simple_assessment"
-            logger.info("使用简单评估方法获取期刊质量信息")
+        if not result.get("success", False):
+            return {
+                "success": False,
+                "error": result.get("error", "获取期刊质量失败"),
+                "journal_name": journal_name,
+                "quality_metrics": {},
+                "ranking_info": {},
+                "data_source": None,
+            }
 
         # 过滤用户请求的指标
+        quality_metrics = result.get("quality_metrics", {})
         filtered_metrics = {}
         for metric in include_metrics:
             if metric in quality_metrics:
                 filtered_metrics[metric] = quality_metrics[metric]
+            # 添加别名映射
+            elif metric == "cas_zone" and "cas_zone" in quality_metrics:
+                filtered_metrics[metric] = quality_metrics[metric]
+            elif metric == "chinese_academy_sciences_zone" and "cas_zone" in quality_metrics:
+                filtered_metrics[metric] = quality_metrics["cas_zone"]
 
         processing_time = round(time.time() - start_time, 2)
 
@@ -167,8 +158,8 @@ def _single_journal_quality(
             "success": True,
             "journal_name": journal_name.strip(),
             "quality_metrics": filtered_metrics,
-            "ranking_info": ranking_info,
-            "data_source": data_source,
+            "ranking_info": result.get("ranking_info", {}),
+            "data_source": result.get("data_source", "easyscholar"),
             "processing_time": processing_time,
         }
 
@@ -203,20 +194,31 @@ def _batch_journal_quality(
         journal_results = {}
         successful_evaluations = 0
 
-        for journal_name in journal_names:
-            try:
-                result = _single_journal_quality(journal_name, include_metrics, use_cache, logger)
+        # 使用异步批量评估
+        import asyncio
+
+        async def batch_eval() -> None:
+            nonlocal successful_evaluations
+            easyscholar_service = _get_easyscholar_service(logger)
+            results = await easyscholar_service.batch_get_journal_quality(journal_names)
+
+            for i, result in enumerate(results):
+                journal_name = journal_names[i]
                 journal_results[journal_name] = result
+
+                # 过滤请求的指标
                 if result.get("success", False):
+                    quality_metrics = result.get("quality_metrics", {})
+                    filtered_metrics = {}
+                    for metric in include_metrics:
+                        if metric in quality_metrics:
+                            filtered_metrics[metric] = quality_metrics[metric]
+
+                    journal_results[journal_name]["quality_metrics"] = filtered_metrics
                     successful_evaluations += 1
-            except Exception as e:
-                logger.error(f"评估期刊 '{journal_name}' 失败: {e}")
-                journal_results[journal_name] = {
-                    "success": False,
-                    "error": str(e),
-                    "journal_name": journal_name,
-                    "quality_metrics": {},
-                }
+
+        # 运行异步批量评估
+        asyncio.run(batch_eval())
 
         processing_time = round(time.time() - start_time, 2)
 
@@ -449,38 +451,20 @@ def _get_field_ranking(
         }
 
 
-# 辅助函数（保持原有实现）
+# 辅助函数
+def _get_easyscholar_service(logger: Any) -> Any:
+    """获取 EasyScholar 服务实例"""
+    from article_mcp.services.easyscholar_service import create_easyscholar_service
+
+    return create_easyscholar_service(logger)
+
+
 def _get_easyscholar_quality(journal_name: str, logger: Any) -> dict[str, Any]:
-    """从EasyScholar获取期刊质量信息"""
-    try:
-        # 尝试从环境变量获取API密钥
-        import os
+    """从EasyScholar获取期刊质量信息（已废弃，使用服务）"""
+    import asyncio
 
-        api_key = os.getenv("EASYSCHOLAR_SECRET_KEY")
-
-        if not api_key:
-            logger.debug("未找到EasyScholar API密钥")
-            return {"success": False, "error": "未配置EasyScholar API密钥"}
-
-        # 这里应该调用EasyScholar API
-        # 由于没有真实的API，返回模拟数据
-        return {
-            "success": True,
-            "quality_metrics": {
-                "impact_factor": 4.2,
-                "quartile": "Q2",
-                "jci": 1.8,
-                "分区": "中科院二区",
-            },
-            "ranking_info": {
-                "rank_in_category": 45,
-                "total_journals_in_category": 200,
-                "percentile": 77.5,
-            },
-        }
-    except Exception as e:
-        logger.error(f"从EasyScholar获取质量信息失败: {e}")
-        return {"success": False, "error": str(e)}
+    service = _get_easyscholar_service(logger)
+    return asyncio.run(service.get_journal_quality(journal_name))
 
 
 def _get_cached_journal_quality(journal_name: str, logger: Any) -> dict[str, Any] | None:
@@ -508,42 +492,11 @@ def _get_cached_journal_quality(journal_name: str, logger: Any) -> dict[str, Any
 
 
 def _simple_journal_assessment(journal_name: str, logger: Any) -> dict[str, Any]:
-    """基于期刊名称的简单评估"""
-    try:
-        # 基于期刊名称关键词的简单评估
-        high_indicators = ["nature", "science", "cell", "lancet", "nejm", "pnas"]
-        medium_indicators = ["journal", "review", "progress", "advances", "research"]
+    """基于期刊名称的简单评估（已废弃，使用服务）"""
+    import asyncio
 
-        journal_lower = journal_name.lower()
-
-        if any(indicator in journal_lower for indicator in high_indicators):
-            impact_factor = 8.0
-            quartile = "Q1"
-            jci = 3.5
-            分区 = "中科院一区"
-        elif any(indicator in journal_lower for indicator in medium_indicators):
-            impact_factor = 3.0
-            quartile = "Q2"
-            jci = 1.5
-            分区 = "中科院二区"
-        else:
-            impact_factor = 1.5
-            quartile = "Q3"
-            jci = 0.8
-            分区 = "中科院三区"
-
-        return {
-            "quality_metrics": {
-                "impact_factor": impact_factor,
-                "quartile": quartile,
-                "jci": jci,
-                "分区": 分区,
-            },
-            "ranking_info": {"assessment_method": "simple_keyword_based", "confidence": "low"},
-        }
-    except Exception as e:
-        logger.error(f"简单期刊评估失败: {e}")
-        return {"quality_metrics": {}, "ranking_info": {}}
+    service = _get_easyscholar_service(logger)
+    return asyncio.run(service.get_journal_quality(journal_name))
 
 
 def _evaluate_article_quality(

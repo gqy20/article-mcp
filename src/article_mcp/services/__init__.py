@@ -6,6 +6,7 @@ from .arxiv_search import create_arxiv_service, search_arxiv
 from .crossref_service import CrossRefService
 
 # 导入核心服务
+from .easyscholar_service import EasyScholarService, create_easyscholar_service
 from .europe_pmc import EuropePMCService, create_europe_pmc_service
 from .literature_relation_service import (
     LiteratureRelationService,
@@ -26,12 +27,14 @@ __all__ = [
     "OpenAlexService",
     "UnifiedReferenceService",
     "LiteratureRelationService",
+    "EasyScholarService",
     # 服务创建函数
     "create_europe_pmc_service",
     "create_pubmed_service",
     "create_unified_reference_service",
     "create_literature_relation_service",
     "create_arxiv_service",
+    "create_easyscholar_service",
     # 工具函数
     "search_arxiv",
     "get_similar_articles_by_doi",
