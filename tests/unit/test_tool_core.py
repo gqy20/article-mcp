@@ -254,60 +254,6 @@ class TestQualityToolsCore:
             pytest.fail(f"register_quality_tools raised {e}")
 
 
-class TestBatchToolsCore:
-    """测试批量工具核心逻辑"""
-
-    @pytest.mark.unit
-    def test_batch_tools_registration(self):
-        """测试批量工具注册"""
-        from fastmcp import FastMCP
-
-        from article_mcp.tools.core.batch_tools import register_batch_tools
-
-        mcp = FastMCP("test")
-        logger = Mock()
-        services = {}
-
-        # 验证注册函数存在且可调用
-        assert callable(register_batch_tools)
-        try:
-            register_batch_tools(mcp, services, logger)
-        except Exception as e:
-            pytest.fail(f"register_batch_tools raised {e}")
-
-    @pytest.mark.unit
-    def test_export_format_types(self):
-        """测试导出格式支持 - 验证工具函数参数"""
-        import inspect
-
-        from fastmcp import FastMCP
-
-        from article_mcp.tools.core.batch_tools import register_batch_tools
-
-        mcp = FastMCP("test")
-        logger = Mock()
-        services = {}
-        register_batch_tools(mcp, services, logger)
-
-        # 找到 export_batch_results 工具
-        # FastMCP 会将工具注册为实例方法
-        tools = [
-            getattr(mcp, name)
-            for name in dir(mcp)
-            if not name.startswith("_") and callable(getattr(mcp, name))
-        ]
-        export_tool = None
-        for tool in tools:
-            if hasattr(tool, "__name__") and "export" in tool.__name__.lower():
-                export_tool = tool
-                break
-
-        if export_tool:
-            sig = inspect.signature(export_tool)
-            # 验证有 format_type 参数
-            assert "format_type" in sig.parameters
-
-
 class TestToolIntegration:
     """测试工具集成"""
 
@@ -317,7 +263,6 @@ class TestToolIntegration:
         from fastmcp import FastMCP
 
         from article_mcp.tools.core.article_tools import register_article_tools
-        from article_mcp.tools.core.batch_tools import register_batch_tools
         from article_mcp.tools.core.quality_tools import register_quality_tools
         from article_mcp.tools.core.reference_tools import register_reference_tools
         from article_mcp.tools.core.relation_tools import register_relation_tools
@@ -357,20 +302,12 @@ class TestToolIntegration:
             "pubmed": Mock(),
         }
 
-        batch_services = {
-            "europe_pmc": Mock(),
-            "pubmed": Mock(),
-            "crossref": Mock(),
-            "openalex": Mock(),
-        }
-
-        # 注册所有工具
+        # 注册所有工具（5个核心工具）
         register_search_tools(mcp, search_services, logger)
         register_article_tools(mcp, article_services, logger)
         register_reference_tools(mcp, reference_services, logger)
         register_relation_tools(mcp, relation_services, logger)
         register_quality_tools(mcp, quality_services, logger)
-        register_batch_tools(mcp, batch_services, logger)
 
         # 验证工具已注册 - FastMCP 存储工具在内部
         # 检查是否有非私有属性（注册的工具）
@@ -379,14 +316,13 @@ class TestToolIntegration:
 
     @pytest.mark.unit
     def test_tool_count(self):
-        """验证6个核心工具都已注册"""
-        # 这6个工具是:
+        """验证5个核心工具都已注册"""
+        # 这5个工具是:
         # 1. search_literature
         # 2. get_article_details
         # 3. get_references
         # 4. get_literature_relations
         # 5. get_journal_quality
-        # 6. export_batch_results
 
         from fastmcp import FastMCP
 
@@ -395,8 +331,8 @@ class TestToolIntegration:
         server = create_mcp_server()
         # FastMCP 存储工具 - 检查公开属性
         public_attrs = [name for name in dir(server) if not name.startswith("_")]
-        # 应该至少有6个工具函数
+        # 应该至少有5个工具函数
         tool_funcs = [name for name in public_attrs if callable(getattr(server, name, None))]
-        assert len(tool_funcs) >= 6, (
-            f"Expected at least 6 tools, got {len(tool_funcs)}: {tool_funcs}"
+        assert len(tool_funcs) >= 5, (
+            f"Expected at least 5 tools, got {len(tool_funcs)}: {tool_funcs}"
         )

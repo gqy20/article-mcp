@@ -28,7 +28,6 @@ __email__ = "qingyu_ge@foxmail.com"
 
 # 导入CLI功能
 from .cli import create_mcp_server
-from .cli import main as cli_main
 
 # 主要API导出
 __all__ = [
@@ -38,30 +37,4 @@ __all__ = [
     "__email__",
     # CLI功能
     "create_mcp_server",
-    "cli_main",
-    "main",
-    "get_version",
-    "get_server_info",
 ]
-
-
-# 便捷入口函数
-def main() -> None:
-    """CLI入口点 - 启动Article MCP服务器"""
-    cli_main()
-
-
-def get_version() -> str:
-    """获取版本信息"""
-    return __version__
-
-
-def get_server_info() -> dict[str, Any]:
-    """获取服务器信息"""
-    return {
-        "name": "Article MCP Server",
-        "version": __version__,
-        "author": __author__,
-        "description": "基于 FastMCP 框架的学术文献搜索工具",
-        "supported_databases": ["Europe PMC", "arXiv", "PubMed", "CrossRef", "OpenAlex"],
-    }

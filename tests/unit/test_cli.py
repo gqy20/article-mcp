@@ -211,13 +211,16 @@ class TestArgumentParsing:
         mock_show.assert_called_once()
 
     @pytest.mark.unit
-    def test_parse_no_command(self, capsys):
-        """测试无命令参数"""
-        with patch("sys.argv", ["article_mcp"]):
-            main()
+    def test_parse_no_command(self):
+        """测试无命令参数 - 应该默认启动服务器"""
+        with patch("article_mcp.cli.start_server") as mock_start:
+            with patch("sys.argv", ["article_mcp"]):
+                main()
 
-        capsys.readouterr()
-        # 应该显示帮助信息
+        # 验证默认启动服务器
+        mock_start.assert_called_once_with(
+            transport="stdio", host="localhost", port=9000, path="/mcp"
+        )
 
 
 class TestCLIErrorHandling:
