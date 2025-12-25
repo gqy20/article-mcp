@@ -47,7 +47,7 @@ def create_mcp_server() -> "FastMCP":
     from .services.pubmed_search import create_pubmed_service
     from .services.reference_service import create_unified_reference_service
     from .tools.core.article_tools import register_article_tools
-    from .tools.core.batch_tools import register_batch_tools
+    from .tools.core.keyword_trends import register_keyword_trends_tools
     from .tools.core.quality_tools import register_quality_tools
     from .tools.core.reference_tools import register_reference_tools
     from .tools.core.relation_tools import register_relation_tools
@@ -127,14 +127,14 @@ def create_mcp_server() -> "FastMCP":
     quality_services = {"pubmed": pubmed_service}
     register_quality_tools(mcp, quality_services, logger)
 
-    # 工具6: 通用导出工具
-    batch_services = {
+    # 工具6: 关键词趋势分析工具
+    keyword_trends_services = {
         "europe_pmc": europe_pmc_service,
         "pubmed": pubmed_service,
         "crossref": crossref_service,
         "openalex": openalex_service,
     }
-    register_batch_tools(mcp, batch_services, logger)
+    register_keyword_trends_tools(mcp, keyword_trends_services, logger)
 
     return mcp
 
