@@ -37,6 +37,7 @@ test-reports/
 .mypy_cache/
 .ruff_cache/
 .dmypy.json
+.cache/
 
 # 构建和分发
 build/

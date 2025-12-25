@@ -1,6 +1,8 @@
 """期刊质量评估工具 - 核心工具5（统一质量评估工具）"""
 
+import asyncio
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -9,6 +11,17 @@ from fastmcp import FastMCP
 
 # 全局服务实例
 _quality_services = None
+
+# ========== 缓存配置 ==========
+# 缓存目录
+_CACHE_DIR = Path(os.getenv("JOURNAL_CACHE_DIR", ".cache/journal_quality"))
+_CACHE_FILE = _CACHE_DIR / "journal_data.json"
+
+# 缓存过期时间（秒），默认24小时
+_CACHE_TTL = int(os.getenv("JOURNAL_CACHE_TTL", "86400"))
+
+# 是否启用缓存
+_CACHE_ENABLED = os.getenv("JOURNAL_CACHE_ENABLED", "true").lower() == "true"
 
 
 def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
@@ -113,7 +126,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 async def _single_journal_quality(
     journal_name: str, include_metrics: list[str] | None, use_cache: bool, logger: Any
 ) -> dict[str, Any]:
-    """单个期刊质量评估"""
+    """单个期刊质量评估（带文件缓存支持）"""
     try:
         if not journal_name or not journal_name.strip():
             from fastmcp.exceptions import ToolError
@@ -125,10 +138,30 @@ async def _single_journal_quality(
             include_metrics = ["impact_factor", "quartile", "jci"]
 
         start_time = time.time()
+        normalized_name = journal_name.strip()
+        result = None
+        data_source = None
+        cache_hit = False
 
-        # 使用 EasyScholar 服务获取质量指标
-        easyscholar_service = _get_easyscholar_service(logger)
-        result = await easyscholar_service.get_journal_quality(journal_name.strip())
+        # ========== 缓存查询 ==========
+        if use_cache and _CACHE_ENABLED:
+            # 从文件缓存查询
+            cached_result = await asyncio.to_thread(_get_from_file_cache, normalized_name, logger)
+            if cached_result:
+                logger.debug(f"缓存命中: {normalized_name}")
+                result = cached_result
+                data_source = "cache"
+                cache_hit = True
+
+        # API 调用（缓存未命中或禁用）
+        if result is None:
+            easyscholar_service = _get_easyscholar_service(logger)
+            result = await easyscholar_service.get_journal_quality(normalized_name)
+            data_source = result.get("data_source", "easyscholar")
+
+            # 保存到缓存
+            if use_cache and _CACHE_ENABLED and result.get("success", False):
+                await asyncio.to_thread(_save_to_file_cache, normalized_name, result, logger)
 
         if not result.get("success", False):
             return {
@@ -156,10 +189,11 @@ async def _single_journal_quality(
 
         return {
             "success": True,
-            "journal_name": journal_name.strip(),
+            "journal_name": normalized_name,
             "quality_metrics": filtered_metrics,
             "ranking_info": result.get("ranking_info", {}),
-            "data_source": result.get("data_source", "easyscholar"),
+            "data_source": data_source,
+            "cache_hit": cache_hit,
             "processing_time": processing_time,
         }
 
@@ -178,7 +212,7 @@ async def _single_journal_quality(
 def _batch_journal_quality(
     journal_names: list[str], include_metrics: list[str], use_cache: bool, logger: Any
 ) -> dict[str, Any]:
-    """批量期刊质量评估"""
+    """批量期刊质量评估（带文件缓存支持）"""
     try:
         if not journal_names:
             return {
@@ -187,25 +221,48 @@ def _batch_journal_quality(
                 "total_journals": 0,
                 "successful_evaluations": 0,
                 "journal_results": {},
+                "cache_hits": 0,
                 "processing_time": 0,
             }
 
         start_time = time.time()
         journal_results = {}
         successful_evaluations = 0
+        cache_hits = 0
 
         # 使用异步批量评估
-        import asyncio
-
         async def batch_eval() -> None:
-            nonlocal successful_evaluations
+            nonlocal successful_evaluations, cache_hits
+
+            # 先从缓存查找
+            cached_journals = {}
+            journals_to_fetch = []
+
+            if use_cache and _CACHE_ENABLED:
+                for journal_name in journal_names:
+                    cached_result = await asyncio.to_thread(
+                        _get_from_file_cache, journal_name.strip(), logger
+                    )
+                    if cached_result:
+                        cached_journals[journal_name] = (cached_result, True)
+                        cache_hits += 1
+                    else:
+                        journals_to_fetch.append(journal_name)
+            else:
+                journals_to_fetch = journal_names.copy()
+
+            # 获取未缓存的数据
             easyscholar_service = _get_easyscholar_service(logger)
-            results = await easyscholar_service.batch_get_journal_quality(journal_names)
+            fetched_results = await easyscholar_service.batch_get_journal_quality(journals_to_fetch)
 
-            for i, result in enumerate(results):
-                journal_name = journal_names[i]
-                journal_results[journal_name] = result
+            # 合并结果
+            all_results = {}
+            all_results.update(cached_journals)
+            for i, result in enumerate(fetched_results):
+                all_results[journals_to_fetch[i]] = (result, False)
 
+            # 处理每个期刊的结果
+            for journal_name, (result, is_cached) in all_results.items():
                 # 过滤请求的指标
                 if result.get("success", False):
                     quality_metrics = result.get("quality_metrics", {})
@@ -214,8 +271,23 @@ def _batch_journal_quality(
                         if metric in quality_metrics:
                             filtered_metrics[metric] = quality_metrics[metric]
 
-                    journal_results[journal_name]["quality_metrics"] = filtered_metrics
+                    journal_results[journal_name] = {
+                        "success": True,
+                        "journal_name": journal_name,
+                        "quality_metrics": filtered_metrics,
+                        "ranking_info": result.get("ranking_info", {}),
+                        "data_source": "cache"
+                        if is_cached
+                        else result.get("data_source", "easyscholar"),
+                        "cache_hit": is_cached,
+                    }
                     successful_evaluations += 1
+
+                    # 保存到缓存（仅限新获取的数据）
+                    if use_cache and _CACHE_ENABLED and not is_cached:
+                        await asyncio.to_thread(_save_to_file_cache, journal_name, result, logger)
+                else:
+                    journal_results[journal_name] = result
 
         # 运行异步批量评估
         asyncio.run(batch_eval())
@@ -226,6 +298,8 @@ def _batch_journal_quality(
             "success": successful_evaluations > 0,
             "total_journals": len(journal_names),
             "successful_evaluations": successful_evaluations,
+            "cache_hits": cache_hits,
+            "cache_hit_rate": cache_hits / len(journal_names) if journal_names else 0,
             "success_rate": successful_evaluations / len(journal_names) if journal_names else 0,
             "journal_results": journal_results,
             "processing_time": processing_time,
@@ -238,6 +312,7 @@ def _batch_journal_quality(
             "error": str(e),
             "total_journals": len(journal_names) if journal_names else 0,
             "successful_evaluations": 0,
+            "cache_hits": 0,
             "journal_results": {},
             "processing_time": 0,
         }
@@ -459,44 +534,76 @@ def _get_easyscholar_service(logger: Any) -> Any:
     return create_easyscholar_service(logger)
 
 
-def _get_easyscholar_quality(journal_name: str, logger: Any) -> dict[str, Any]:
-    """从EasyScholar获取期刊质量信息（已废弃，使用服务）"""
-    import asyncio
-
-    service = _get_easyscholar_service(logger)
-    return asyncio.run(service.get_journal_quality(journal_name))
+# ========== 缓存辅助函数 ==========
 
 
-def _get_cached_journal_quality(journal_name: str, logger: Any) -> dict[str, Any] | None:
-    """从本地缓存获取期刊质量信息"""
+def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | None:
+    """从文件缓存获取期刊质量信息
+
+    Args:
+        journal_name: 期刊名称
+        logger: 日志记录器
+
+    Returns:
+        缓存的数据，如果不存在或已过期返回 None
+    """
+    if not _CACHE_FILE.exists():
+        return None
+
     try:
-        cache_file = Path("src/resource/journal_info.json")
-        if not cache_file.exists():
-            return None
+        with open(_CACHE_FILE, encoding="utf-8") as f:
+            cache_data = json.load(f)
 
-        with open(cache_file, encoding="utf-8") as f:
-            journal_data = json.load(f)
-
-        # 简单的名称匹配
-        for cached_journal in journal_data.get("journals", []):
-            if journal_name.lower() in cached_journal.get("name", "").lower():
-                return {
-                    "quality_metrics": cached_journal.get("metrics", {}),
-                    "ranking_info": cached_journal.get("ranking", {}),
-                }
+        # 检查是否过期
+        cached = cache_data.get("journals", {}).get(journal_name)
+        if cached:
+            timestamp = cached.get("timestamp", 0)
+            if time.time() - timestamp < _CACHE_TTL:
+                logger.debug(f"文件缓存命中: {journal_name}")
+                data = cached.get("data")
+                if isinstance(data, dict):
+                    return data
+                return None
 
         return None
     except Exception as e:
-        logger.error(f"从缓存获取期刊质量信息失败: {e}")
+        logger.error(f"读取文件缓存失败: {e}")
         return None
 
 
-def _simple_journal_assessment(journal_name: str, logger: Any) -> dict[str, Any]:
-    """基于期刊名称的简单评估（已废弃，使用服务）"""
-    import asyncio
+def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) -> None:
+    """保存到文件缓存
 
-    service = _get_easyscholar_service(logger)
-    return asyncio.run(service.get_journal_quality(journal_name))
+    Args:
+        journal_name: 期刊名称
+        data: 要缓存的数据
+        logger: 日志记录器
+    """
+    try:
+        # 确保缓存目录存在
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+        # 读取现有缓存
+        if _CACHE_FILE.exists():
+            with open(_CACHE_FILE, encoding="utf-8") as f:
+                cache_data = json.load(f)
+        else:
+            cache_data = {"journals": {}, "version": "1.0", "created_at": time.time()}
+
+        # 更新缓存
+        cache_data["journals"][journal_name] = {
+            "data": data,
+            "timestamp": time.time(),
+        }
+        cache_data["last_updated"] = time.time()
+
+        # 写入文件
+        with open(_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+
+        logger.debug(f"已保存到文件缓存: {journal_name}")
+    except Exception as e:
+        logger.error(f"写入文件缓存失败: {e}")
 
 
 def _evaluate_article_quality(
@@ -512,8 +619,13 @@ def _evaluate_article_quality(
                 # 基于期刊名称评估质量
                 journal = article.get("journal", "")
                 if journal:
-                    simple_result = _simple_journal_assessment(journal, logger)
-                    impact_factor = simple_result.get("quality_metrics", {}).get("impact_factor", 0)
+                    import asyncio
+
+                    service = _get_easyscholar_service(logger)
+                    quality_result = asyncio.run(service.get_journal_quality(journal))
+                    impact_factor = quality_result.get("quality_metrics", {}).get(
+                        "impact_factor", 0
+                    )
                     # 归一化影响因子到0-100分
                     score = min(impact_factor * 10, 100)
                     scores[criterion] = score
