@@ -290,7 +290,30 @@ def _batch_journal_quality(
                     journal_results[journal_name] = result
 
         # 运行异步批量评估
-        asyncio.run(batch_eval())
+        try:
+            # 尝试获取正在运行的事件循环
+            asyncio.get_running_loop()
+            # 如果能获取到，说明已经在事件循环中
+            # 在新线程中运行以避免嵌套事件循环问题
+            import threading
+
+            result_container = {"done": False, "result": None}
+
+            def run_in_new_loop():
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    new_loop.run_until_complete(batch_eval())
+                    result_container["done"] = True
+                finally:
+                    new_loop.close()
+
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join(timeout=60)
+        except RuntimeError:
+            # 没有正在运行的事件循环，使用 asyncio.run
+            asyncio.run(batch_eval())
 
         processing_time = round(time.time() - start_time, 2)
 
