@@ -158,34 +158,6 @@ class PubMedService:
             return None
 
     # ------------------------ 期刊质量评估 ------------------------ #
-    def _load_journal_cache(self) -> dict[str, Any]:
-        """加载本地期刊信息缓存"""
-        import json
-        import os
-
-        try:
-            cache_path = os.path.join(os.path.dirname(__file__), "resource", "journal_info.json")
-            if os.path.exists(cache_path):
-                with open(cache_path, encoding="utf-8") as f:
-                    return json.load(f)  # type: ignore[no-any-return]
-            return {}
-        except Exception as e:
-            self.logger.warning(f"加载期刊缓存失败: {e}")
-            return {}
-
-    def _save_journal_cache(self, cache_data: dict[str, Any]) -> None:
-        """保存期刊信息到本地缓存"""
-        import json
-        import os
-
-        try:
-            cache_path = os.path.join(os.path.dirname(__file__), "resource", "journal_info.json")
-            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-            with open(cache_path, "w", encoding="utf-8") as f:
-                json.dump(cache_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            self.logger.warning(f"保存期刊缓存失败: {e}")
-
     def _query_easyscholar_api(self, journal_name: str, secret_key: str) -> dict[str, Any] | None:
         """调用 EasyScholar API 获取期刊信息"""
         import requests
@@ -246,42 +218,29 @@ class PubMedService:
     def get_journal_quality(
         self, journal_name: str, secret_key: str | None = None
     ) -> dict[str, Any]:
-        """获取期刊质量评估信息（影响因子、分区等）"""
+        """获取期刊质量评估信息（影响因子、分区等）
+
+        注意：此方法仅供兼容保留，建议使用 quality_tools 中的 get_journal_quality
+        """
         if not journal_name or not journal_name.strip():
             return {"error": "期刊名称不能为空"}
 
         journal_name = journal_name.strip()
 
-        # 1. 先从本地缓存查询
-        cache = self._load_journal_cache()
-        if journal_name in cache:
-            rank_data = cache[journal_name].get("rank", {})
-            metrics = self._extract_quality_metrics(rank_data)
-            if metrics:
-                self.logger.info(f"从本地缓存获取期刊信息: {journal_name}")
-                return {
-                    "journal_name": journal_name,
-                    "source": "local_cache",
-                    "quality_metrics": metrics,
-                    "error": None,
-                }
-
-        # 2. 如果本地没有且提供了API密钥，则调用EasyScholar API
+        # 如果提供了 API 密钥，则调用 EasyScholar API
         if secret_key:
             api_data = self._query_easyscholar_api(journal_name, secret_key)
             if api_data:
-                # 保存到缓存
-                if journal_name not in cache:
-                    cache[journal_name] = {}
-                cache[journal_name]["rank"] = {}
+                # 构建排名数据
+                rank_data = {}
 
                 # 处理官方排名数据
                 if "officialRank" in api_data:
                     official = api_data["officialRank"]
                     if "select" in official:
-                        cache[journal_name]["rank"].update(official["select"])
+                        rank_data.update(official["select"])
                     elif "all" in official:
-                        cache[journal_name]["rank"].update(official["all"])
+                        rank_data.update(official["all"])
 
                 # 处理自定义排名数据
                 if "customRank" in api_data:
@@ -308,12 +267,10 @@ class PubMedService:
                                         rank_text = info.get("fiveRankText", "")
 
                                     if abbr_name and rank_text:
-                                        cache[journal_name]["rank"][abbr_name.lower()] = rank_text
-
-                self._save_journal_cache(cache)
+                                        rank_data[abbr_name.lower()] = rank_text
 
                 # 提取质量指标
-                metrics = self._extract_quality_metrics(cache[journal_name]["rank"])
+                metrics = self._extract_quality_metrics(rank_data)
                 self.logger.info(f"从 EasyScholar API 获取期刊信息: {journal_name}")
                 return {
                     "journal_name": journal_name,
@@ -322,7 +279,7 @@ class PubMedService:
                     "error": None,
                 }
 
-        # 3. 都没有找到
+        # 未找到或未提供 API 密钥
         return {
             "journal_name": journal_name,
             "source": None,
