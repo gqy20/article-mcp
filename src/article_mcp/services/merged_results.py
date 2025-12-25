@@ -48,17 +48,54 @@ def merge_same_doi_articles(articles: list[dict]) -> dict:
         }
 
     # 选择最完整的数据作为基础
-    base_article = articles[0]
+    base_article = articles[0].copy()
     for article in articles[1:]:
         # 合并字段，优先选择非空值
         for key, value in article.items():
             if key not in base_article or not base_article[key]:
                 base_article[key] = value
 
+    # 从 data_sources 中提升字段到顶层
+    sources_list = [a.get("source_from", "unknown") for a in articles]
+    data_sources_dict = {}
+
+    for a in articles:
+        source = a.get("source_from", "unknown")
+        # 如果 data_sources 已经有这个源的数据，需要合并
+        if source in data_sources_dict:
+            existing = data_sources_dict[source]
+            # 合并新字段到现有数据（排除某些特殊字段）
+            for key, value in a.items():
+                if key not in ("data_sources", "source_from"):
+                    if key not in existing or not existing[key]:
+                        existing[key] = value
+        else:
+            # 复制文章数据，但排除某些特殊字段
+            article_copy = {k: v for k, v in a.items() if k not in ("data_sources",)}
+            data_sources_dict[source] = article_copy
+
+    # 提升所有 data_sources 中的字段到顶层（如果顶层没有）
+    for source_data in data_sources_dict.values():
+        for key, value in source_data.items():
+            if key not in ("data_sources", "source_from"):
+                if key not in base_article or not base_article[key]:
+                    base_article[key] = value
+
+    # 处理每个文章原有的 data_sources 字段（递归提升）
+    for a in articles:
+        nested_data_sources = a.get("data_sources", {})
+        if nested_data_sources:
+            for _nested_source, nested_data in nested_data_sources.items():
+                # 提升嵌套数据中的字段到顶层
+                for key, value in nested_data.items():
+                    if key not in ("data_sources", "source_from"):
+                        if key not in base_article or not base_article[key]:
+                            base_article[key] = value
+
     return {
         **base_article,
-        "sources": [a.get("source_from", "unknown") for a in articles],
-        "data_sources": {a.get("source_from", "unknown"): a for a in articles},
+        "sources": sources_list,
+        "data_sources": data_sources_dict,
     }
 
 
@@ -69,8 +106,11 @@ def deduplicate_articles(articles: list[dict]) -> list[dict]:
     deduplicated = []
 
     for article in articles:
-        doi = article.get("doi", "").lower()
-        title = article.get("title", "").lower()
+        doi = article.get("doi") or ""  # 处理 None 值
+        title = article.get("title") or ""  # 处理 None 值
+
+        doi = doi.lower() if doi else ""
+        title = title.lower() if title else ""
 
         # 检查DOI去重
         if doi and doi in seen_dois:
@@ -95,13 +135,28 @@ def simple_rank_articles(
 ) -> list[dict]:
     """简单的文章排序，基于数据源优先级"""
     if source_priority is None:
-        source_priority = ["europe_pmc", "pubmed", "crossref", "openalex", "arxiv"]
+        source_priority = [
+            "nature",
+            "science",
+            "cell",
+            "europe_pmc",
+            "pubmed",
+            "crossref",
+            "openalex",
+            "arxiv",
+        ]
     else:
         # 使用传入的优先级
         pass
 
     def get_priority_score(article: dict) -> int:
-        sources = article.get("sources", [article.get("source_from", "")])
+        # 优先使用 sources 字段
+        sources = article.get("sources", [])
+        if not sources:
+            # 兼容旧格式：使用 source 或 source_from 字段
+            source = article.get("source") or article.get("source_from", "")
+            sources = [source] if source else []
+
         for i, priority_source in enumerate(source_priority):
             if priority_source in sources:
                 return i
@@ -128,6 +183,7 @@ def merge_reference_results(reference_results: dict[str, dict]) -> dict[str, Any
 
     return {
         "success": len(deduplicated_refs) > 0,
+        "merged_references": deduplicated_refs,  # 保持向后兼容
         "references": deduplicated_refs,
         "total_count": len(deduplicated_refs),
         "sources_used": sources_used,
@@ -173,6 +229,7 @@ def merge_citation_results(citation_results: dict[str, dict]) -> dict[str, Any]:
 
     return {
         "success": len(deduplicated_citations) > 0,
+        "merged_citations": deduplicated_citations,  # 保持向后兼容
         "citations": deduplicated_citations,
         "total_count": len(deduplicated_citations),
         "sources_used": sources_used,
@@ -202,9 +259,16 @@ def extract_identifier_type(identifier: str) -> str:
     if identifier.startswith("PMID:") or (original.isdigit() and 6 <= len(original) <= 8):
         return "pmid"
 
-    # arXiv ID检测 (支持 ARXIV: 前缀或 arXiv: 前缀)
-    if identifier.startswith("ARXIV:") or original.startswith("arXiv:"):
+    # arXiv ID检测 (支持 ARXIV: 前缀、arXiv: 前缀，或 YYMM.NNNNN 格式)
+    if (
+        identifier.startswith("ARXIV:")
+        or original.startswith("arXiv:")
+        or (
+            identifier.replace(".", "").replace("V", "").isdigit()
+            and len(identifier.replace(".", "").replace("V", "")) >= 8
+        )
+    ):
         return "arxiv_id"
 
-    # 默认尝试DOI
-    return "doi"
+    # 默认返回 unknown
+    return "unknown"

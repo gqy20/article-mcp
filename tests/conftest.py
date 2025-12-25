@@ -14,6 +14,9 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
+# 加载测试辅助模块中的 fixtures
+pytest_plugins = ["tests.utils.test_helpers"]
+
 
 # 延迟导入，只在需要时导入
 def _import_services():
@@ -34,6 +37,19 @@ def logger():
     """提供测试用的 logger"""
     logger = logging.getLogger("test")
     logger.setLevel(logging.WARNING)
+    return logger
+
+
+@pytest.fixture
+def mock_logger():
+    """模拟日志记录器fixture"""
+    from unittest.mock import Mock
+
+    logger = Mock()
+    logger.info = Mock()
+    logger.warning = Mock()
+    logger.error = Mock()
+    logger.debug = Mock()
     return logger
 
 
