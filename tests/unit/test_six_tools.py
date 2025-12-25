@@ -412,120 +412,16 @@ class TestGetJournalQualityTool:
             "include_metrics": ["impact_factor", "cas_zone"],
             "use_cache": True,
         }
-
         assert isinstance(params["journal_name"], str)
         assert params["include_metrics"] == ["impact_factor", "cas_zone"]
 
 
-class TestAnalyzeKeywordTrendsTool:
-    """测试工具6: analyze_keyword_trends - 关键词趋势分析工具"""
-
-    @pytest.fixture
-    def mock_trend_services(self):
-        """模拟趋势分析服务"""
-        return {
-            "europe_pmc": Mock(),
-            "pubmed": Mock(),
-            "crossref": Mock(),
-            "openalex": Mock(),
-        }
-
-    @pytest.fixture
-    def sample_articles(self):
-        """示例文献数据"""
-        return [
-            {
-                "title": "Deep Learning for Image Recognition",
-                "abstract": "We propose a deep learning approach for image recognition.",
-                "year": 2020,
-            },
-            {
-                "title": "Machine Learning in Healthcare",
-                "abstract": "This study explores machine learning applications.",
-                "year": 2021,
-            },
-            {
-                "title": "Transformers for NLP",
-                "abstract": "Transformer architectures revolutionized NLP.",
-                "year": 2022,
-            },
-        ]
-
-    @pytest.mark.unit
-    def test_analyze_keyword_trends_basic(self, mock_trend_services, sample_articles):
-        """测试基本关键词趋势分析"""
-        with patch(
-            "article_mcp.tools.core.keyword_trends.register_keyword_trends_tools"
-        ) as mock_register:
-            create_mcp_server()
-
-            # 验证服务注册（使用位置参数调用）
-            mock_register.assert_called_once()
-            args, kwargs = mock_register.call_args
-            assert len(args) == 3  # mcp, services, logger
-            assert args[1] is not None  # services should be passed
-
-    @pytest.mark.unit
-    def test_analyze_keyword_trends_parameters(self, sample_articles):
-        """测试趋势分析参数"""
-        params = {
-            "articles": sample_articles,
-            "field": "abstract",
-            "year_range": (2020, 2022),
-            "top_n": 30,
-            "normalize": False,
-            "min_word_length": 3,
-            "min_docs": 2,
-        }
-
-        assert params["field"] == "abstract"
-        assert params["year_range"] == (2020, 2022)
-        assert params["top_n"] == 30
-        assert params["normalize"] is False
-
-    @pytest.mark.unit
-    def test_analyze_keyword_trends_result_structure(self, sample_articles):
-        """测试返回结果结构"""
-        # 预期的结果结构
-        expected_trend_types = ["growing", "consolidated", "declining", "stable"]
-
-        # 验证结构包含正确的字段
-        trend_structure = {
-            "keyword": str,
-            "total_freq": int,
-            "yearly_freq": dict,
-            "trend_type": str,
-            "growth_rate": float,
-        }
-
-        summary_structure = {
-            "total_papers": int,
-            "year_range": list,
-            "total_unique_keywords": int,
-        }
-
-        # 验证字段存在
-        assert "keyword" in trend_structure
-        assert "trend_type" in trend_structure
-        assert len(expected_trend_types) == 4  # 4种趋势类型
-
-    @pytest.mark.unit
-    def test_analyze_keyword_trends_field_selection(self, sample_articles):
-        """测试字段选择"""
-        # 测试不同字段
-        fields = ["title", "abstract", "keywords", "title,abstract"]
-
-        for field in fields:
-            params = {"articles": sample_articles, "field": field}
-            assert params["field"] == field
-
-
 class TestSixToolIntegration:
-    """6工具集成测试"""
+    """5工具集成测试"""
 
     @pytest.mark.unit
     def test_all_tools_registered(self):
-        """测试所有6个工具都被正确注册"""
+        """测试所有5个工具都被正确注册"""
         with TestTimer() as timer:
             mcp = create_mcp_server()
 
@@ -576,9 +472,6 @@ class TestSixToolIntegration:
                                     patch(
                                         "article_mcp.tools.core.quality_tools.register_quality_tools"
                                     ) as mock_quality_tools,
-                                    patch(
-                                        "article_mcp.tools.core.keyword_trends.register_keyword_trends_tools"
-                                    ) as mock_keyword_trends_tools,
                                 ):
                                     create_mcp_server()
 
@@ -588,7 +481,6 @@ class TestSixToolIntegration:
                                     mock_reference_tools.assert_called_once()
                                     mock_relation_tools.assert_called_once()
                                     mock_quality_tools.assert_called_once()
-                                    mock_keyword_trends_tools.assert_called_once()
 
     @pytest.mark.unit
     def test_tool_parameter_validation(self):
@@ -598,7 +490,6 @@ class TestSixToolIntegration:
             {"keyword": ""},  # 空关键词
             {"identifier": None},  # 空标识符
             {"max_results": -1},  # 负数结果
-            {"format_type": "invalid"},  # 无效格式
         ]
 
         for params in invalid_params:
@@ -608,8 +499,6 @@ class TestSixToolIntegration:
                     assert not value  # 空值检测
                 elif key == "max_results" and value < 0:
                     assert value < 0  # 负数检测
-                elif key == "format_type" and value not in ["json", "csv", "excel"]:
-                    assert value == "invalid"  # 无效格式检测
 
     @pytest.mark.unit
     def test_tool_error_handling(self):

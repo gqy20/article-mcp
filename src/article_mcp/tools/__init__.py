@@ -3,7 +3,6 @@
 """
 
 from .core.article_tools import register_article_tools
-from .core.keyword_trends import register_keyword_trends_tools
 from .core.quality_tools import register_quality_tools
 from .core.reference_tools import register_reference_tools
 from .core.relation_tools import register_relation_tools
@@ -18,5 +17,4 @@ __all__ = [
     "register_reference_tools",
     "register_relation_tools",
     "register_quality_tools",
-    "register_keyword_trends_tools",
 ]

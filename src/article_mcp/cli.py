@@ -47,7 +47,6 @@ def create_mcp_server() -> "FastMCP":
     from .services.pubmed_search import create_pubmed_service
     from .services.reference_service import create_unified_reference_service
     from .tools.core.article_tools import register_article_tools
-    from .tools.core.keyword_trends import register_keyword_trends_tools
     from .tools.core.quality_tools import register_quality_tools
     from .tools.core.reference_tools import register_reference_tools
     from .tools.core.relation_tools import register_relation_tools
@@ -127,15 +126,6 @@ def create_mcp_server() -> "FastMCP":
     quality_services = {"pubmed": pubmed_service}
     register_quality_tools(mcp, quality_services, logger)
 
-    # 工具6: 关键词趋势分析工具
-    keyword_trends_services = {
-        "europe_pmc": europe_pmc_service,
-        "pubmed": pubmed_service,
-        "crossref": crossref_service,
-        "openalex": openalex_service,
-    }
-    register_keyword_trends_tools(mcp, keyword_trends_services, logger)
-
     return mcp
 
 
@@ -143,9 +133,9 @@ def start_server(
     transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"
 ) -> None:
     """启动MCP服务器"""
-    safe_print("启动 Article MCP 服务器 v2.0 (6工具统一架构)")
+    safe_print("启动 Article MCP 服务器 v2.0 (5个核心工具)")
     safe_print(f"传输模式: {transport}")
-    safe_print("[新架构] 核心工具 (6个统一工具):")
+    safe_print("[新架构] 核心工具 (5个核心工具):")
     safe_print("")
     safe_print("[工具1] search_literature")
     safe_print("   - 统一多源文献搜索工具")
@@ -176,12 +166,6 @@ def start_server(
     safe_print("   - 支持指标: 影响因子、JCI、分区、排名")
     safe_print("   - 特点: EasyScholar集成、本地缓存、批量评估")
     safe_print("   - 参数: journal_name, include_metrics, evaluation_criteria")
-    safe_print("")
-    safe_print("[工具6] analyze_keyword_trends")
-    safe_print("   - 关键词趋势分析工具")
-    safe_print("   - 支持: 频率统计、年份趋势、趋势分类")
-    safe_print("   - 特点: growing/consolidated/declining分类、多字段支持")
-    safe_print("   - 参数: articles, field, year_range, top_n, min_docs")
     safe_print("")
     safe_print("[技术特性]:")
     safe_print("   - FastMCP 2.13.0 框架")
@@ -272,7 +256,7 @@ def show_info() -> None:
     safe_print("- 同步版本: 67.79秒 (112条参考文献)")
     safe_print("- 异步版本: 10.99秒 (112条参考文献)")
     safe_print("- 性能提升: 6.2倍更快，节省83.8%时间")
-    safe_print("\n[MCP 工具详情（新6工具统一架构）]:")
+    safe_print("\n[MCP 工具详情（5个核心工具）]:")
     print("1. search_literature")
     print("   功能：统一多源文献搜索工具")
     print("   参数：keyword, sources, max_results, search_type")
@@ -303,12 +287,6 @@ def show_info() -> None:
     print("   操作类型：质量评估、领域排名、批量评估")
     print("   特点：EasyScholar集成、本地缓存、多维度评估")
     print("   适用：期刊质量评估、投稿期刊选择、文献质量筛选")
-    print("6. analyze_keyword_trends")
-    print("   功能：关键词趋势分析工具")
-    print("   参数：articles, field, year_range, top_n, min_docs")
-    print("   趋势类型：growing, consolidated, declining, stable")
-    print("   特点：频率统计、年份趋势、趋势分类、多字段支持")
-    print("   适用：学术热点分析、研究趋势发现、文献主题演化")
     print("\n使用 'python -m article_mcp --help' 查看更多选项")
 
 
