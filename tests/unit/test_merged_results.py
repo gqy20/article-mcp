@@ -1,6 +1,6 @@
 """合并结果工具单元测试"""
 
-from src.merged_results import (
+from article_mcp.services.merged_results import (
     deduplicate_articles,
     extract_identifier_type,
     merge_articles_by_doi,

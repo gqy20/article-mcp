@@ -9,11 +9,14 @@ import os
 
 import pytest
 
-from article_mcp.tests.test_helpers import (
-    TestTimer,
+from tests.utils.test_helpers import (
+    PerformanceTimer,
     assert_valid_search_results,
     run_async_with_timeout,
 )
+
+# 向后兼容别名
+TestTimer = PerformanceTimer
 
 # 跳过网络测试的环境变量标记
 SKIP_NETWORK_TESTS = os.getenv("SKIP_NETWORK_TESTS", "false").lower() == "true"

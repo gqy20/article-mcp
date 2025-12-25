@@ -86,8 +86,8 @@ class MockDataGenerator:
         return references
 
 
-class TestTimer:
-    """测试计时器"""
+class PerformanceTimer:
+    """性能测试计时器 - 用于测试中的性能测量"""
 
     def __init__(self):
         self.start_time = None
@@ -110,6 +110,10 @@ class TestTimer:
         """获取已经过的时间"""
         current_time = time.time()
         return current_time - self.start_time if self.start_time else 0
+
+
+# 保持向后兼容的别名
+TestTimer = PerformanceTimer
 
 
 class MockResponse:
