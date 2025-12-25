@@ -395,17 +395,6 @@ def _get_references(
                     else:
                         logger.warning("无法转换标识符为DOI，跳过CrossRef查询")
 
-                elif source == "europe_pmc" and "europe_pmc" in _relation_services:  # type: ignore[operator]
-                    # Europe PMC参考文献获取（第二阶段实现）
-                    service = _relation_services["europe_pmc"]  # type: ignore[index]
-                    # TODO: 实现Europe PMC参考文献API集成
-                    logger.debug("Europe PMC参考文献功能待实现")
-
-                elif source == "pubmed" and "pubmed" in _relation_services:  # type: ignore[operator]
-                    # PubMed参考文献获取逻辑
-                    logger.debug("PubMed参考文献功能待实现")
-                    # TODO: 实现PubMed参考文献API集成
-
             except Exception as e:
                 logger.error(f"从 {source} 获取参考文献失败: {e}")
 
@@ -463,20 +452,6 @@ def _get_similar_articles(
                     except Exception as e:
                         logger.warning(f"PubMed相似文献查询失败: {e}")
 
-                elif source == "openalex" and "openalex" in _relation_services:  # type: ignore[operator]
-                    # OpenAlex相似文献查询（第二阶段实现）
-                    _relation_services["openalex"]  # type: ignore[index]
-                    logger.info(f"使用OpenAlex查询 {doi} 的相似文献")
-                    # TODO: 实现OpenAlex相似文献API集成
-                    logger.debug("OpenAlex相似文献功能待实现")
-
-                elif source == "europe_pmc" and "europe_pmc" in _relation_services:  # type: ignore[operator]
-                    # Europe PMC相似文献查询（第二阶段实现）
-                    _relation_services["europe_pmc"]  # type: ignore[index]
-                    logger.info(f"使用Europe PMC查询 {doi} 的相似文献")
-                    # TODO: 实现Europe PMC相似文献API集成
-                    logger.debug("Europe PMC相似文献功能待实现")
-
             except Exception as e:
                 logger.error(f"从 {source} 获取相似文献失败: {e}")
 
@@ -514,26 +489,6 @@ def _get_citing_articles(
                             logger.warning(f"OpenAlex获取引用文献失败: {result.get('error')}")
                     else:
                         logger.warning("无法转换标识符为DOI，跳过OpenAlex查询")
-
-                elif source == "crossref" and "crossref" in _relation_services:  # type: ignore[operator]
-                    # Crossref也提供引用文献查询（作为备用）
-                    service = _relation_services["crossref"]  # type: ignore[index]
-                    doi = _ensure_doi_identifier(identifier, id_type, logger)
-                    if doi:
-                        logger.info(f"使用CrossRef查询 {doi} 的引用文献")
-                        # TODO: 实现CrossRef引用文献API集成
-                        logger.debug("CrossRef引用文献功能待实现")
-
-                elif source == "europe_pmc" and "europe_pmc" in _relation_services:  # type: ignore[operator]
-                    # Europe PMC引用文献获取（第二阶段实现）
-                    service = _relation_services["europe_pmc"]  # type: ignore[index]
-                    # TODO: 实现Europe PMC引用文献API集成
-                    logger.debug("Europe PMC引用文献功能待实现")
-
-                elif source == "pubmed" and "pubmed" in _relation_services:  # type: ignore[operator]
-                    # PubMed引用文献获取逻辑
-                    logger.debug("PubMed引用文献功能待实现")
-                    # TODO: 实现PubMed引用文献API集成
 
             except Exception as e:
                 logger.error(f"从 {source} 获取引用文献失败: {e}")
