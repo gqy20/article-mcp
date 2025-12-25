@@ -24,6 +24,30 @@ _CACHE_TTL = int(os.getenv("JOURNAL_CACHE_TTL", "86400"))
 _CACHE_ENABLED = os.getenv("JOURNAL_CACHE_ENABLED", "true").lower() == "true"
 
 
+def _parse_json_list_param(value: Any) -> Any:
+    """解析可能是字符串形式的 JSON 数组参数
+
+    某些 MCP 客户端会将列表参数序列化为字符串（如 '["a", "b"]'）。
+    此函数检测并解析这种情况，如果是字符串则尝试解析为列表。
+
+    Args:
+        value: 参数值（可能是字符串、列表或其他类型）
+
+    Returns:
+        解析后的值：如果是有效的 JSON 数组字符串则返回列表，否则返回原值
+    """
+    if isinstance(value, str):
+        # 尝试解析 JSON 数组字符串
+        if value.startswith("[") and value.endswith("]"):
+            try:
+                import json
+
+                return json.loads(value)
+            except json.JSONDecodeError:
+                pass
+    return value
+
+
 def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册期刊质量评估工具"""
     global _quality_services
@@ -60,6 +84,12 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
         """
         try:
+            # ========== 参数预处理：解析字符串形式的 JSON 数组 ==========
+            # 某些 MCP 客户端会将列表参数序列化为字符串
+            journal_name = _parse_json_list_param(journal_name)
+            include_metrics = _parse_json_list_param(include_metrics)
+            evaluation_criteria = _parse_json_list_param(evaluation_criteria)
+
             # 根据操作类型分发到具体处理函数
             if operation == "quality":
                 if isinstance(journal_name, list):
