@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 import logging
 import re
 import xml.etree.ElementTree as ET

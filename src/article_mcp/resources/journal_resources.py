@@ -69,7 +69,7 @@ def register_journal_resources(mcp: FastMCP) -> None:
             # 统计缓存文件
             total_files = 0
             total_size = 0
-            newest_time = 0
+            newest_time: float = 0.0
 
             for cache_file in cache_dir.glob("*.json"):
                 total_files += 1

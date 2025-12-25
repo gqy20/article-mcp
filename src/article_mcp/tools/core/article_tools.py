@@ -109,10 +109,10 @@ async def get_article_details_async(
         async def fetch_from_source(source: str) -> tuple[str, dict | None]:
             """从单个数据源异步获取文献详情"""
             try:
-                if source not in _article_services:
+                if source not in _article_services:  # type: ignore[operator]
                     return source, None
 
-                service = _article_services[source]
+                service = _article_services[source]  # type: ignore[index]
 
                 if source == "europe_pmc":
                     # Europe PMC - 使用 fetch 方法
@@ -155,7 +155,7 @@ async def get_article_details_async(
                 logger.error(f"获取文献详情时发生异常: {result}")
                 continue
 
-            source, article = result
+            source, article = result  # type: ignore[misc]
             if article:
                 details_by_source[source] = article
                 sources_found.append(source)
@@ -176,8 +176,8 @@ async def get_article_details_async(
                     from article_mcp.services.mcp_config import get_easyscholar_key
 
                     secret_key = get_easyscholar_key(None, logger)
-                    pubmed_service = _article_services.get("pubmed")
-                    if pubmed_service:
+                    pubmed_service = _article_services.get("pubmed")  # type: ignore[union-attr]
+                    if pubmed_service is not None:
                         quality_metrics = pubmed_service.get_journal_quality(
                             journal_name, secret_key
                         )

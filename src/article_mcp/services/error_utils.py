@@ -61,7 +61,7 @@ def format_response(
     return response
 
 
-def safe_execute(operation: str, func, *args, **kwargs):
+def safe_execute(operation: str, func: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
     """安全执行函数 - 自动处理异常
 
     Args:

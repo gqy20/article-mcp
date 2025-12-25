@@ -22,9 +22,9 @@ class OpenAlexService:
             }
         )
         # 异步客户端（延迟初始化）
-        self._async_api_client = None
+        self._async_api_client: Any = None
 
-    def _get_async_client(self):
+    def _get_async_client(self) -> Any:
         """获取异步API客户端（延迟初始化）"""
         if self._async_api_client is None:
             self._async_api_client = get_async_api_client(self.logger)
@@ -33,7 +33,7 @@ class OpenAlexService:
         return self._async_api_client
 
     async def search_works_async(
-        self, query: str, max_results: int = 10, filters: dict = None
+        self, query: str, max_results: int = 10, filters: dict[Any, Any] | None = None
     ) -> dict[str, Any]:
         """异步搜索OpenAlex学术文献"""
         try:
@@ -184,7 +184,7 @@ class OpenAlexService:
                     openalex_url = work.get("id", "")
                     # 提取OpenAlex ID（格式如: https://openalex.org/W2159974629）
                     if openalex_url and "/W" in openalex_url:
-                        return openalex_url.split("/W")[-1].split("?")[0]
+                        return openalex_url.split("/W")[-1].split("?")[0]  # type: ignore[no-any-return]
 
             return None
 

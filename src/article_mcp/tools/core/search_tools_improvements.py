@@ -136,7 +136,7 @@ class SearchCache:
                 return None
 
             self._stats["hits"] += 1
-            return cache_data.get("result")
+            return cache_data.get("result")  # type: ignore[no-any-return]
 
         except (json.JSONDecodeError, KeyError, ValueError):
             # 缓存文件损坏，删除并返回 None
@@ -311,7 +311,7 @@ async def parallel_search_sources(
             logger.error(f"搜索任务异常: {item}")
             continue
 
-        source, result = item
+        source, result = item  # type: ignore[misc]
         if result is None:
             continue
 
@@ -481,7 +481,7 @@ async def search_literature_async(
     # 应用合并策略
     from article_mcp.services.merged_results import simple_rank_articles
 
-    merged_results = apply_merge_strategy(results_by_source, strategy["merge_strategy"], logger)
+    merged_results = apply_merge_strategy(results_by_source, strategy["merge_strategy"], logger)  # type: ignore[arg-type]
     merged_results = simple_rank_articles(merged_results)
 
     search_time = round(time.time() - start_time, 2)

@@ -24,7 +24,7 @@ class LiteratureRelationService:
         self.logger.info("LiteratureRelationService 初始化完成")
 
     def analyze_relations(
-        self, identifier: str, relation_types: list[str] = None
+        self, identifier: str, relation_types: list[str] | None = None
     ) -> dict[str, Any]:
         """分析文献关系"""
         # 占位符实现

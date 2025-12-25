@@ -19,7 +19,7 @@ class MCPErrorHandlingMiddleware(Middleware):
     def __init__(self, logger: std_logging.Logger | None = None):
         self.logger = logger or std_logging.getLogger(__name__)
 
-    async def on_message(self, context: MiddlewareContext, call_next):
+    async def on_message(self, context: MiddlewareContext, call_next: Any) -> Any:
         """处理所有消息的错误"""
         try:
             return await call_next(context)
@@ -78,10 +78,10 @@ class StandardErrorWrapper:
     """标准错误包装器 - 用于工具函数"""
 
     @staticmethod
-    def wrap_tool_function(tool_func):
+    def wrap_tool_function(tool_func: Any) -> Any:
         """包装工具函数以提供标准错误处理"""
 
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return await tool_func(*args, **kwargs)
             except McpError:
@@ -92,10 +92,10 @@ class StandardErrorWrapper:
         return wrapper
 
     @staticmethod
-    def wrap_sync_tool_function(tool_func):
+    def wrap_sync_tool_function(tool_func: Any) -> Any:
         """包装同步工具函数以提供标准错误处理"""
 
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return tool_func(*args, **kwargs)
             except McpError:

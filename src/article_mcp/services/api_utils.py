@@ -6,7 +6,7 @@ from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from requests.packages.urllib3.util.retry import Retry  # type: ignore[import-not-found]
 
 
 class UnifiedAPIClient:
@@ -64,7 +64,7 @@ class UnifiedAPIClient:
 
         """
         try:
-            request_headers = self.session.headers.copy()
+            request_headers = dict(self.session.headers)
             if headers:
                 request_headers.update(headers)
 
@@ -112,7 +112,7 @@ class UnifiedAPIClient:
 
         """
         try:
-            request_headers = self.session.headers.copy()
+            request_headers = dict(self.session.headers)
             if headers:
                 request_headers.update(headers)
 
@@ -138,7 +138,7 @@ class UnifiedAPIClient:
             self.logger.error(f"POST请求异常 {url}: {e}")
             return {"success": False, "error": str(e), "error_type": "unknown_error", "url": url}
 
-    def close(self):
+    def close(self) -> None:
         """关闭会话"""
         if hasattr(self.session, "close"):
             self.session.close()
@@ -176,7 +176,7 @@ def cached_get(url: str, params: str | None = None) -> dict[str, Any]:
     return api_client.get(url, query_params)
 
 
-def make_api_request(method: str, url: str, **kwargs) -> dict[str, Any]:
+def make_api_request(method: str, url: str, **kwargs: Any) -> dict[str, Any]:
     """统一的API请求接口 - 简单直接
 
     Args:
@@ -203,12 +203,12 @@ def make_api_request(method: str, url: str, **kwargs) -> dict[str, Any]:
 
 
 # 便捷函数
-def simple_get(url: str, **params) -> dict[str, Any]:
+def simple_get(url: str, **params: Any) -> dict[str, Any]:
     """简单的GET请求"""
     return get_api_client().get(url, params)
 
 
-def simple_post(url: str, **kwargs) -> dict[str, Any]:
+def simple_post(url: str, **kwargs: Any) -> dict[str, Any]:
     """简单的POST请求"""
     return get_api_client().post(url, **kwargs)
 
@@ -368,7 +368,7 @@ class AsyncAPIClient:
             self.logger.error(f"异步POST请求异常 {url}: {e}")
             return {"success": False, "error": str(e), "error_type": "unknown_error", "url": url}
 
-    async def close(self):
+    async def close(self) -> None:
         """关闭会话"""
         if self._session and not self._session.closed:
             await self._session.close()
@@ -387,7 +387,7 @@ def get_async_api_client(logger: logging.Logger | None = None) -> AsyncAPIClient
     return _async_api_client
 
 
-async def close_async_api_client():
+async def close_async_api_client() -> None:
     """关闭全局异步API客户端"""
     global _async_api_client
     if _async_api_client:

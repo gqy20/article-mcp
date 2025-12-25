@@ -34,7 +34,7 @@ class MCPConfigManager:
 
         for config_path in self._config_paths:
             try:
-                with open(config_path, encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:  # type: ignore[arg-type]
                     config = json.load(f)
 
                 # 查找 article-mcp 服务配置
@@ -48,7 +48,7 @@ class MCPConfigManager:
                 self._config_cache = env_config
 
                 self.logger.info(f"成功加载MCP配置: {config_path}")
-                return env_config
+                return env_config  # type: ignore[no-any-return]
 
             except (json.JSONDecodeError, FileNotFoundError, PermissionError) as e:
                 self.logger.debug(f"配置文件 {config_path} 读取失败: {e}")
@@ -73,7 +73,7 @@ class MCPConfigManager:
 
         if config_key:
             self.logger.info("使用MCP配置中的EasyScholar密钥")
-            return config_key
+            return config_key  # type: ignore[no-any-return]
 
         # 2. 从函数参数获取
         if param_key:
@@ -92,7 +92,7 @@ class MCPConfigManager:
     def get_api_config(self, api_name: str) -> dict[str, Any]:
         """获取特定API配置"""
         mcp_config = self.load_mcp_config()
-        return mcp_config.get(f"{api_name.upper()}_CONFIG", {})
+        return mcp_config.get(f"{api_name.upper()}_CONFIG", {})  # type: ignore[no-any-return]
 
     def get_search_preferences(self) -> dict[str, Any]:
         """获取搜索偏好配置"""
@@ -137,7 +137,7 @@ def get_easyscholar_key(
     return manager.get_easyscholar_key(param_key)
 
 
-def reset_config_cache():
+def reset_config_cache() -> None:
     """重置配置缓存（用于测试）"""
     global _config_manager
     _config_manager = None

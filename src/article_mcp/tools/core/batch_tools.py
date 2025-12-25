@@ -74,20 +74,26 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
                 output_dir.mkdir(exist_ok=True)
                 output_path = str(output_dir / f"batch_export_{timestamp}.{format_type}")
 
-            output_path = Path(output_path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path_obj = Path(output_path)
+            output_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
             records_exported = 0
 
             if format_type.lower() == "json":
-                records_exported = _export_to_json(results, output_path, include_metadata, logger)
+                records_exported = _export_to_json(
+                    results, output_path_obj, include_metadata, logger
+                )
             elif format_type.lower() == "csv":
-                records_exported = _export_to_csv(results, output_path, include_metadata, logger)
+                records_exported = _export_to_csv(
+                    results, output_path_obj, include_metadata, logger
+                )
             elif format_type.lower() == "excel":
                 # Excel格式已移除，自动降级为CSV格式
                 logger.warning("Excel格式已移除，使用CSV格式替代")
-                output_path = output_path.with_suffix(".csv")
-                records_exported = _export_to_csv(results, output_path, include_metadata, logger)
+                output_path_obj = output_path_obj.with_suffix(".csv")
+                records_exported = _export_to_csv(
+                    results, output_path_obj, include_metadata, logger
+                )
             else:
                 return {
                     "success": False,
@@ -104,8 +110,8 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
 
             # 获取文件大小
             file_size = None
-            if output_path.exists():
-                file_size_bytes = output_path.stat().st_size
+            if output_path_obj.exists():
+                file_size_bytes = output_path_obj.stat().st_size
                 if file_size_bytes < 1024:
                     file_size = f"{file_size_bytes}B"
                 elif file_size_bytes < 1024 * 1024:
@@ -117,7 +123,7 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
 
             return {
                 "success": records_exported > 0,
-                "export_path": str(output_path),
+                "export_path": str(output_path_obj),
                 "format_type": format_type.lower(),
                 "records_exported": records_exported,
                 "file_size": file_size,
@@ -137,7 +143,7 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
 
 
 def _export_to_json(
-    results: dict[str, Any], output_path: Path, include_metadata: bool, logger
+    results: dict[str, Any], output_path: Path, include_metadata: bool, logger: Any
 ) -> int:
     """导出为JSON格式"""
     try:
@@ -178,7 +184,7 @@ def _export_to_json(
 
 
 def _export_to_csv(
-    results: dict[str, Any], output_path: Path, include_metadata: bool, logger
+    results: dict[str, Any], output_path: Path, include_metadata: bool, logger: Any
 ) -> int:
     """导出为CSV格式"""
     try:

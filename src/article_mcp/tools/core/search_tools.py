@@ -96,7 +96,7 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                     articles = result.get("articles", []) if result else []
                     if not error and articles:
                         logger.info(f"{source} 异步搜索成功，找到 {len(articles)} 篇文章")
-                        return (source, articles)
+                        return (source, articles)  # type: ignore[return-value]
                     else:
                         logger.warning(f"{source} 搜索失败: {error or '无搜索结果'}")
                         return (source, None)
@@ -115,13 +115,13 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                     logger.error(f"搜索任务异常: {result}")
                     continue
 
-                source, articles = result
+                source, articles = result  # type: ignore[misc]
                 if articles is not None:
                     results_by_source[source] = articles
                     sources_used.append(source)
 
             # 合并结果
-            merged_results = merge_articles_by_doi(results_by_source)
+            merged_results = merge_articles_by_doi(results_by_source)  # type: ignore[arg-type]
             merged_results = simple_rank_articles(merged_results)
 
             search_time = round(time.time() - start_time, 2)

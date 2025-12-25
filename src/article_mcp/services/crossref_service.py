@@ -11,9 +11,9 @@ class CrossRefService:
         self.logger = logger or logging.getLogger(__name__)
         self.base_url = "https://api.crossref.org"
         self.api_client = get_api_client(logger)
-        self._async_api_client = None  # 延迟初始化异步客户端
+        self._async_api_client: Any = None  # 延迟初始化异步客户端
 
-    def _get_async_client(self):
+    def _get_async_client(self) -> Any:
         """获取异步API客户端（延迟初始化）"""
         if self._async_api_client is None:
             self._async_api_client = get_async_api_client(self.logger)

@@ -2,6 +2,7 @@
 
 import logging
 import time
+from typing import Any
 
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 
@@ -12,7 +13,7 @@ class LoggingMiddleware(Middleware):
     def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
 
-    async def on_message(self, context: MiddlewareContext, call_next):
+    async def on_message(self, context: MiddlewareContext, call_next: Any) -> Any:
         """记录请求日志"""
         start_time = time.time()
 
@@ -34,10 +35,10 @@ class LoggingMiddleware(Middleware):
 class TimingMiddleware(Middleware):
     """计时中间件 - 自动添加性能统计"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
-    async def on_message(self, context: MiddlewareContext, call_next):
+    async def on_message(self, context: MiddlewareContext, call_next: Any) -> Any:
         """自动添加计时信息"""
         start_time = time.time()
 

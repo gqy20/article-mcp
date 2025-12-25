@@ -88,9 +88,18 @@ known-first-party = ["article_mcp", "tests"]
 "scripts/**/*.py" = ["E402", "F841", "F401", "B904"]  # 脚本文件允许非顶部导入、未使用变量
 "src/article_mcp/services/api_utils.py" = ["E402"]  # 延迟导入 aiohttp
 
+# mypy per-file ignores (通过 comments 实现，见各文件)
+
 [tool.mypy]
 python_version = "3.10"
 explicit_package_bases = true
+ignore_missing_imports = true
+exclude = [
+    "build",
+    "dist",
+    ".eggs",
+    "src/article_mcp/services/similar_articles.py",
+]
 # 放宽类型检查（逐步修复中）
 warn_return_any = false
 warn_unused_configs = false

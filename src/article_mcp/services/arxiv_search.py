@@ -10,9 +10,9 @@ from datetime import datetime
 from typing import Any
 
 import requests
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from requests.packages.urllib3.util.retry import Retry  # type: ignore[import-not-found]
 
 # ArXiv Atom feed namespace
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
@@ -49,7 +49,7 @@ def parse_date(date_str: str) -> datetime:
     raise ValueError(f"无法解析日期格式: {date_str}")
 
 
-def process_arxiv_entry(entry) -> dict[str, Any] | None:
+def process_arxiv_entry(entry: Any) -> dict[str, Any] | None:
     """处理单个 arXiv 条目并提取信息"""
     try:
         # 提取 arXiv ID 和链接
@@ -195,7 +195,7 @@ def search_arxiv(
         encoded_query = urllib.parse.quote_plus(full_query)
 
         base_url = "http://export.arxiv.org/api/query?"
-        articles = []
+        articles: list[dict[str, Any]] = []
         start_index = 0
         results_per_page = min(100, max_results)  # arXiv 推荐每次不超过100条
 
@@ -399,7 +399,7 @@ async def search_arxiv_async(
         encoded_query = urllib.parse.quote_plus(full_query)
 
         base_url = "http://export.arxiv.org/api/query?"
-        articles = []
+        articles: list[dict[str, Any]] = []
         start_index = 0
         results_per_page = min(100, max_results)  # arXiv 推荐每次不超过100条
 
@@ -541,16 +541,18 @@ async def search_arxiv_async(
 class ArXivSearchService:
     """arXiv搜索服务类"""
 
-    def __init__(self, logger):
+    def __init__(self, logger: logging.Logger) -> None:
         self.logger = logger
 
-    async def search_async(self, keyword: str, max_results: int = 10, **kwargs) -> dict[str, Any]:
+    async def search_async(
+        self, keyword: str, max_results: int = 10, **kwargs: Any
+    ) -> dict[str, Any]:
         """异步搜索arXiv文献"""
         return await search_arxiv_async(
             keyword=keyword, max_results=max_results, logger=self.logger, **kwargs
         )
 
-    def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs) -> dict[str, Any]:
+    def fetch(self, identifier: str, id_type: str = "arxiv_id", **kwargs: Any) -> dict[str, Any]:
         """获取arXiv文献详情"""
         if id_type != "arxiv_id":
             return {
@@ -560,7 +562,7 @@ class ArXivSearchService:
             }
 
         # 通过arXiv ID搜索获取详情
-        result = search_arxiv(keyword=f"id:{identifier}", max_results=1, logger=self.logger)
+        result = search_arxiv(keyword=f"id:{identifier}", max_results=1)
 
         if result.get("articles"):
             return {"success": True, "article": result["articles"][0], "source": "arxiv"}
@@ -568,6 +570,6 @@ class ArXivSearchService:
             return {"success": False, "error": f"未找到arXiv文献: {identifier}", "article": None}
 
 
-def create_arxiv_service(logger):
+def create_arxiv_service(logger: logging.Logger) -> ArXivSearchService:
     """创建arXiv服务实例"""
     return ArXivSearchService(logger)

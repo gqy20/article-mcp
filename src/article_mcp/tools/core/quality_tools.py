@@ -24,7 +24,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         tags={"quality", "journal", "metrics", "ranking"},
     )
     def get_journal_quality(
-        journal_name: str,
+        journal_name: str | list[str],
         operation: str = "quality",
         evaluation_criteria: list[str] | None = None,
         include_metrics: list[str] | None = None,
@@ -51,7 +51,9 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             if operation == "quality":
                 if isinstance(journal_name, list):
                     # 批量期刊质量评估
-                    return _batch_journal_quality(journal_name, include_metrics, use_cache, logger)
+                    return _batch_journal_quality(
+                        journal_name, include_metrics or [], use_cache, logger
+                    )
                 else:
                     # 单个期刊质量评估
                     return _single_journal_quality(journal_name, include_metrics, use_cache, logger)
@@ -60,7 +62,10 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                 # 批量文献质量评估
                 if isinstance(journal_name, list):
                     return _batch_articles_quality_evaluation(
-                        journal_name, evaluation_criteria, weight_config, logger
+                        journal_name,  # type: ignore[arg-type]
+                        evaluation_criteria or [],
+                        weight_config,
+                        logger,
                     )
                 else:
                     return {
@@ -102,7 +107,7 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
 
 def _single_journal_quality(
-    journal_name: str, include_metrics: list[str], use_cache: bool, logger
+    journal_name: str, include_metrics: list[str] | None, use_cache: bool, logger: Any
 ) -> dict[str, Any]:
     """单个期刊质量评估"""
     try:
@@ -180,7 +185,7 @@ def _single_journal_quality(
 
 
 def _batch_journal_quality(
-    journal_names: list[str], include_metrics: list[str], use_cache: bool, logger
+    journal_names: list[str], include_metrics: list[str], use_cache: bool, logger: Any
 ) -> dict[str, Any]:
     """批量期刊质量评估"""
     try:
@@ -240,7 +245,7 @@ def _batch_articles_quality_evaluation(
     articles: list[dict[str, Any]],
     evaluation_criteria: list[str],
     weight_config: dict[str, float] | None,
-    logger,
+    logger: Any,
 ) -> dict[str, Any]:
     """批量文献质量评估"""
     try:
@@ -313,9 +318,10 @@ def _batch_articles_quality_evaluation(
         evaluation_summary = {
             "total_articles": len(articles),
             "successful_evaluations": sum(
-                1
+                1  # type: ignore[misc]
                 for eval_result in evaluated_articles
-                if eval_result.get("quality_evaluation", {}).get("overall_score", 0) > 0
+                if isinstance(eval_result, dict)
+                and eval_result.get("quality_evaluation", {}).get("overall_score", 0) > 0  # type: ignore[attr-defined]
             ),
             "average_quality_score": (
                 sum(quality_scores) / len(quality_scores) if quality_scores else 0
@@ -353,7 +359,9 @@ def _batch_articles_quality_evaluation(
         }
 
 
-def _get_field_ranking(field_name: str, ranking_type: str, limit: int, logger) -> dict[str, Any]:
+def _get_field_ranking(
+    field_name: str, ranking_type: str, limit: int, logger: Any
+) -> dict[str, Any]:
     """获取学科领域期刊排名"""
     try:
         if not field_name or not field_name.strip():
@@ -442,7 +450,7 @@ def _get_field_ranking(field_name: str, ranking_type: str, limit: int, logger) -
 
 
 # 辅助函数（保持原有实现）
-def _get_easyscholar_quality(journal_name: str, logger) -> dict[str, Any]:
+def _get_easyscholar_quality(journal_name: str, logger: Any) -> dict[str, Any]:
     """从EasyScholar获取期刊质量信息"""
     try:
         # 尝试从环境变量获取API密钥
@@ -475,7 +483,7 @@ def _get_easyscholar_quality(journal_name: str, logger) -> dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-def _get_cached_journal_quality(journal_name: str, logger) -> dict[str, Any] | None:
+def _get_cached_journal_quality(journal_name: str, logger: Any) -> dict[str, Any] | None:
     """从本地缓存获取期刊质量信息"""
     try:
         cache_file = Path("src/resource/journal_info.json")
@@ -499,7 +507,7 @@ def _get_cached_journal_quality(journal_name: str, logger) -> dict[str, Any] | N
         return None
 
 
-def _simple_journal_assessment(journal_name: str, logger) -> dict[str, Any]:
+def _simple_journal_assessment(journal_name: str, logger: Any) -> dict[str, Any]:
     """基于期刊名称的简单评估"""
     try:
         # 基于期刊名称关键词的简单评估
@@ -539,7 +547,7 @@ def _simple_journal_assessment(journal_name: str, logger) -> dict[str, Any]:
 
 
 def _evaluate_article_quality(
-    article: dict[str, Any], criteria: list[str], weights: dict[str, float], logger
+    article: dict[str, Any], criteria: list[str], weights: dict[str, float], logger: Any
 ) -> dict[str, Any]:
     """评估单篇文献的质量"""
     try:
@@ -610,7 +618,7 @@ def _calculate_quality_distribution(scores: list[float]) -> dict[str, Any]:
         # 计算百分比
         for category in ["excellent", "good", "average", "poor"]:
             if distribution["total"] > 0:
-                distribution[f"{category}_percentage"] = round(
+                distribution[f"{category}_percentage"] = round(  # type: ignore[assignment]
                     (distribution[category] / distribution["total"]) * 100, 2
                 )
             else:

@@ -9,12 +9,16 @@ import logging
 import os
 import re
 import sys
+from typing import TYPE_CHECKING
 
 # 设置编码环境，确保emoji字符正确处理
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
 
-def safe_print(text):
+
+def safe_print(text: str) -> None:
     """安全打印函数，处理编码问题"""
     try:
         print(text)
@@ -28,7 +32,7 @@ def safe_print(text):
         print(clean_text)
 
 
-def create_mcp_server():
+def create_mcp_server() -> "FastMCP":
     """创建MCP服务器 - 集成新的6工具架构"""
     from fastmcp import FastMCP
 
@@ -137,7 +141,7 @@ def create_mcp_server():
 
 def start_server(
     transport: str = "stdio", host: str = "localhost", port: int = 9000, path: str = "/mcp"
-):
+) -> None:
     """启动MCP服务器"""
     safe_print("启动 Article MCP 服务器 v2.0 (6工具统一架构)")
     safe_print(f"传输模式: {transport}")
@@ -205,7 +209,7 @@ def start_server(
         sys.exit(1)
 
 
-async def run_test():
+async def run_test() -> bool:
     """运行测试"""
     print("Europe PMC MCP 服务器测试")
     print("=" * 50)
@@ -240,7 +244,7 @@ async def run_test():
         return False
 
 
-def show_info():
+def show_info() -> None:
     """显示项目信息"""
     safe_print("Article MCP 文献搜索服务器 (基于 BioMCP 设计模式)")
     safe_print("=" * 70)
@@ -308,7 +312,7 @@ def show_info():
     print("\n使用 'python -m article_mcp --help' 查看更多选项")
 
 
-def main():
+def main() -> None:
     """主函数"""
     parser = argparse.ArgumentParser(
         description="Article MCP 文献搜索服务器",

@@ -7,10 +7,10 @@
 import logging
 from typing import Any
 
-from markdownify import markdownify as md
+from markdownify import markdownify as md  # type: ignore[import-untyped]
 
 
-def html_to_markdown(html_content: str, **options) -> str | None:
+def html_to_markdown(html_content: str, **options: Any) -> str | None:
     """将HTML内容转换为Markdown格式
 
     功能说明：
@@ -251,7 +251,7 @@ def convert_pmc_xml_to_markdown(xml_content: str) -> str | None:
         body_content = body_match.group(1).strip() if body_match else xml_content
 
         # 处理section标题
-        def process_sections(content):
+        def process_sections(content: str) -> str:
             # 将section标题转换为Markdown格式
             content = re.sub(r"<sec[^>]*>.*?<title>([^<]+)</title>", r"\n\n## \1\n\n", content)
             # 处理子section
@@ -261,7 +261,7 @@ def convert_pmc_xml_to_markdown(xml_content: str) -> str | None:
         body_content = process_sections(body_content)
 
         # 处理引用链接
-        def process_references(content):
+        def process_references(content: str) -> str:
             # 处理文献引用
             content = re.sub(r'<xref[^>]*ref-type="bibr"[^>]*>([^<]+)</xref>', r"[\1]", content)
             # 处理图表引用

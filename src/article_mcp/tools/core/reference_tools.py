@@ -190,8 +190,8 @@ async def get_references_async(
         async def fetch_from_source(source: str) -> tuple[str, list[dict] | None]:
             """从单个数据源异步获取参考文献"""
             try:
-                if source == "europe_pmc" and "reference" in _reference_services:
-                    service = _reference_services["reference"]
+                if source == "europe_pmc" and "reference" in _reference_services:  # type: ignore[operator]
+                    service = _reference_services["reference"]  # type: ignore[index]
                     if id_type == "doi":
                         result = await service.get_references_by_doi_async(identifier)
                         references = result.get("references", [])
@@ -199,16 +199,16 @@ async def get_references_async(
                             return source, references
                     return source, None
 
-                elif source == "crossref" and "reference" in _reference_services:
-                    service = _reference_services["reference"]
+                elif source == "crossref" and "reference" in _reference_services:  # type: ignore[operator]
+                    service = _reference_services["reference"]  # type: ignore[index]
                     if id_type == "doi":
                         references = await service.get_references_crossref_async(identifier)
                         if references:
                             return source, references
                     return source, None
 
-                elif source == "pubmed" and "reference" in _reference_services:
-                    service = _reference_services["reference"]
+                elif source == "pubmed" and "reference" in _reference_services:  # type: ignore[operator]
+                    service = _reference_services["reference"]  # type: ignore[index]
                     if id_type == "doi":
                         result = await service.get_references_by_doi_async(identifier)
                         references = result.get("references", [])
@@ -232,7 +232,7 @@ async def get_references_async(
                 logger.error(f"获取参考文献时发生异常: {result}")
                 continue
 
-            source, references = result
+            source, references = result  # type: ignore[misc]
             if references:
                 references_by_source[source] = references
                 sources_used.append(source)

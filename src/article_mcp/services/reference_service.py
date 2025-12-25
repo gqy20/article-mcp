@@ -37,8 +37,8 @@ class UnifiedReferenceService:
         self.europe_pmc_semaphore = asyncio.Semaphore(3)
 
         # 缓存
-        self.cache = {}
-        self.cache_expiry = {}
+        self.cache: dict[str, Any] = {}
+        self.cache_expiry: dict[str, Any] = {}
 
         # 批量查询配置
         self.max_batch_size = 20  # 最大批量大小
@@ -179,7 +179,7 @@ class UnifiedReferenceService:
             }
 
             self.logger.info(f"Europe PMC 搜索 DOI: {doi}")
-            resp = self.session.get(url, params=params, timeout=15)
+            resp = self.session.get(url, params=params, timeout=15)  # type: ignore[arg-type]
 
             if resp.status_code != 200:
                 self.logger.warning(f"Europe PMC 搜索失败: {resp.status_code}")
@@ -192,7 +192,7 @@ class UnifiedReferenceService:
                 self.logger.info(f"Europe PMC 未找到: {doi}")
                 return None
 
-            return results[0]
+            return results[0]  # type: ignore[no-any-return]
 
         except Exception as e:
             self.logger.error(f"Europe PMC 搜索异常: {e}")
@@ -495,7 +495,7 @@ class UnifiedReferenceService:
 
             self.logger.info(f"批量搜索 Europe PMC: {len(dois)} 个 DOI")
 
-            resp = self.session.get(url, params=params, timeout=self.batch_timeout)
+            resp = self.session.get(url, params=params, timeout=self.batch_timeout)  # type: ignore[arg-type]
 
             if resp.status_code != 200:
                 self.logger.warning(f"批量 Europe PMC 搜索失败: {resp.status_code}")
