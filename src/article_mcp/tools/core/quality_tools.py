@@ -70,40 +70,40 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                 else:
                     # 单个期刊质量评估
                     import asyncio
+                    import threading
 
-                    return asyncio.run(
-                        _single_journal_quality(journal_name, include_metrics, use_cache, logger)
-                    )
+                    # 检查是否在事件循环中运行
+                    try:
+                        asyncio.get_running_loop()
+                        # 在事件循环中，在新线程中运行
+                        result_container = {"result": None}
+
+                        def run_in_new_loop():
+                            new_loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(new_loop)
+                            try:
+                                result_container["result"] = new_loop.run_until_complete(
+                                    _single_journal_quality(
+                                        journal_name, include_metrics, use_cache, logger
+                                    )
+                                )
+                            finally:
+                                new_loop.close()
+
+                        thread = threading.Thread(target=run_in_new_loop)
+                        thread.start()
+                        thread.join(timeout=60)
+
+                        return result_container["result"]
+                    except RuntimeError:
+                        # 没有运行的事件循环，使用 asyncio.run
+                        return asyncio.run(
+                            _single_journal_quality(
+                                journal_name, include_metrics, use_cache, logger
+                            )
+                        )
 
             elif operation == "evaluation":
-                # 批量文献质量评估
-                if isinstance(journal_name, list):
-                    return _batch_articles_quality_evaluation(
-                        journal_name,  # type: ignore[arg-type]
-                        evaluation_criteria or [],
-                        weight_config,
-                        logger,
-                    )
-                else:
-                    return {
-                        "success": False,
-                        "error": "evaluation操作需要文献列表",
-                        "evaluated_articles": [],
-                        "quality_distribution": {},
-                        "evaluation_summary": {},
-                        "processing_time": 0,
-                    }
-
-            elif operation in ["ranking", "field_ranking"]:
-                # 学科领域期刊排名
-                field_name = (
-                    journal_name
-                    if isinstance(journal_name, str)
-                    else (journal_name[0] if journal_name else "")
-                )
-                return _get_field_ranking(field_name, ranking_type, limit, logger)
-
-            else:
                 return {
                     "success": False,
                     "error": f"不支持的操作类型: {operation}",
