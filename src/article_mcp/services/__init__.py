@@ -13,7 +13,10 @@ from .literature_relation_service import (
 )
 from .openalex_service import OpenAlexService
 from .pubmed_search import create_pubmed_service
-from .reference_service import UnifiedReferenceService, create_reference_service
+from .reference_service import (
+    UnifiedReferenceService,
+    create_unified_reference_service,
+)
 from .similar_articles import get_similar_articles_by_doi
 
 __all__ = [
@@ -26,7 +29,7 @@ __all__ = [
     # 服务创建函数
     "create_europe_pmc_service",
     "create_pubmed_service",
-    "create_reference_service",
+    "create_unified_reference_service",
     "create_literature_relation_service",
     "create_arxiv_service",
     # 工具函数

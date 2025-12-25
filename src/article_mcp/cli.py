@@ -45,7 +45,7 @@ def create_mcp_server() -> "FastMCP":
     # from .services.literature_relation_service import create_literature_relation_service
     from .services.openalex_service import OpenAlexService
     from .services.pubmed_search import create_pubmed_service
-    from .services.reference_service import create_reference_service
+    from .services.reference_service import create_unified_reference_service
     from .tools.core.article_tools import register_article_tools
     from .tools.core.batch_tools import register_batch_tools
     from .tools.core.quality_tools import register_quality_tools
@@ -81,7 +81,7 @@ def create_mcp_server() -> "FastMCP":
     crossref_service = CrossRefService(logger)
     openalex_service = OpenAlexService(logger)
     arxiv_service = create_arxiv_service(logger)
-    reference_service = create_reference_service(logger)
+    reference_service = create_unified_reference_service(logger)
     # literature_relation_service 在关系工具中使用，不需要单独创建
 
     # 注册新架构核心工具

@@ -21,8 +21,9 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-# 导入被测试的模块
-from article_mcp.tools.core.search_tools_improvements import (
+# 导入被测试的模块（功能已合并到 search_tools.py）
+from article_mcp.tools.core.search_tools import (
+    SEARCH_STRATEGIES,
     SearchCache,
     apply_merge_strategy,
     get_cache_key,
@@ -480,10 +481,6 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_save_and_retrieve(self, search_cache, mock_logger):
         """测试缓存保存和读取"""
-        from article_mcp.tools.core.search_tools_improvements import (
-            SearchCache,
-        )
-
         cache = SearchCache(cache_dir=str(search_cache), ttl=3600)
 
         # 保存测试结果
@@ -515,10 +512,6 @@ class TestSearchCache:
         """测试缓存过期"""
         import time
 
-        from article_mcp.tools.core.search_tools_improvements import (
-            SearchCache,
-        )
-
         # 创建一个很快过期的缓存
         cache = SearchCache(cache_dir=str(search_cache), ttl=1)
 
@@ -541,7 +534,7 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_miss(self, search_cache, mock_logger):
         """测试缓存未命中"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -555,7 +548,7 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_clear(self, search_cache, mock_logger):
         """测试缓存清理"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -577,7 +570,7 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_clear_with_pattern(self, search_cache, mock_logger):
         """测试带模式的缓存清理"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -600,7 +593,7 @@ class TestSearchCache:
     @pytest.mark.unit
     def test_cache_hit_tracking(self, search_cache, mock_logger):
         """测试缓存命中统计"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -677,7 +670,7 @@ class TestSearchCache:
         """测试缓存元数据"""
         import time
 
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -714,7 +707,7 @@ class TestSearchImprovementsIntegration:
         self, mock_search_services, search_cache, mock_logger
     ):
         """测试完整的异步搜索流程：策略 + 缓存"""
-        from article_mcp.tools.core.search_tools_improvements import SearchCache
+        # SearchCache is already imported at the top of the file
 
         cache = SearchCache(cache_dir=str(search_cache), ttl=3600)
 
@@ -756,7 +749,7 @@ class TestSearchImprovementsIntegration:
     @pytest.mark.asyncio
     async def test_search_strategies_affect_sources_used(self, mock_search_services, mock_logger):
         """测试不同搜索策略使用不同的数据源"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -795,7 +788,7 @@ class TestSearchImprovementsIntegration:
         self, mock_search_services, mock_logger, search_cache
     ):
         """测试并行搜索的性能改进"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -845,7 +838,7 @@ class TestSearchImprovementsEdgeCases:
         """测试空关键词抛出错误"""
         from fastmcp.exceptions import ToolError
 
-        from article_mcp.tools.core.search_tools_improvements import SearchCache
+        # SearchCache is already imported at the top of the file
 
         cache = SearchCache(ttl=3600)
 
@@ -860,7 +853,7 @@ class TestSearchImprovementsEdgeCases:
     @pytest.mark.asyncio
     async def test_all_sources_fail_gracefully(self, mock_search_services, mock_logger):
         """测试所有数据源都失败时的优雅处理"""
-        from article_mcp.tools.core.search_tools_improvements import SearchCache
+        # SearchCache is already imported at the top of the file
 
         cache = SearchCache(ttl=3600)
 
@@ -889,7 +882,7 @@ class TestSearchImprovementsEdgeCases:
     @pytest.mark.unit
     def test_cache_corruption_handling(self, search_cache, mock_logger):
         """测试缓存损坏时的处理"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
@@ -910,7 +903,7 @@ class TestSearchImprovementsEdgeCases:
     @pytest.mark.unit
     def test_cache_with_none_result(self, search_cache, mock_logger):
         """测试缓存 None 值"""
-        from article_mcp.tools.core.search_tools_improvements import (
+        from article_mcp.tools.core.search_tools import (
             SearchCache,
         )
 
