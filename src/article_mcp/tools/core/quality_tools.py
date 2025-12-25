@@ -73,6 +73,8 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         journal_name: str | list[str],
         include_metrics: str | list[str] | None = None,
         use_cache: bool = True,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> dict[str, Any]:
         """期刊质量评估工具。评估期刊的学术质量和影响力指标。
 
@@ -80,6 +82,8 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             journal_name: 期刊名称（单个期刊或期刊列表）
             include_metrics: 返回的质量指标类型（如 ["impact_factor", "quartile", "jci"]）
             use_cache: 是否使用缓存数据
+            sort_by: 排序字段（仅批量查询有效）：impact_factor, quartile, jci
+            sort_order: 排序顺序（仅批量查询有效）：desc 降序，asc 升序
 
         Returns:
             包含期刊质量评估结果的字典，包括影响因子、分区等
@@ -90,6 +94,9 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 
             # 批量期刊查询
             get_journal_quality(["Nature", "Science", "Cell"])
+
+            # 批量查询并按影响因子降序排序
+            get_journal_quality(["Nature", "Science"], sort_by="impact_factor", sort_order="desc")
 
             # 指定返回指标
             get_journal_quality("Nature", include_metrics=["impact_factor", "cas_zone"])
@@ -116,7 +123,9 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
                         "journal_results": {},
                         "processing_time": 0,
                     }
-                return _batch_journal_quality(journal_name, include_metrics, use_cache, logger)
+                result = _batch_journal_quality(journal_name, include_metrics, use_cache, logger)
+                # 应用排序（仅批量查询）
+                return _apply_sorting(result, sort_by, sort_order)
             else:
                 # 单个期刊质量评估
                 import threading
@@ -457,3 +466,120 @@ def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) ->
         logger.debug(f"已保存到文件缓存: {journal_name}")
     except Exception as e:
         logger.error(f"写入文件缓存失败: {e}")
+
+
+# ========== 排序辅助函数 ==========
+
+
+def _get_quartile_order(quartile: str) -> int:
+    """获取分区的排序值
+
+    分区排序优先级：Q1 > Q2 > Q3 > Q4
+    支持英文格式（Q1-Q4）和中文格式（1区-4区）
+
+    Args:
+        quartile: 分区字符串（如 "Q1", "1区", "Q2", "2区" 等）
+
+    Returns:
+        排序值，值越大排序越靠前
+    """
+    quartile_map = {
+        # 英文格式
+        "Q1": 4,
+        "Q2": 3,
+        "Q3": 2,
+        "Q4": 1,
+        # 中文格式
+        "1区": 4,
+        "2区": 3,
+        "3区": 2,
+        "4区": 1,
+    }
+    return quartile_map.get(quartile, 0)  # 无效分区返回 0，排在最后
+
+
+def _get_sort_key(journal_data: dict, sort_by: str) -> tuple:
+    """获取期刊数据的排序键
+
+    Args:
+        journal_data: 期刊数据字典
+        sort_by: 排序字段（impact_factor, quartile, jci）
+
+    Returns:
+        排序键值元组，用于比较排序：(primary_key, secondary_key, ...)
+        主键相同的情况下使用次键，确保排序稳定
+    """
+    quality_metrics = journal_data.get("quality_metrics", {})
+    journal_name = journal_data.get("journal_name", "")
+
+    if sort_by == "impact_factor":
+        value = quality_metrics.get("impact_factor")
+        if value is None:
+            return (0, 0, journal_name)  # 缺失值排最后：(has_value, value, name)
+        return (1, float(value), journal_name)
+
+    if sort_by == "quartile":
+        quartile = quality_metrics.get("quartile", "")
+        order = _get_quartile_order(quartile)
+        return (order, quartile, journal_name)  # 同分区时按名称排序
+
+    if sort_by == "jci":
+        value = quality_metrics.get("jci")
+        if value is None:
+            return (0, 0, journal_name)  # 缺失值排最后
+        return (1, float(value), journal_name)
+
+    # 未知字段
+    return (0, "", journal_name)
+
+
+def _apply_sorting(
+    result: dict[str, Any], sort_by: str | None = None, sort_order: str = "desc"
+) -> dict[str, Any]:
+    """对批量期刊查询结果应用排序
+
+    Args:
+        result: 批量期刊查询结果
+        sort_by: 排序字段（impact_factor, quartile, jci），None 表示不排序
+        sort_order: 排序顺序（"desc" 降序，"asc" 升序）
+
+    Returns:
+        统一返回列表格式，包含 journals 和 sort_info
+        - sort_by 为 None 时，journals 按原始顺序排列，sort_info 为 None
+        - sort_by 有值时，journals 按指定字段排序
+    """
+    # 提取期刊结果
+    journal_results = result.get("journal_results", {})
+    if not journal_results:
+        return result
+
+    # 提取成功的期刊结果
+    successful_journals = [data for data in journal_results.values() if data.get("success", False)]
+
+    if not successful_journals:
+        return result
+
+    # 排序逻辑（仅当指定了有效排序字段时）
+    valid_fields = {"impact_factor", "quartile", "jci"}
+    if sort_by in valid_fields:
+        reverse = sort_order.lower() == "desc"
+        successful_journals = sorted(
+            successful_journals,
+            key=lambda j: _get_sort_key(j, sort_by),
+            reverse=reverse,
+        )
+
+    # 统一返回列表格式
+    sorted_result = {
+        "success": result.get("success", True),
+        "total_journals": result.get("total_journals", len(successful_journals)),
+        "successful_evaluations": len(successful_journals),
+        "cache_hits": result.get("cache_hits", 0),
+        "cache_hit_rate": result.get("cache_hit_rate", 0),
+        "success_rate": result.get("success_rate", 1.0),
+        "journals": successful_journals,  # 统一列表格式
+        "sort_info": {"field": sort_by, "order": sort_order} if sort_by in valid_fields else None,
+        "processing_time": result.get("processing_time", 0),
+    }
+
+    return sorted_result
