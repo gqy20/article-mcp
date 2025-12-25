@@ -99,22 +99,26 @@ pytest                    # Run all tests
 pytest tests/unit/        # Unit tests only
 pytest -m integration     # Integration tests only
 pytest -m "not slow"      # Exclude slow tests
+pytest tests/unit/test_six_tools.py  # Test all 6 core tools
 ```
 
 ### Code Quality
 ```bash
-# Format code
-black src/ tests/
-isort src/ tests/
+# Format code (Ruff formatter - 100x faster than black)
+ruff format src/ tests/
 
-# Lint
+# Lint (Ruff linter - replaces flake8, isort)
 ruff check src/ tests/
+ruff check src/ tests/ --fix  # Auto-fix issues
 
 # Type checking
 mypy src/
 
 # All quality checks
-ruff check src/ tests/ && mypy src/ && black --check src/ tests/
+ruff check src/ tests/ --fix && mypy src/ && ruff format --check src/ tests/
+
+# Pre-commit hooks (install)
+pre-commit install
 ```
 
 ### Package Management
@@ -126,9 +130,29 @@ uvx article-mcp server      # Test PyPI package
 
 ## Key Development Patterns
 
+### TDD Approach
+
+New features should be implemented using TDD methodology:
+1. Write test file first in `tests/unit/`
+2. Implement feature to pass tests
+3. Example: `OpenAlexMetricsService` was implemented with `test_openalex_metrics_service.py` (15 tests)
+
 ### Caching Strategy
+
 The project implements intelligent caching with 24-hour expiry:
-- Cache keys are generated from API endpoints and parameters
+- Cache file: `.cache/journal_quality/journal_data.json` (unified cache)
+- OpenAlex and EasyScholar share the same cache file with merged data structure:
+  ```json
+  {
+    "journals": {
+      "Nature": {
+        "data": {...},           // EasyScholar data
+        "openalex_metrics": {...}, // OpenAlex metrics
+        "timestamp": 1234567890.0
+      }
+    }
+  }
+  ```
 - Cache hit information is included in response metadata
 - Performance gains: 30-50% faster than traditional methods
 
@@ -137,12 +161,22 @@ Different APIs have different rate limits:
 - Europe PMC: 1 request/second (conservative)
 - Crossref: 50 requests/second (with email)
 - arXiv: 3 seconds/request (official limit)
+- OpenAlex: No rate limit (polite usage recommended)
 
 ### Error Handling
 Comprehensive error handling via middleware:
 - `MCPErrorHandlingMiddleware` converts exceptions to MCP standard errors
 - User input errors become `ToolError` with friendly messages
 - System errors become `McpError` with error codes
+
+### Async Patterns
+
+The codebase is transitioning to async/await patterns:
+- Services use `async def` methods with `aiohttp` for HTTP requests
+- Tool functions are declared `async` and FastMCP handles the event loop
+- Some services still have sync methods for backward compatibility
+- `_batch_literature_relations` in `relation_tools.py` is fully async
+- Tests use `pytest.mark.asyncio` and `AsyncMock`
 
 ## Configuration
 
@@ -188,3 +222,49 @@ EASYSCHOLAR_SECRET_KEY=your_secret_key  # Optional: for journal quality tools
 **Configuration paths searched:** `~/.config/claude-desktop/config.json`, `~/.config/claude/config.json`, `~/.claude/config.json`
 
 **Key priority:** MCP config > function parameter > environment variable
+
+## Critical Implementation Details
+
+### OpenAlex Integration
+
+OpenAlex provides free metrics that complement EasyScholar:
+- Service: `OpenAlexMetricsService` in `services/openalex_metrics_service.py`
+- API: `https://api.openalex.org/sources`
+- Metrics: `h_index`, `citation_rate`, `cited_by_count`, `works_count`, `i10_index`
+- Integrated into both single and batch journal quality queries
+- Cache merging is handled in `_save_to_file_cache()` and `_get_from_file_cache()` in `quality_tools.py`
+
+### Quality Tools Architecture
+
+`tools/core/quality_tools.py` is the single source of truth for journal quality:
+- EasyScholar provides: `impact_factor`, `quartile`, `jci`, `cas_zone` variants
+- OpenAlex provides: `h_index`, `citation_rate`, `cited_by_count`, `works_count`, `i10_index`
+- Reserved metrics (not available): `acceptance_rate`, `eigenfactor`, `sjr`, `snip`
+- Cache is at `.cache/journal_quality/journal_data.json`
+- Deprecated `get_journal_quality()` in `pubmed_search.py` - use quality_tools instead
+
+### Relation Tools Async Refactoring
+
+`tools/core/relation_tools.py` has been partially refactored to async:
+- Single literature analysis: `_single_literature_relations()` (sync)
+- Batch literature analysis: `_batch_literature_relations()` (async)
+- Network analysis: `_analyze_literature_network()` (async)
+- When modifying, prefer async patterns for new code
+
+### Tool Registration Pattern
+
+All tools follow the registration pattern in `cli.py`:
+```python
+def register_X_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
+    @mcp.tool(description="...")
+    async def tool_function(...) -> dict[str, Any]:
+        # Implementation
+```
+
+### Ruff Toolchain
+
+The project has migrated from black+isort+flake8 to pure Ruff:
+- Formatter: `ruff format` (replaces `black`)
+- Linter: `ruff check` (replaces `flake8`, `isort`)
+- Config in `.pre-commit-config.yaml` and `pyproject.toml [tool.ruff]`
+- MyPy is still used for type checking

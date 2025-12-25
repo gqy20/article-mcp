@@ -21,7 +21,25 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="文献关系分析工具。分析文献间的引用关系、相似性和合作网络。",
+        description="""文献关系分析工具。分析文献间的引用关系、相似文献和引用网络。
+
+关系类型：
+- references: 该文献引用的参考文献
+- similar: 相似文献
+- citing: 引用该文献的文献
+
+主要参数：
+- identifiers: 文献标识符（单个或列表）：DOI、PMID、PMCID
+- id_type: 标识符类型（默认auto）：auto/doi/pmid/pmcid
+- relation_types: 关系类型列表（默认全部）：["references", "similar", "citing"]
+- max_results: 每种关系类型最大结果数（默认20）
+- analysis_type: 分析类型（默认basic）：basic/comprehensive/network
+- max_depth: 分析深度（默认1）
+
+分析模式：
+- 单个文献：传入单个标识符
+- 批量分析：传入标识符列表 + analysis_type="basic"
+- 网络分析：传入标识符列表 + analysis_type="network\"""",
         annotations=ToolAnnotations(title="文献关系分析", readOnlyHint=True, openWorldHint=False),
         tags={"relations", "network", "analysis", "citations"},
     )

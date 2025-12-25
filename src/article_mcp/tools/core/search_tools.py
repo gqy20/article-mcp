@@ -527,7 +527,22 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。",
+        description="""多源文献搜索工具。并行搜索多个学术数据库（Europe PMC、PubMed、arXiv、CrossRef、OpenAlex），支持关键词检索和智能结果合并。
+
+搜索策略：
+- comprehensive: 全面搜索，使用所有可用数据源（并集）
+- fast: 快速搜索，只使用主要数据源（Europe PMC、PubMed）
+- precise: 精确搜索，只使用权威数据源（PubMed、Europe PMC，交集）
+- preprint: 预印本搜索（arXiv）
+
+主要参数：
+- keyword: 搜索关键词（必填）
+- sources: 数据源列表（可选，默认根据搜索策略自动选择）
+- max_results: 每个源的最大结果数（默认10）
+- search_type: 搜索策略（默认comprehensive）
+- use_cache: 是否使用24小时缓存（默认true）
+
+返回数据包含合并结果、各源结果、搜索时间、缓存命中等信息""",
         annotations=ToolAnnotations(title="文献搜索", readOnlyHint=True, openWorldHint=False),
         tags={"search", "literature", "academic"},
     )

@@ -107,7 +107,20 @@ def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="期刊质量评估工具。评估期刊的学术质量和影响力指标。",
+        description="""期刊质量评估工具。评估期刊的学术质量和影响力指标，集成 EasyScholar + OpenAlex 双数据源。
+
+支持的指标：
+EasyScholar 提供：impact_factor（影响因子）、quartile（SCI分区 Q1-Q4）、jci（JCI指数）、cas_zone（中科院分区）、cas_zone_top（TOP期刊标识）
+OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cited_by_count（总引用数）、works_count（总文章数）、i10_index（i10指数）
+
+主要参数：
+- journal_name: 期刊名称（单个或列表）
+- include_metrics: 返回的指标列表（默认["impact_factor", "quartile", "jci"]）
+- use_cache: 是否使用24小时缓存（默认true）
+- sort_by: 排序字段，仅批量查询有效（默认null）：impact_factor/quartile/jci
+- sort_order: 排序顺序，仅批量查询有效（默认desc）：desc降序/asc升序
+
+使用示例：单个期刊查询、批量期刊查询、批量查询并排序、指定返回指标""",
         annotations=ToolAnnotations(title="期刊质量评估", readOnlyHint=True, openWorldHint=False),
         tags={"quality", "journal", "metrics"},
     )

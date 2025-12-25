@@ -21,7 +21,17 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="获取参考文献工具。通过文献标识符获取完整参考文献列表。",
+        description="""获取参考文献工具。通过文献标识符获取其引用的参考文献列表，支持智能去重。
+
+主要参数：
+- identifier: 文献标识符（必填）：DOI、PMID、PMCID
+- id_type: 标识符类型（默认doi）：auto/doi/pmid/pmcid
+- sources: 数据源列表（默认["europe_pmc", "crossref"]）
+- max_results: 最大参考文献数量（默认20，建议20-100）
+- include_metadata: 是否包含详细元数据（默认true）
+
+支持的数据源：Europe PMC、CrossRef、PubMed
+去重规则：优先按DOI去重，其次按标题去重；按数据源优先级排序""",
         annotations=ToolAnnotations(title="参考文献", readOnlyHint=True, openWorldHint=False),
         tags={"references", "citations", "bibliography"},
     )

@@ -19,7 +19,16 @@ def register_batch_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) ->
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="通用结果导出工具。导出批量处理结果为JSON或CSV格式文件。",
+        description="""通用结果导出工具。导出批量处理结果为JSON或CSV格式文件。
+
+主要参数：
+- results: 批量处理结果（必填）：包含文献数据的字典
+- format_type: 导出格式（默认json）：json/csv
+- output_path: 输出文件路径（可选，默认exports/目录）
+- include_metadata: 是否包含元数据（默认true）
+
+支持导出来源：search_literature、get_article_details、get_references、get_literature_relations、get_journal_quality
+返回数据包含文件路径、记录数量、文件大小、处理时间等信息""",
         annotations=ToolAnnotations(title="批量结果导出", readOnlyHint=False, openWorldHint=True),
         tags={"export", "batch", "json", "csv"},
     )

@@ -147,46 +147,275 @@ python main.py server
 
 ## 📋 完整功能列表
 
-### 🔍 核心搜索工具
+### 🔍 工具1: 多源文献搜索 (`search_literature`)
 
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|----------|
-| `search_literature` | 多源文献搜索工具。搜索学术数据库文献，支持关键词检索和结果合并。 | `keyword`, `sources[]`, `max_results`, `search_type` |
-| `get_article_details` | 获取文献详情工具。通过DOI、PMID等标识符获取文献的详细信息。 | `identifier`, `id_type`, `sources[]`, `include_quality_metrics` |
+**功能描述**: 并行搜索多个学术数据库，支持关键词检索和智能结果合并
 
-### 📚 参考文献工具
+**支持的数据源**: Europe PMC, PubMed, arXiv, CrossRef, OpenAlex
 
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|----------|
-| `get_references` | 获取参考文献工具。通过文献标识符获取完整参考文献列表。 | `identifier`, `id_type`, `sources[]`, `max_results`, `include_metadata` |
+**搜索策略**:
+| 策略 | 说明 | 数据源 | 合并方式 |
+|------|------|--------|----------|
+| `comprehensive` | 全面搜索，使用所有可用数据源 | 全部5个源 | 并集 |
+| `fast` | 快速搜索，只使用主要数据源 | Europe PMC, PubMed | 并集 |
+| `precise` | 精确搜索，只使用权威数据源 | PubMed, Europe PMC | 交集 |
+| `preprint` | 预印本搜索 | arXiv | 并集 |
 
-### 🔗 文献关系分析工具
+**主要参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `keyword` | string | 必填 | 搜索关键词 |
+| `sources` | list[] | 自动选择 | 数据源列表 |
+| `max_results` | int | 10 | 每个源的最大结果数 |
+| `search_type` | string | `comprehensive` | 搜索策略 |
+| `use_cache` | bool | true | 是否使用24小时缓存 |
 
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|----------|
-| `get_literature_relations` | 文献关系分析工具。分析文献间的引用关系、相似性和合作网络。 | `identifier/identifiers`, `id_type`, `relation_types[]`, `max_results`, `analysis_type` |
+**返回数据**:
+```json
+{
+  "success": true,
+  "keyword": "机器学习",
+  "sources_used": ["europe_pmc", "pubmed", "arxiv"],
+  "merged_results": [...],
+  "total_count": 25,
+  "search_time": 1.23,
+  "cache_hit": false
+}
+```
 
-### ⭐ 质量评估工具
+---
 
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|----------|
-| `get_journal_quality` | 期刊质量评估工具。评估期刊的学术质量和影响力指标。 | `journal_name`, `operation`, `evaluation_criteria[]`, `include_metrics[]` |
+### 📄 工具2: 获取文献详情 (`get_article_details`)
 
-### 📊 批量处理工具
+**功能描述**: 通过 DOI、PMID、PMCID 或 arXiv ID 获取文献详细信息
 
-| 工具名称 | 功能描述 | 主要参数 |
-|---------|---------|----------|
-| `export_batch_results` | 通用结果导出工具。导出批量处理结果为JSON或CSV格式文件。 | `results`, `format_type`, `output_path`, `include_metadata` |
+**主要参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `identifier` | string | 必填 | 文献标识符 |
+| `id_type` | string | `auto` | 标识符类型: `auto`/`doi`/`pmid`/`pmcid`/`arxiv_id` |
+| `sources` | list[] | `["europe_pmc", "crossref"]` | 数据源列表 |
+| `include_quality_metrics` | bool | false | 是否包含期刊质量指标 |
+
+**返回数据**:
+```json
+{
+  "success": true,
+  "identifier": "10.1038/nature12373",
+  "id_type": "doi",
+  "sources_found": ["europe_pmc", "crossref"],
+  "merged_detail": {
+    "title": "...",
+    "authors": [...],
+    "abstract": "...",
+    "journal": "...",
+    "publication_date": "...",
+    "doi": "..."
+  },
+  "quality_metrics": {...},
+  "processing_time": 0.45
+}
+```
+
+---
+
+### 📚 工具3: 获取参考文献 (`get_references`)
+
+**功能描述**: 获取指定文献引用的所有参考文献，支持智能去重
+
+**主要参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `identifier` | string | 必填 | 文献标识符 |
+| `id_type` | string | `auto` | 标识符类型 |
+| `sources` | list[] | `["europe_pmc", "crossref"]` | 数据源列表 |
+| `max_results` | int | 20 | 最大参考文献数量 (建议20-100) |
+| `include_metadata` | bool | true | 是否包含详细元数据 |
+
+**去重规则**: 优先按 DOI 去重，其次按标题去重；按数据源优先级排序
+
+**返回数据**:
+```json
+{
+  "success": true,
+  "identifier": "10.1038/nature12373",
+  "sources_used": ["europe_pmc"],
+  "merged_references": [
+    {
+      "title": "...",
+      "authors": [...],
+      "journal": "...",
+      "doi": "...",
+      "pmid": "...",
+      "source": "europe_pmc",
+      "abstract": "..."
+    }
+  ],
+  "total_count": 20,
+  "processing_time": 0.67
+}
+```
+
+---
+
+### 🔗 工具4: 文献关系分析 (`get_literature_relations`)
+
+**功能描述**: 分析文献间的引用关系、相似性和合作网络
+
+**关系类型**:
+| 类型 | 说明 | 数据来源 |
+|------|------|----------|
+| `references` | 该文献引用的参考文献 | Europe PMC, CrossRef |
+| `similar` | 相似文献 | Europe PMC |
+| `citing` | 引用该文献的文献 | Europe PMC, OpenAlex |
+
+**主要参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `identifiers` | string/list[] | 必填 | 文献标识符 (单个或列表) |
+| `id_type` | string | `auto` | 标识符类型 |
+| `relation_types` | list[] | `["references", "similar", "citing"]` | 关系类型 |
+| `max_results` | int | 20 | 每种关系类型最大结果数 |
+| `sources` | list[] | 全部源 | 数据源列表 |
+| `analysis_type` | string | `basic` | `basic`(基本)/`comprehensive`(全面)/`network`(网络) |
+| `max_depth` | int | 1 | 分析深度 |
+
+**分析模式**:
+- **单个文献**: 传入单个标识符，返回该文献的所有关系
+- **批量分析**: 传入标识符列表 + `analysis_type="basic"`
+- **网络分析**: 传入标识符列表 + `analysis_type="network"`
+
+**返回数据 (单个文献)**:
+```json
+{
+  "success": true,
+  "identifier": "10.1038/nature12373",
+  "relations": {
+    "references": [...],
+    "similar": [...],
+    "citing": [...]
+  },
+  "statistics": {
+    "references_count": 30,
+    "similar_count": 10,
+    "citing_count": 5,
+    "total_relations": 45
+  },
+  "processing_time": 1.23
+}
+```
+
+---
+
+### ⭐ 工具5: 期刊质量评估 (`get_journal_quality`)
+
+**功能描述**: 评估期刊的学术质量和影响力指标，集成 EasyScholar + OpenAlex 双数据源
+
+**支持的指标**:
+
+| 指标名称 | 数据源 | 说明 |
+|---------|--------|------|
+| **EasyScholar 提供的指标** |
+| `impact_factor` | EasyScholar | 影响因子 |
+| `quartile` | EasyScholar | SCI分区 (Q1-Q4) |
+| `jci` | EasyScholar | JCI指数 |
+| `cas_zone` | EasyScholar | 中科院分区 (完整) |
+| `cas_zone_base` | EasyScholar | 中科院基础版分区 |
+| `cas_zone_small` | EasyScholar | 中科院小类分区 |
+| `cas_zone_top` | EasyScholar | TOP期刊标识 |
+| **OpenAlex 提供的指标 (自动补充)** |
+| `h_index` | OpenAlex | h指数 |
+| `citation_rate` | OpenAlex | 引用率 (2年平均) |
+| `cited_by_count` | OpenAlex | 总引用数 |
+| `works_count` | OpenAlex | 总文章数 |
+| `i10_index` | OpenAlex | i10指数 |
+
+**主要参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `journal_name` | string/list[] | 必填 | 期刊名称 (单个或列表) |
+| `include_metrics` | list[] | `["impact_factor", "quartile", "jci"]` | 返回的指标列表 |
+| `use_cache` | bool | true | 是否使用24小时缓存 |
+| `sort_by` | string | null | 排序字段 (仅批量): `impact_factor`/`quartile`/`jci` |
+| `sort_order` | string | `desc` | 排序顺序: `desc`(降序)/`asc`(升序) |
+
+**使用示例**:
+```python
+# 单个期刊查询
+get_journal_quality("Nature")
+
+# 批量期刊查询
+get_journal_quality(["Nature", "Science", "Cell"])
+
+# 批量查询并按影响因子降序排序
+get_journal_quality(["Nature", "Science"], sort_by="impact_factor", sort_order="desc")
+
+# 指定返回指标
+get_journal_quality("Nature", include_metrics=["impact_factor", "cas_zone", "h_index"])
+```
+
+**返回数据 (单个期刊)**:
+```json
+{
+  "success": true,
+  "journal_name": "Nature",
+  "quality_metrics": {
+    "impact_factor": 49.962,
+    "quartile": "Q1",
+    "jci": 26.85,
+    "cas_zone": "1区TOP"
+  },
+  "openalex_metrics": {
+    "h_index": 1811,
+    "citation_rate": 21.9,
+    "cited_by_count": 26225053,
+    "works_count": 446231,
+    "i10_index": 118873
+  },
+  "cache_hit": false,
+  "processing_time": 0.34
+}
+```
+
+---
+
+### 📊 工具6: 批量结果导出 (`export_batch_results`)
+
+**功能描述**: 导出批量处理结果为 JSON 或 CSV 格式文件
+
+**主要参数**:
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `results` | object | 必填 | 要导出的结果数据 |
+| `format_type` | string | `json` | 导出格式: `json`/`csv` |
+| `output_path` | string | 自动生成 | 输出文件路径 |
+| `include_metadata` | bool | true | 是否包含元数据 |
 
 ---
 
 ## ⚡ 性能特性
 
-- 🚀 **高性能并行处理** - 比传统方法快 30-50%
-- 💾 **智能缓存机制** - 24小时本地缓存，避免重复请求
-- 🔄 **批量处理优化** - 支持最多20个DOI同时处理
+- 🚀 **高性能并行处理** - 异步并行查询多个数据源，比传统方法快 30-50%
+- 💾 **智能缓存机制** - 24小时本地缓存，避免重复API请求
+- 🔄 **批量处理优化** - 支持批量文献查询和关系分析
 - 🛡️ **自动重试机制** - 网络异常自动重试
-- 📊 **详细性能统计** - 实时监控API调用情况
+- 📊 **详细性能统计** - 实时监控API调用情况和缓存命中率
+
+---
+
+## 📈 OpenAlex 集成
+
+项目已集成 OpenAlex API 作为免费数据源，提供以下额外指标：
+
+| 指标 | 说明 | 示例值 (Nature) |
+|------|------|-----------------|
+| `h_index` | h指数 | 1811 |
+| `citation_rate` | 引用率 (2年平均) | 21.9 |
+| `cited_by_count` | 总引用数 | 26,225,053 |
+| `works_count` | 总文章数 | 446,231 |
+| `i10_index` | i10指数 | 118,873 |
+
+这些指标会自动补充到期刊质量评估结果中，无需额外配置。
 
 ---
 
@@ -231,8 +460,8 @@ export EASYSCHOLAR_SECRET_KEY=your_secret_key  # EasyScholar API密钥(可选)
 
 #### 支持的工具
 
-- `get_journal_quality` - 获取期刊质量评估信息
-- `evaluate_articles_quality` - 批量评估文献的期刊质量
+集成 EasyScholar 密钥后，以下工具将获得更完整的数据：
+- `get_journal_quality` - 获取期刊质量评估信息（影响因子、分区等）
 
 配置完成后重启 MCP 客户端即可生效。
 
@@ -251,9 +480,13 @@ uv run python -m article_mcp server --transport streamable-http --host 0.0.0.0 -
 
 ### API 限制与优化
 
-- **Crossref API**: 50 requests/second (建议提供邮箱获得更高限额)
-- **Europe PMC API**: 1 request/second (保守策略)
-- **arXiv API**: 3 seconds/request (官方限制)
+| API | 限制 | 说明 |
+|-----|------|------|
+| **Crossref** | 50 req/s | 提供邮箱可获得更高限额 |
+| **Europe PMC** | 1 req/s | 保守策略，避免过载 |
+| **arXiv** | 3 req/request | 官方限制 |
+| **OpenAlex** | 无限制 | 礼貌使用，建议添加 `mailto` 参数 |
+| **EasyScholar** | 未知 | 建议配置密钥获得稳定服务 |
 
 ---
 
@@ -323,6 +556,8 @@ article-mcp/
 │       │   ├── literature_relation_service.py # 文献关系分析
 │       │   ├── crossref_service.py        # Crossref 服务
 │       │   ├── openalex_service.py        # OpenAlex 服务
+│       │   ├── openalex_metrics_service.py # OpenAlex 指标补充
+│       │   ├── easyscholar_service.py      # EasyScholar 服务
 │       │   ├── api_utils.py               # API 工具类
 │       │   ├── mcp_config.py              # MCP 配置管理
 │       │   ├── error_utils.py             # 错误处理工具
@@ -337,15 +572,6 @@ article-mcp/
 │       │   │   ├── relation_tools.py      # 关系分析工具注册
 │       │   │   ├── quality_tools.py       # 质量评估工具注册
 │       │   │   └── batch_tools.py         # 批量处理工具注册
-│       │   ├── article_detail_tools.py    # 文章详情工具
-│       │   ├── quality_tools.py           # 质量工具
-│       │   ├── reference_tools.py         # 参考文献工具
-│       │   ├── relation_tools.py          # 关系工具
-│       │   └── search_tools.py            # 搜索工具
-│       └── legacy/       # 向后兼容模块
-│           └── __init__.py
-├── src/resource/        # 资源文件目录
-│   └── journal_info.json  # 期刊信息缓存
 ├── tests/               # 测试套件
 │   ├── unit/            # 单元测试
 │   ├── integration/     # 集成测试
@@ -585,24 +811,46 @@ uvx --from . article-mcp server
 }
 ```
 
-### 期刊质量评估
+### 期刊质量评估 (单个期刊)
 
 ```json
 {
   "journal_name": "Nature",
-  "operation": "quality",
-  "evaluation_criteria": ["impact_factor", "quartile", "jci"],
-  "include_metrics": ["impact_factor", "quartile", "jci", "分区"]
+  "include_metrics": ["impact_factor", "quartile", "cas_zone", "h_index"]
 }
 ```
 
-### 批量期刊质量评估
+### 期刊质量评估 (批量 + 排序)
 
 ```json
 {
   "journal_name": ["Nature", "Science", "Cell"],
-  "operation": "quality",
-  "include_metrics": ["impact_factor", "quartile"]
+  "include_metrics": ["impact_factor", "quartile", "h_index"],
+  "sort_by": "impact_factor",
+  "sort_order": "desc"
+}
+```
+
+### 文献关系分析 (单个文献)
+
+```json
+{
+  "identifiers": "10.1038/nature12373",
+  "id_type": "doi",
+  "relation_types": ["references", "similar", "citing"],
+  "max_results": 20
+}
+```
+
+### 文献关系分析 (批量分析)
+
+```json
+{
+  "identifiers": ["10.1038/nature12373", "10.1038/nature12374"],
+  "id_type": "doi",
+  "relation_types": ["references", "similar"],
+  "analysis_type": "basic",
+  "max_results": 15
 }
 ```
 
