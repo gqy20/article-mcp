@@ -45,9 +45,9 @@ class EasyScholarService:
         self._request_times: list[float] = []  # 用于速率限制
 
         if self.api_key:
-            self.logger.info("EasyScholar API 密钥已配置，将使用官方 API")
+            self.logger.info("EasyScholar API 密钥已配置")
         else:
-            self.logger.warning("EASYSCHOLAR_SECRET_KEY 未设置，将使用模拟数据")
+            self.logger.warning("EASYSCHOLAR_SECRET_KEY 未设置")
 
     async def get_journal_quality(
         self, journal_name: str, timeout: int | None = None
@@ -71,14 +71,18 @@ class EasyScholarService:
                 "data_source": None,
             }
 
-        # 如果没有 API 密钥，直接返回模拟数据
+        # 如果没有 API 密钥，返回配置提示
         if not self.api_key:
-            self.logger.debug(f"使用模拟数据获取期刊质量: {journal_name}")
-            mock_result = self._get_mock_quality(journal_name.strip())
-            mock_result["data_source"] = "mock_data"
-            return mock_result
+            return {
+                "success": False,
+                "error": "EASYSCHOLAR_SECRET_KEY 环境变量未设置。请访问 https://www.easyscholar.cc 获取密钥，然后设置环境变量：export EASYSCHOLAR_SECRET_KEY=your_key_here",
+                "journal_name": journal_name,
+                "quality_metrics": {},
+                "ranking_info": {},
+                "data_source": None,
+            }
 
-        # 尝试调用真实 API
+        # 调用官方 API
         try:
             result = await asyncio.wait_for(
                 self._make_request(journal_name.strip()),
@@ -86,15 +90,32 @@ class EasyScholarService:
             )
             return result
         except asyncio.TimeoutError:
-            self.logger.warning(f"EasyScholar API 超时: {journal_name}，降级到模拟数据")
-            mock_result = self._get_mock_quality(journal_name.strip())
-            mock_result["data_source"] = "mock_data"
-            return mock_result
+            return {
+                "success": False,
+                "error": f"请求超时：超过 {timeout or self._timeout_val} 秒未响应",
+                "journal_name": journal_name,
+                "quality_metrics": {},
+                "ranking_info": {},
+                "data_source": None,
+            }
+        except RuntimeError as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "journal_name": journal_name,
+                "quality_metrics": {},
+                "ranking_info": {},
+                "data_source": None,
+            }
         except Exception as e:
-            self.logger.warning(f"EasyScholar API 调用失败: {e}，降级到模拟数据")
-            mock_result = self._get_mock_quality(journal_name.strip())
-            mock_result["data_source"] = "mock_data"
-            return mock_result
+            return {
+                "success": False,
+                "error": f"未知错误: {e}",
+                "journal_name": journal_name,
+                "quality_metrics": {},
+                "ranking_info": {},
+                "data_source": None,
+            }
 
     async def batch_get_journal_quality(self, journal_names: list[str]) -> list[dict[str, Any]]:
         """批量获取期刊质量信息
@@ -125,6 +146,9 @@ class EasyScholarService:
 
         Returns:
             包含期刊质量指标的字典
+
+        Raises:
+            RuntimeError: API 请求失败或返回错误
         """
         # 速率限制检查
         await _enforce_rate_limit(self._request_times, self.RATE_LIMIT_PER_SECOND)
@@ -211,80 +235,6 @@ class EasyScholarService:
             "ranking_info": ranking_info,
             "data_source": "easyscholar_api",
         }
-
-    def _get_mock_quality(self, journal_name: str) -> dict[str, Any]:
-        """生成模拟的期刊质量数据（用于降级）
-
-        Args:
-            journal_name: 期刊名称
-
-        Returns:
-            模拟的期刊质量数据
-        """
-        journal_lower = journal_name.lower()
-
-        # 高影响力期刊
-        if any(
-            keyword in journal_lower
-            for keyword in ["nature", "science", "cell", "lancet", "nejm", "pnas"]
-        ):
-            return {
-                "success": True,
-                "journal_name": journal_name,
-                "quality_metrics": {
-                    "impact_factor": 8.0,
-                    "quartile": "Q1",
-                    "jci": 3.5,
-                    "cas_zone": "中科院一区",
-                },
-                "ranking_info": {
-                    "rank_in_category": 10,
-                    "total_journals_in_category": 200,
-                    "percentile": 95.0,
-                    "assessment_method": "keyword_matching",
-                    "confidence": "high",
-                },
-            }
-        # 中等影响力期刊
-        elif any(
-            keyword in journal_lower for keyword in ["journal", "review", "progress", "advances"]
-        ):
-            return {
-                "success": True,
-                "journal_name": journal_name,
-                "quality_metrics": {
-                    "impact_factor": 3.0,
-                    "quartile": "Q2",
-                    "jci": 1.5,
-                    "cas_zone": "中科院二区",
-                },
-                "ranking_info": {
-                    "rank_in_category": 80,
-                    "total_journals_in_category": 200,
-                    "percentile": 60.0,
-                    "assessment_method": "keyword_matching",
-                    "confidence": "medium",
-                },
-            }
-        # 默认低影响力期刊
-        else:
-            return {
-                "success": True,
-                "journal_name": journal_name,
-                "quality_metrics": {
-                    "impact_factor": 1.2,
-                    "quartile": "Q3",
-                    "jci": 0.8,
-                    "cas_zone": "中科院三区",
-                },
-                "ranking_info": {
-                    "rank_in_category": 150,
-                    "total_journals_in_category": 200,
-                    "percentile": 25.0,
-                    "assessment_method": "keyword_matching",
-                    "confidence": "low",
-                },
-            }
 
 
 async def _enforce_rate_limit(request_times: list[float], max_per_second: int) -> None:
