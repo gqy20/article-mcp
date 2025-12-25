@@ -417,12 +417,12 @@ class TestGetJournalQualityTool:
         assert params["include_metrics"] == ["impact_factor", "cas_zone"]
 
 
-class TestExportBatchResultsTool:
-    """测试工具6: export_batch_results - 通用结果导出工具"""
+class TestAnalyzeKeywordTrendsTool:
+    """测试工具6: analyze_keyword_trends - 关键词趋势分析工具"""
 
     @pytest.fixture
-    def mock_batch_services(self):
-        """模拟批量处理服务"""
+    def mock_trend_services(self):
+        """模拟趋势分析服务"""
         return {
             "europe_pmc": Mock(),
             "pubmed": Mock(),
@@ -430,10 +430,33 @@ class TestExportBatchResultsTool:
             "openalex": Mock(),
         }
 
+    @pytest.fixture
+    def sample_articles(self):
+        """示例文献数据"""
+        return [
+            {
+                "title": "Deep Learning for Image Recognition",
+                "abstract": "We propose a deep learning approach for image recognition.",
+                "year": 2020,
+            },
+            {
+                "title": "Machine Learning in Healthcare",
+                "abstract": "This study explores machine learning applications.",
+                "year": 2021,
+            },
+            {
+                "title": "Transformers for NLP",
+                "abstract": "Transformer architectures revolutionized NLP.",
+                "year": 2022,
+            },
+        ]
+
     @pytest.mark.unit
-    def test_export_batch_results_json(self, mock_batch_services, sample_search_results):
-        """测试JSON格式导出"""
-        with patch("article_mcp.tools.core.batch_tools.register_batch_tools") as mock_register:
+    def test_analyze_keyword_trends_basic(self, mock_trend_services, sample_articles):
+        """测试基本关键词趋势分析"""
+        with patch(
+            "article_mcp.tools.core.keyword_trends.register_keyword_trends_tools"
+        ) as mock_register:
             create_mcp_server()
 
             # 验证服务注册（使用位置参数调用）
@@ -442,56 +465,59 @@ class TestExportBatchResultsTool:
             assert len(args) == 3  # mcp, services, logger
             assert args[1] is not None  # services should be passed
 
-        # 测试导出参数
-        export_params = {
-            "results": sample_search_results,
-            "format_type": "json",
-            "output_path": None,
-            "include_metadata": True,
+    @pytest.mark.unit
+    def test_analyze_keyword_trends_parameters(self, sample_articles):
+        """测试趋势分析参数"""
+        params = {
+            "articles": sample_articles,
+            "field": "abstract",
+            "year_range": (2020, 2022),
+            "top_n": 30,
+            "normalize": False,
+            "min_word_length": 3,
+            "min_docs": 2,
         }
 
-        assert export_params["format_type"] == "json"
-        assert export_params["include_metadata"] is True
+        assert params["field"] == "abstract"
+        assert params["year_range"] == (2020, 2022)
+        assert params["top_n"] == 30
+        assert params["normalize"] is False
 
     @pytest.mark.unit
-    def test_export_batch_results_csv(self, sample_search_results):
-        """测试CSV格式导出"""
-        export_params = {
-            "results": sample_search_results,
-            "format_type": "csv",
-            "output_path": "/tmp/export.csv",
-            "include_metadata": False,
+    def test_analyze_keyword_trends_result_structure(self, sample_articles):
+        """测试返回结果结构"""
+        # 预期的结果结构
+        expected_trend_types = ["growing", "consolidated", "declining", "stable"]
+
+        # 验证结构包含正确的字段
+        trend_structure = {
+            "keyword": str,
+            "total_freq": int,
+            "yearly_freq": dict,
+            "trend_type": str,
+            "growth_rate": float,
         }
 
-        assert export_params["format_type"] == "csv"
-        assert export_params["output_path"] == "/tmp/export.csv"
-        assert export_params["include_metadata"] is False
+        summary_structure = {
+            "total_papers": int,
+            "year_range": list,
+            "total_unique_keywords": int,
+        }
+
+        # 验证字段存在
+        assert "keyword" in trend_structure
+        assert "trend_type" in trend_structure
+        assert len(expected_trend_types) == 4  # 4种趋势类型
 
     @pytest.mark.unit
-    def test_export_batch_results_excel(self, sample_search_results):
-        """测试Excel格式导出"""
-        export_params = {
-            "results": sample_search_results,
-            "format_type": "excel",
-            "output_path": "/tmp/export.xlsx",
-            "include_metadata": True,
-        }
+    def test_analyze_keyword_trends_field_selection(self, sample_articles):
+        """测试字段选择"""
+        # 测试不同字段
+        fields = ["title", "abstract", "keywords", "title,abstract"]
 
-        assert export_params["format_type"] == "excel"
-        assert export_params["output_path"].endswith(".xlsx")
-
-    @pytest.mark.unit
-    def test_export_batch_results_auto_path(self, sample_search_results):
-        """测试自动路径生成"""
-        export_params = {
-            "results": sample_search_results,
-            "format_type": "json",
-            "output_path": None,  # 自动生成路径
-            "include_metadata": True,
-        }
-
-        assert export_params["output_path"] is None
-        # 在实际实现中，会自动生成路径
+        for field in fields:
+            params = {"articles": sample_articles, "field": field}
+            assert params["field"] == field
 
 
 class TestSixToolIntegration:
@@ -551,8 +577,8 @@ class TestSixToolIntegration:
                                         "article_mcp.tools.core.quality_tools.register_quality_tools"
                                     ) as mock_quality_tools,
                                     patch(
-                                        "article_mcp.tools.core.batch_tools.register_batch_tools"
-                                    ) as mock_batch_tools,
+                                        "article_mcp.tools.core.keyword_trends.register_keyword_trends_tools"
+                                    ) as mock_keyword_trends_tools,
                                 ):
                                     create_mcp_server()
 
@@ -562,7 +588,7 @@ class TestSixToolIntegration:
                                     mock_reference_tools.assert_called_once()
                                     mock_relation_tools.assert_called_once()
                                     mock_quality_tools.assert_called_once()
-                                    mock_batch_tools.assert_called_once()
+                                    mock_keyword_trends_tools.assert_called_once()
 
     @pytest.mark.unit
     def test_tool_parameter_validation(self):

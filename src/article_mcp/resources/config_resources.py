@@ -39,5 +39,9 @@ def register_config_resources(mcp: FastMCP) -> None:
                 "category": "analysis",
             },
             {"name": "get_journal_quality", "description": "期刊质量评估", "category": "quality"},
-            {"name": "export_batch_results", "description": "批量结果导出", "category": "export"},
+            {
+                "name": "analyze_keyword_trends",
+                "description": "关键词趋势分析",
+                "category": "trends",
+            },
         ]
