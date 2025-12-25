@@ -498,14 +498,14 @@ def _get_openalex_service(logger: Any) -> Any:
 
 
 def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | None:
-    """从文件缓存获取期刊质量信息
+    """从文件缓存获取期刊质量信息（合并 EasyScholar 和 OpenAlex 数据）
 
     Args:
         journal_name: 期刊名称
         logger: 日志记录器
 
     Returns:
-        缓存的数据，如果不存在或已过期返回 None
+        合并后的缓存数据，如果不存在或已过期返回 None
     """
     if not _CACHE_FILE.exists():
         return None
@@ -520,10 +520,29 @@ def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | Non
             timestamp = cached.get("timestamp", 0)
             if time.time() - timestamp < _CACHE_TTL:
                 logger.debug(f"文件缓存命中: {journal_name}")
+
+                # 获取 EasyScholar 数据
                 data = cached.get("data")
-                if isinstance(data, dict):
-                    return data
-                return None
+                if not isinstance(data, dict):
+                    return None
+
+                # 获取 OpenAlex 指标（如果存在）
+                openalex_metrics = cached.get("openalex_metrics")
+                if isinstance(openalex_metrics, dict):
+                    # 合并 OpenAlex 指标到 quality_metrics
+                    if "quality_metrics" in data:
+                        data["quality_metrics"] = {
+                            **data["quality_metrics"],
+                            **openalex_metrics,
+                        }
+                    else:
+                        data["quality_metrics"] = openalex_metrics.copy()
+
+                    # 更新数据来源标记
+                    original_source = data.get("data_source", "easyscholar")
+                    data["data_source"] = f"{original_source}+openalex_cache"
+
+                return data
 
         return None
     except Exception as e:
@@ -532,7 +551,7 @@ def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | Non
 
 
 def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) -> None:
-    """保存到文件缓存
+    """保存到文件缓存（与 OpenAlex 共享缓存文件）
 
     Args:
         journal_name: 期刊名称
@@ -548,13 +567,20 @@ def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) ->
             with open(_CACHE_FILE, encoding="utf-8") as f:
                 cache_data = json.load(f)
         else:
-            cache_data = {"journals": {}, "version": "1.0", "created_at": time.time()}
+            cache_data = {"journals": {}, "version": "2.0", "created_at": time.time()}
 
-        # 更新缓存
-        cache_data["journals"][journal_name] = {
-            "data": data,
-            "timestamp": time.time(),
-        }
+        # 更新缓存（保留可能已存在的 openalex_metrics）
+        if journal_name in cache_data["journals"]:
+            # 期刊已存在，保留 openalex_metrics，更新 data 和 timestamp
+            cache_data["journals"][journal_name]["data"] = data
+            cache_data["journals"][journal_name]["timestamp"] = time.time()
+        else:
+            # 期刊不存在，创建新条目
+            cache_data["journals"][journal_name] = {
+                "data": data,
+                "timestamp": time.time(),
+            }
+
         cache_data["last_updated"] = time.time()
 
         # 写入文件

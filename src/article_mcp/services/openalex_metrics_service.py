@@ -202,11 +202,13 @@ class OpenAlexMetricsService:
                 cache_data["journals"][journal_name]["openalex_metrics"] = metrics
                 cache_data["journals"][journal_name]["timestamp"] = time.time()
             else:
-                # 期刊不存在，创建新条目
+                # 期刊不存在，创建新条目（保留可能已存在的 data 字段）
                 cache_data["journals"][journal_name] = {
                     "openalex_metrics": metrics,
                     "timestamp": time.time(),
                 }
+                # 注意：这里不会覆盖 data 字段，因为期刊是新创建的
+                # 如果 EasyScholar 先保存了数据，它会在 else 分支中存在
 
             cache_data["last_updated"] = time.time()
 
