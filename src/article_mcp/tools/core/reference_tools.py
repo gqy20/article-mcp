@@ -1,23 +1,17 @@
-"""统一参考文献工具 - 核心工具3"""
+"""统一参考文献工具 - 核心工具3
+
+服务依赖：使用闭包捕获模式，无全局变量
+"""
 
 import asyncio
-import logging
 import time
 from typing import Any
 
 from fastmcp import FastMCP
 
-# 全局服务实例
-_reference_services = None
-_logger = None  # 全局 logger
-
 
 def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
-    """注册参考文献工具"""
-    global _reference_services, _logger
-    _reference_services = services
-    _logger = logger
-
+    """注册参考文献工具（使用闭包捕获服务依赖，无全局变量）"""
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
@@ -55,12 +49,15 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
             包含参考文献列表的字典，包括引用信息和统计
 
         """
+        # 使用闭包捕获的 services 和 logger
         return await get_references_async(
             identifier=identifier,
             id_type=id_type,
             sources=sources,
             max_results=max_results,
             include_metadata=include_metadata,
+            services=services,
+            logger=logger,
         )
 
 
@@ -153,8 +150,8 @@ async def get_references_async(
     max_results: int = 20,
     include_metadata: bool = True,
     *,
-    services: dict[str, Any] | None = None,
-    logger: Any = None,
+    services: dict[str, Any],
+    logger: Any,
 ) -> dict[str, Any]:
     """异步获取参考文献工具。通过文献标识符获取其引用的参考文献列表。
 
@@ -164,17 +161,13 @@ async def get_references_async(
         sources: 数据源列表，支持多源查询
         max_results: 最大参考文献数量 (建议20-100)
         include_metadata: 是否包含详细元数据
-        services: 服务依赖注入字典（闭包捕获模式）
-        logger: 日志记录器（闭包捕获模式）
+        services: 服务依赖注入字典（必需，闭包捕获模式）
+        logger: 日志记录器（必需，闭包捕获模式）
 
     Returns:
         包含参考文献列表的字典，包括引用信息和统计
 
     """
-    # 使用闭包捕获的服务，或回退到全局变量
-    resolved_services = services or _reference_services
-    resolved_logger = logger or _logger or logging.getLogger(__name__)
-
     try:
         if not identifier or not identifier.strip():
             return {
@@ -206,8 +199,8 @@ async def get_references_async(
         async def fetch_from_source(source: str) -> tuple[str, list[dict] | None]:
             """从单个数据源异步获取参考文献"""
             try:
-                if source == "europe_pmc" and "reference" in resolved_services:
-                    service = resolved_services["reference"]
+                if source == "europe_pmc" and "reference" in services:
+                    service = services["reference"]
                     if id_type == "doi":
                         result = await service.get_references_by_doi_async(identifier)
                         references = result.get("references", [])
@@ -215,16 +208,16 @@ async def get_references_async(
                             return source, references
                     return source, None
 
-                elif source == "crossref" and "reference" in resolved_services:
-                    service = resolved_services["reference"]
+                elif source == "crossref" and "reference" in services:
+                    service = services["reference"]
                     if id_type == "doi":
                         references = await service.get_references_crossref_async(identifier)
                         if references:
                             return source, references
                     return source, None
 
-                elif source == "pubmed" and "reference" in resolved_services:
-                    service = resolved_services["reference"]
+                elif source == "pubmed" and "reference" in services:
+                    service = services["reference"]
                     if id_type == "doi":
                         result = await service.get_references_by_doi_async(identifier)
                         references = result.get("references", [])
@@ -235,7 +228,7 @@ async def get_references_async(
                 return source, None
 
             except Exception as e:
-                resolved_logger.error(f"从 {source} 获取参考文献失败: {e}")
+                logger.error(f"从 {source} 获取参考文献失败: {e}")
                 return source, None
 
         # 并行执行所有数据源的查询
@@ -245,18 +238,18 @@ async def get_references_async(
         # 处理结果
         for result in fetch_results:
             if isinstance(result, Exception):
-                resolved_logger.error(f"获取参考文献时发生异常: {result}")
+                logger.error(f"获取参考文献时发生异常: {result}")
                 continue
 
             source, references = result  # type: ignore[misc]
             if references:
                 references_by_source[source] = references
                 sources_used.append(source)
-                resolved_logger.info(f"从 {source} 获取到 {len(references)} 条参考文献")
+                logger.info(f"从 {source} 获取到 {len(references)} 条参考文献")
 
         # 合并和去重参考文献
         merged_references = _merge_and_deduplicate_references(
-            references_by_source, include_metadata, resolved_logger
+            references_by_source, include_metadata, logger
         )
 
         # 限制返回数量
@@ -277,7 +270,7 @@ async def get_references_async(
         }
 
     except Exception as e:
-        resolved_logger.error(f"获取参考文献异常: {e}")
+        logger.error(f"获取参考文献异常: {e}")
         # 抛出MCP标准错误
         from mcp import McpError
         from mcp.types import ErrorData

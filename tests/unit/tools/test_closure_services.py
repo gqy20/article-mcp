@@ -49,32 +49,35 @@ class TestClosureServicesSearchTools:
         assert len(result["merged_results"]) > 0
 
     def test_search_literature_async_fails_without_services(self):
-        """测试：search_literature_async 在没有 services 参数时应该返回错误"""
-        # Arrange: 不提供 services 参数，让函数使用全局变量
-        # （但全局变量未初始化，应该返回错误）
+        """测试：search_literature_async 在没有 services 参数时应该抛出 TypeError
 
-        # Act: 调用函数不传入 services
-        # 由于全局变量未初始化，应该抛出异常或返回错误
-        # 当前实现会抛出 ToolError
+        在 Refactor 阶段，services 成为必需参数，不再支持 None 值。
+        传入 None 应该导致 TypeError，而不是静默返回错误结果。
+        """
+        # Arrange: 不提供 services 参数
+        # 由于 services 现在是必需参数，调用时应该抛出 TypeError
         import asyncio
 
         from article_mcp.tools.core.search_tools import search_literature_async
 
         async def call_without_services():
             try:
+                # services 是必需的 keyword-only 参数，不传入会导致 TypeError
                 result = await search_literature_async(
                     keyword="test",
-                    services=None,  # 不传入 services
+                    # services 未提供 - 应该抛出 TypeError
                     logger=Mock(),
                 )
-                return result
+                return {"type": "no_error", "result": result}
+            except TypeError as e:
+                return {"type": "TypeError", "message": str(e)}
             except Exception as e:
-                return {"error": str(e)}
+                return {"type": type(e).__name__, "message": str(e)}
 
         result = asyncio.run(call_without_services())
 
-        # Assert: 应该返回错误
-        assert "error" in result or result.get("success") is False
+        # Assert: 应该抛出 TypeError
+        assert result["type"] == "TypeError", f"期望 TypeError，实际得到: {result}"
 
 
 class TestClosureServicesArticleTools:

@@ -7,26 +7,19 @@
 4. sections=None 表示获取全部章节（默认）
 5. sections=["xxx"] 表示获取指定章节
 6. 支持批量获取（最多20个 PMCID）
+
+服务依赖：使用闭包捕获模式，无全局变量
 """
 
 import asyncio
-import logging
 import time
 from typing import Any
 
 from fastmcp import FastMCP
 
-# 全局服务实例
-_article_services = None
-_logger = None
-
 
 def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
-    """注册文献全文获取工具"""
-    global _article_services, _logger
-    _article_services = services
-    _logger = logger
-
+    """注册文献全文获取工具（使用闭包捕获服务依赖，无全局变量）"""
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
@@ -90,10 +83,13 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             统一批量结果字典 {total, successful, failed, articles, fulltext_stats}
 
         """
+        # 使用闭包捕获的 services 和 logger
         return await get_article_details_async(
             pmcid=pmcid,
             sections=sections,
             format=format,
+            services=services,
+            logger=logger,
         )
 
 
@@ -102,8 +98,8 @@ async def get_article_details_async(
     sections: list[str] | None = None,
     format: str = "markdown",
     *,
-    services: dict[str, Any] | None = None,
-    logger: Any = None,
+    services: dict[str, Any],
+    logger: Any,
 ) -> dict[str, Any]:
     """异步获取文献全文。
 
@@ -111,8 +107,8 @@ async def get_article_details_async(
         pmcid: PMCID 标识符或 PMCID 列表（最多20个）
         sections: 全文章节控制，None=全部章节，["xxx"]=指定章节
         format: 全文格式，"markdown"|"xml"|"text"，默认"markdown"
-        services: 服务依赖注入字典（闭包捕获模式）
-        logger: 日志记录器（闭包捕获模式）
+        services: 服务依赖注入字典（必需，闭包捕获模式）
+        logger: 日志记录器（必需，闭包捕获模式）
 
     Returns:
         统一批量结果格式：
@@ -129,15 +125,10 @@ async def get_article_details_async(
         }
 
     """
-    # 使用闭包捕获的服务，或回退到全局变量
-    resolved_services = services or _article_services
-    resolved_logger = logger or _logger
-
     # 验证 format 参数
     valid_formats = ["markdown", "xml", "text"]
     if format not in valid_formats:
-        resolved_logger = resolved_logger or logging.getLogger(__name__)
-        resolved_logger.error(f"无效的 format 参数: {format}，有效值为: {valid_formats}")
+        logger.error(f"无效的 format 参数: {format}，有效值为: {valid_formats}")
         return {
             "total": 1 if isinstance(pmcid, str) else len(pmcid) if pmcid else 0,
             "successful": 0,
@@ -164,8 +155,7 @@ async def get_article_details_async(
 
     # 验证 PMCID 数量上限
     if len(pmcids) > 20:
-        resolved_logger = resolved_logger or logging.getLogger(__name__)
-        resolved_logger.error(f"PMCID 数量超过限制：{len(pmcids)} > 20")
+        logger.error(f"PMCID 数量超过限制：{len(pmcids)} > 20")
         return {
             "total": len(pmcids),
             "successful": 0,
@@ -180,8 +170,8 @@ async def get_article_details_async(
         pmcids=pmcids,
         sections=sections,
         format=format,
-        services=resolved_services,
-        logger=resolved_logger,
+        services=services,
+        logger=logger,
     )
 
 
@@ -194,9 +184,6 @@ async def _fetch_single_article(
     logger: Any,
 ) -> dict[str, Any] | None:
     """获取单个文献全文（内部函数，不对外暴露）"""
-
-    resolved_logger = logger or logging.getLogger(__name__)
-
     try:
         if not pmcid or not pmcid.strip():
             return None
@@ -205,7 +192,7 @@ async def _fetch_single_article(
 
         # 验证必须是 PMCID 格式
         if not pmcid.startswith("PMC"):
-            resolved_logger.warning(f"非 PMCID 格式: {pmcid}")
+            logger.warning(f"非 PMCID 格式: {pmcid}")
             return None
 
         # 获取服务
@@ -213,11 +200,11 @@ async def _fetch_single_article(
         pubmed_service = services.get("pubmed")
 
         if europe_pmc_service is None:
-            resolved_logger.error("europe_pmc 服务未配置")
+            logger.error("europe_pmc 服务未配置")
             return None
 
         if pubmed_service is None:
-            resolved_logger.error("pubmed 服务未配置")
+            logger.error("pubmed 服务未配置")
             return None
 
         # 获取文献详情（使用 pmcid 类型）
@@ -225,7 +212,7 @@ async def _fetch_single_article(
 
         if not result or result.get("error") is not None or not result.get("article"):
             error_msg = result.get("error", "未知错误") if result else "服务未响应"
-            resolved_logger.warning(f"未找到文献: {pmcid} - {error_msg}")
+            logger.warning(f"未找到文献: {pmcid} - {error_msg}")
             return None
 
         article = result["article"]
@@ -253,13 +240,13 @@ async def _fetch_single_article(
                     article["fulltext"]["sections_found"] = fulltext.get("sections_found")
                     article["fulltext"]["sections_missing"] = fulltext.get("sections_missing")
         except Exception as e:
-            resolved_logger.warning(f"获取全文失败: {e}")
+            logger.warning(f"获取全文失败: {e}")
 
-        resolved_logger.info(f"成功获取文献全文: {pmcid}")
+        logger.info(f"成功获取文献全文: {pmcid}")
         return article
 
     except Exception as e:
-        resolved_logger.error(f"获取文献全文异常: {e}")
+        logger.error(f"获取文献全文异常: {e}")
         return None
 
 
@@ -275,8 +262,6 @@ async def _batch_get_article_details(
 
     内部使用 Semaphore(5) 控制并发，确保每次最多5个请求同时执行。
     """
-
-    resolved_logger = logger or logging.getLogger(__name__)
     start_time = time.time()
 
     # 控制并发数：内部固定为5
@@ -307,7 +292,7 @@ async def _batch_get_article_details(
 
     for result in results:
         if isinstance(result, Exception):
-            resolved_logger.error(f"获取文献时发生异常: {result}")
+            logger.error(f"获取文献时发生异常: {result}")
             failed_count += 1
             continue
 

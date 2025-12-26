@@ -4,6 +4,7 @@
 1. asyncio 并行搜索
 2. search_type 搜索策略
 3. 缓存机制
+4. 闭包捕获服务依赖（无全局变量）
 """
 
 import asyncio
@@ -14,10 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
-
-# 全局服务实例
-_search_services = None
-
 
 # ============================================================================
 # 搜索策略配置
@@ -359,8 +356,9 @@ async def search_literature_async(
     search_type: str = "comprehensive",
     use_cache: bool = True,
     cache: SearchCache | None = None,
-    services: dict[str, Any] | None = None,
-    logger: Any = None,
+    *,
+    services: dict[str, Any],
+    logger: Any,
 ) -> dict[str, Any]:
     """异步文献搜索（供测试使用）
 
@@ -371,8 +369,8 @@ async def search_literature_async(
         search_type: 搜索策略 (fast, comprehensive, precise, preprint)
         use_cache: 是否使用缓存
         cache: 缓存实例（如果为None，使用默认缓存）
-        services: 服务字典
-        logger: 日志记录器
+        services: 服务字典（必需）
+        logger: 日志记录器（必需）
 
     Returns:
         搜索结果字典
@@ -387,15 +385,7 @@ async def search_literature_async(
     if not keyword or not keyword.strip():
         raise ToolError("搜索关键词不能为空")
 
-    # 使用传入的 services 或全局 _search_services
-    if services is None:
-        # 使用全局服务（运行时在 register_search_tools 中设置）
-        # mypy 无法检测到全局变量的运行时修改，使用 get 间接访问
-        global _search_services
-        services = _search_services  # noqa: F821
-
-    if services is None:
-        raise ToolError("搜索服务未初始化")
+    # services 参数现在是必需的（通过闭包捕获传递）
     search_services = services
 
     # 使用传入的 cache 或创建新的
@@ -522,12 +512,10 @@ def search_literature_with_cache(
 
 
 def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
-    """注册搜索工具"""
-    global _search_services
-    _search_services = services
+    """注册搜索工具（使用闭包捕获服务依赖，无全局变量）"""
 
-    # 初始化缓存（全局共享）
-    _search_cache = SearchCache()
+    # 初始化缓存（闭包局部变量）
+    search_cache = SearchCache()
 
     from mcp.types import ToolAnnotations
 
@@ -595,9 +583,9 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
             # 生成缓存键
             cache_key = SearchCache._generate_key(keyword, sources, max_results)
 
-            # 尝试从缓存获取
+            # 尝试从缓存获取（使用闭包捕获的 search_cache）
             if use_cache:
-                cached_result = _search_cache.get(cache_key)
+                cached_result = search_cache.get(cache_key)
                 if cached_result is not None:
                     cached_result["cached"] = True
                     cached_result["cache_hit"] = True
@@ -607,15 +595,15 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
             results_by_source = {}
             sources_used = []
 
-            # 定义每个数据源的异步搜索函数
+            # 定义每个数据源的异步搜索函数（使用闭包捕获的 services 和 logger）
             async def search_source(source: str) -> tuple[str, list[dict[str, Any]] | None]:
                 """搜索单个数据源，返回 (source_name, articles)"""
-                if source not in _search_services:
+                if source not in services:
                     logger.warning(f"未知数据源: {source}")
                     return (source, None)
 
                 try:
-                    service = _search_services[source]
+                    service = services[source]
                     query = keyword
 
                     # 调用对应的异步搜索方法
@@ -697,9 +685,9 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
                 "cache_hit": False,
             }
 
-            # 保存到缓存
+            # 保存到缓存（使用闭包捕获的 search_cache）
             if use_cache:
-                _search_cache.set(cache_key, result)
+                search_cache.set(cache_key, result)
 
             return result
 
