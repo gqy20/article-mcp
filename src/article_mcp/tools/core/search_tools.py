@@ -245,7 +245,8 @@ async def parallel_search_sources(
     async def search_source(source: str) -> tuple[str, list[dict[str, Any]] | None]:
         """搜索单个数据源"""
         if source not in services:
-            logger.warning(f"未知数据源: {source}")
+            if logger:
+                logger.warning(f"未知数据源: {source}")
             return (source, None)
 
         try:
@@ -269,14 +270,17 @@ async def parallel_search_sources(
             error = result.get("error") if result else None
             articles = result.get("articles", []) if result else []
             if not error and articles:
-                logger.info(f"{source} 异步搜索成功，找到 {len(articles)} 篇文章")
+                if logger:
+                    logger.info(f"{source} 异步搜索成功，找到 {len(articles)} 篇文章")
                 return (source, articles)
             else:
-                logger.warning(f"{source} 搜索失败: {error or '无搜索结果'}")
+                if logger:
+                    logger.warning(f"{source} 搜索失败: {error or '无搜索结果'}")
                 return (source, None)
 
         except Exception as e:
-            logger.error(f"{source} 搜索异常: {e}")
+            if logger:
+                logger.error(f"{source} 搜索异常: {e}")
             return (source, None)
 
     # 并行搜索所有数据源
@@ -286,7 +290,8 @@ async def parallel_search_sources(
     # 处理搜索结果
     for result in gathered_results:
         if isinstance(result, Exception):
-            logger.error(f"搜索任务异常: {result}")
+            if logger:
+                logger.error(f"搜索任务异常: {result}")
             continue
 
         # 此时 result 必须是 tuple[str, list[dict[str, Any]] | None] 类型
