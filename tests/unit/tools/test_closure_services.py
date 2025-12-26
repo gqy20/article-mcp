@@ -206,16 +206,28 @@ class TestClosureServicesQualityTools:
         """测试：_single_journal_quality 通过闭包参数使用服务"""
 
         # Arrange: 创建模拟服务
-        async def mock_get_quality(journal_name):
+        async def mock_easyscholar_get_quality(journal_name):
             await asyncio.sleep(0.01)
             return {
-                "journal": journal_name,
-                "impact_factor": 5.0,
-                "quartile": "Q1",
+                "success": True,
+                "journal_name": journal_name,
+                "data_source": "easyscholar",
+                "quality_metrics": {
+                    "impact_factor": 5.0,
+                    "quartile": "Q1",
+                },
+                "ranking_info": {},
             }
 
+        async def mock_openalex_enhance(result, use_cache):
+            result["openalex_metrics"] = {"h_index": 400}
+            return result
+
         mock_services = {
-            "pubmed": Mock(get_journal_quality_async=mock_get_quality),
+            "easyscholar": Mock(
+                get_journal_quality=AsyncMock(side_effect=mock_easyscholar_get_quality)
+            ),
+            "openalex": Mock(enhance_quality_result=AsyncMock(side_effect=mock_openalex_enhance)),
         }
 
         # Act: 调用函数并传入 services 参数

@@ -99,6 +99,83 @@ def _parse_json_param(value: Any) -> Any:
     return value
 
 
+async def get_journal_quality_async(
+    journal_name: str | list[str],
+    include_metrics: list[str] | None = None,
+    use_cache: bool = True,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
+    *,
+    services: dict[str, Any],
+    logger: Any,
+) -> dict[str, Any]:
+    """期刊质量评估工具（纯异步版本）
+
+    这是 get_journal_quality 的纯异步版本，不使用 threading 混合模式。
+    可用于在异步上下文中直接调用。
+
+    Args:
+        journal_name: 期刊名称（单个期刊或期刊列表）
+        include_metrics: 返回的质量指标类型
+        use_cache: 是否使用缓存数据
+        sort_by: 排序字段（仅批量查询有效）
+        sort_order: 排序顺序（仅批量查询有效）
+        services: 服务依赖注入字典（必需，闭包模式）
+        logger: 日志记录器（必需）
+
+    Returns:
+        包含期刊质量评估结果的字典
+    """
+    try:
+        # 参数预处理
+        journal_name = _parse_json_param(journal_name)
+        include_metrics = _parse_json_param(include_metrics)
+
+        if include_metrics is None:
+            include_metrics = ["impact_factor", "quartile", "jci"]
+
+        # 判断是单个期刊还是批量期刊
+        if isinstance(journal_name, list):
+            # 批量期刊质量评估
+            if not journal_name:
+                return {
+                    "success": False,
+                    "error": "期刊名称列表不能为空",
+                    "total_journals": 0,
+                    "successful_evaluations": 0,
+                    "journal_results": {},
+                    "processing_time": 0,
+                }
+            result = await _batch_journal_quality(
+                journal_name,
+                include_metrics,
+                use_cache,
+                services=services,
+                logger=logger,
+            )
+            # 应用排序（仅批量查询）
+            return _apply_sorting(result, sort_by, sort_order)
+        else:
+            # 单个期刊质量评估 - 直接调用异步函数
+            return await _single_journal_quality(
+                journal_name,
+                include_metrics,
+                use_cache,
+                services=services,
+                logger=logger,
+            )
+
+    except Exception as e:
+        logger.error(f"期刊质量评估异常（异步版本）: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "journal_name": journal_name if isinstance(journal_name, str) else "multiple",
+            "quality_metrics": {},
+            "data_source": None,
+        }
+
+
 def register_quality_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
     """注册期刊质量评估工具（使用闭包捕获服务依赖，无全局变量）"""
     from mcp.types import ToolAnnotations
@@ -121,14 +198,14 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
         annotations=ToolAnnotations(title="期刊质量评估", readOnlyHint=True, openWorldHint=False),
         tags={"quality", "journal", "metrics"},
     )
-    def get_journal_quality(
+    async def get_journal_quality(
         journal_name: str | list[str],
         include_metrics: str | list[str] | None = None,
         use_cache: bool = True,
         sort_by: str | None = None,
         sort_order: str = "desc",
     ) -> dict[str, Any]:
-        """期刊质量评估工具。评估期刊的学术质量和影响力指标。
+        """期刊质量评估工具（纯异步版本）。评估期刊的学术质量和影响力指标。
 
         Args:
             journal_name: 期刊名称（单个期刊或期刊列表）
@@ -142,16 +219,16 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
 
         Examples:
             # 单个期刊查询
-            get_journal_quality("Nature")
+            await get_journal_quality("Nature")
 
             # 批量期刊查询
-            get_journal_quality(["Nature", "Science", "Cell"])
+            await get_journal_quality(["Nature", "Science", "Cell"])
 
             # 批量查询并按影响因子降序排序
-            get_journal_quality(["Nature", "Science"], sort_by="impact_factor", sort_order="desc")
+            await get_journal_quality(["Nature", "Science"], sort_by="impact_factor", sort_order="desc")
 
             # 指定返回指标
-            get_journal_quality("Nature", include_metrics=["impact_factor", "cas_zone"])
+            await get_journal_quality("Nature", include_metrics=["impact_factor", "cas_zone"])
         """
         try:
             # ========== 参数预处理：解析字符串形式的 JSON 参数 ==========
@@ -175,7 +252,7 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                         "journal_results": {},
                         "processing_time": 0,
                     }
-                result = _batch_journal_quality(
+                result = await _batch_journal_quality(
                     journal_name,
                     include_metrics,
                     use_cache,
@@ -185,47 +262,14 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                 # 应用排序（仅批量查询）
                 return _apply_sorting(result, sort_by, sort_order)
             else:
-                # 单个期刊质量评估
-                import threading
-
-                # 检查是否在事件循环中运行
-                try:
-                    asyncio.get_running_loop()
-                    # 在事件循环中，在新线程中运行
-                    result_container = {"result": None}
-
-                    def run_in_new_loop():
-                        new_loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(new_loop)
-                        try:
-                            result_container["result"] = new_loop.run_until_complete(
-                                _single_journal_quality(
-                                    journal_name,
-                                    include_metrics,
-                                    use_cache,
-                                    services=services,  # 使用闭包捕获的 services
-                                    logger=logger,
-                                )
-                            )
-                        finally:
-                            new_loop.close()
-
-                    thread = threading.Thread(target=run_in_new_loop)
-                    thread.start()
-                    thread.join(timeout=60)
-
-                    return result_container["result"]
-                except RuntimeError:
-                    # 没有运行的事件循环，使用 asyncio.run
-                    return asyncio.run(
-                        _single_journal_quality(
-                            journal_name,
-                            include_metrics,
-                            use_cache,
-                            services=services,  # 使用闭包捕获的 services
-                            logger=logger,
-                        )
-                    )
+                # 单个期刊质量评估 - 纯异步调用
+                return await _single_journal_quality(
+                    journal_name,
+                    include_metrics,
+                    use_cache,
+                    services=services,  # 使用闭包捕获的 services
+                    logger=logger,
+                )
 
         except Exception as e:
             logger.error(f"期刊质量评估异常: {e}")
@@ -283,7 +327,7 @@ async def _single_journal_quality(
 
         # API 调用（缓存未命中或禁用）
         if result is None:
-            easyscholar_service = _get_easyscholar_service(logger)
+            easyscholar_service = services["easyscholar"]
             result = await easyscholar_service.get_journal_quality(normalized_name)
             data_source = result.get("data_source", "easyscholar")
 
@@ -341,7 +385,7 @@ async def _single_journal_quality(
 
         # 集成 OpenAlex 指标补充（在当前异步上下文中运行）
         try:
-            openalex_service = _get_openalex_service(logger)
+            openalex_service = services["openalex"]
             response = await openalex_service.enhance_quality_result(response, use_cache)
         except Exception as e:
             # OpenAlex 补充失败不影响主流程
@@ -361,7 +405,7 @@ async def _single_journal_quality(
         }
 
 
-def _batch_journal_quality(
+async def _batch_journal_quality(
     journal_names: list[str],
     include_metrics: list[str],
     use_cache: bool,
@@ -369,7 +413,7 @@ def _batch_journal_quality(
     services: dict[str, Any],
     logger: Any,
 ) -> dict[str, Any]:
-    """批量期刊质量评估（带文件缓存支持）"""
+    """批量期刊质量评估（纯异步版本，带文件缓存支持）"""
     try:
         if not journal_names:
             return {
@@ -387,115 +431,85 @@ def _batch_journal_quality(
         successful_evaluations = 0
         cache_hits = 0
 
-        # 使用异步批量评估
-        async def batch_eval() -> None:
-            nonlocal successful_evaluations, cache_hits
+        # 先从缓存查找
+        cached_journals = {}
+        journals_to_fetch = []
 
-            # 先从缓存查找
-            cached_journals = {}
-            journals_to_fetch = []
+        if use_cache and _CACHE_ENABLED:
+            for journal_name in journal_names:
+                cached_result = await asyncio.to_thread(
+                    _get_from_file_cache, journal_name.strip(), logger
+                )
+                if cached_result:
+                    cached_journals[journal_name] = (cached_result, True)
+                    cache_hits += 1
+                else:
+                    journals_to_fetch.append(journal_name)
+        else:
+            journals_to_fetch = journal_names.copy()
 
-            if use_cache and _CACHE_ENABLED:
-                for journal_name in journal_names:
-                    cached_result = await asyncio.to_thread(
-                        _get_from_file_cache, journal_name.strip(), logger
-                    )
-                    if cached_result:
-                        cached_journals[journal_name] = (cached_result, True)
-                        cache_hits += 1
+        # 获取未缓存的数据
+        easyscholar_service = services["easyscholar"]
+        fetched_results = await easyscholar_service.batch_get_journal_quality(journals_to_fetch)
+
+        # 合并结果
+        all_results = {}
+        all_results.update(cached_journals)
+        for i, result in enumerate(fetched_results):
+            all_results[journals_to_fetch[i]] = (result, False)
+
+        # 处理每个期刊的结果
+        for journal_name, (result, is_cached) in all_results.items():
+            # 过滤请求的指标，并跟踪不可用指标
+            if result.get("success", False):
+                quality_metrics = result.get("quality_metrics", {})
+                filtered_metrics = {}
+                unavailable_metrics = []
+
+                for metric in include_metrics:
+                    if metric in quality_metrics:
+                        filtered_metrics[metric] = quality_metrics[metric]
                     else:
-                        journals_to_fetch.append(journal_name)
-            else:
-                journals_to_fetch = journal_names.copy()
+                        # 记录不可用的指标
+                        if metric not in unavailable_metrics:
+                            unavailable_metrics.append(metric)
 
-            # 获取未缓存的数据
-            easyscholar_service = _get_easyscholar_service(logger)
-            fetched_results = await easyscholar_service.batch_get_journal_quality(journals_to_fetch)
+                journal_entry = {
+                    "success": True,
+                    "journal_name": journal_name,
+                    "quality_metrics": filtered_metrics,
+                    "ranking_info": result.get("ranking_info", {}),
+                    "data_source": "cache"
+                    if is_cached
+                    else result.get("data_source", "easyscholar"),
+                    "cache_hit": is_cached,
+                }
 
-            # 合并结果
-            all_results = {}
-            all_results.update(cached_journals)
-            for i, result in enumerate(fetched_results):
-                all_results[journals_to_fetch[i]] = (result, False)
-
-            # 处理每个期刊的结果
-            for journal_name, (result, is_cached) in all_results.items():
-                # 过滤请求的指标，并跟踪不可用指标
-                if result.get("success", False):
-                    quality_metrics = result.get("quality_metrics", {})
-                    filtered_metrics = {}
-                    unavailable_metrics = []
-
-                    for metric in include_metrics:
-                        if metric in quality_metrics:
-                            filtered_metrics[metric] = quality_metrics[metric]
-                        else:
-                            # 记录不可用的指标
-                            if metric not in unavailable_metrics:
-                                unavailable_metrics.append(metric)
-
-                    journal_entry = {
-                        "success": True,
-                        "journal_name": journal_name,
-                        "quality_metrics": filtered_metrics,
-                        "ranking_info": result.get("ranking_info", {}),
-                        "data_source": "cache"
-                        if is_cached
-                        else result.get("data_source", "easyscholar"),
-                        "cache_hit": is_cached,
+                # 为每个期刊添加指标可用性信息
+                if unavailable_metrics:
+                    journal_entry["metrics_info"] = {
+                        "unavailable_metrics": unavailable_metrics,
+                        "available_metrics": list(_AVAILABLE_METRICS.keys()),
                     }
 
-                    # 为每个期刊添加指标可用性信息
-                    if unavailable_metrics:
-                        journal_entry["metrics_info"] = {
-                            "unavailable_metrics": unavailable_metrics,
-                            "available_metrics": list(_AVAILABLE_METRICS.keys()),
-                        }
-
-                    # 集成 OpenAlex 指标补充
-                    try:
-                        openalex_service = _get_openalex_service(logger)
-                        journal_entry = await openalex_service.enhance_quality_result(
-                            journal_entry, use_cache
-                        )
-                    except Exception as e:
-                        # OpenAlex 补充失败不影响主流程
-                        logger.debug(f"OpenAlex 指标补充失败（非致命）: {e}")
-
-                    journal_results[journal_name] = journal_entry
-                    successful_evaluations += 1
-
-                    # 保存到缓存（仅限新获取的数据）
-                    if use_cache and _CACHE_ENABLED and not is_cached:
-                        await asyncio.to_thread(_save_to_file_cache, journal_name, result, logger)
-                else:
-                    journal_results[journal_name] = result
-
-        # 运行异步批量评估
-        try:
-            # 尝试获取正在运行的事件循环
-            asyncio.get_running_loop()
-            # 如果能获取到，说明已经在事件循环中
-            # 在新线程中运行以避免嵌套事件循环问题
-            import threading
-
-            result_container = {"done": False, "result": None}
-
-            def run_in_new_loop():
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
+                # 集成 OpenAlex 指标补充
                 try:
-                    new_loop.run_until_complete(batch_eval())
-                    result_container["done"] = True
-                finally:
-                    new_loop.close()
+                    openalex_service = services["openalex"]
+                    journal_entry = await openalex_service.enhance_quality_result(
+                        journal_entry, use_cache
+                    )
+                except Exception as e:
+                    # OpenAlex 补充失败不影响主流程
+                    logger.debug(f"OpenAlex 指标补充失败（非致命）: {e}")
 
-            thread = threading.Thread(target=run_in_new_loop)
-            thread.start()
-            thread.join(timeout=60)
-        except RuntimeError:
-            # 没有正在运行的事件循环，使用 asyncio.run
-            asyncio.run(batch_eval())
+                journal_results[journal_name] = journal_entry
+                successful_evaluations += 1
+
+                # 保存到缓存（仅限新获取的数据）
+                if use_cache and _CACHE_ENABLED and not is_cached:
+                    await asyncio.to_thread(_save_to_file_cache, journal_name, result, logger)
+            else:
+                journal_results[journal_name] = result
 
         processing_time = round(time.time() - start_time, 2)
 
