@@ -124,7 +124,7 @@ python main.py server
 配置完成后，重启你的 AI 客户端，即可使用以下功能：
 
 - 🔍 多源文献搜索 (`search_literature`)
-- 📄 获取文献详情 (`get_article_details`)
+- 📄 获取文献全文 (`get_article_details`)
 - 📚 获取参考文献 (`get_references`)
 - 🔗 文献关系分析 (`get_literature_relations`)
 - ⭐ 期刊质量评估 (`get_journal_quality`)
@@ -172,37 +172,58 @@ python main.py server
 
 ---
 
-### 📄 工具2: 获取文献详情 (`get_article_details`)
+### 📄 工具2: 获取文献全文 (`get_article_details`)
 
-**功能描述**: 通过 DOI、PMID、PMCID 或 arXiv ID 获取文献详细信息
+**功能描述**: 专门用于获取文献全文的工具，通过 PMCID 获取文献的完整内容
 
 **主要参数**:
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `identifier` | string | 必填 | 文献标识符 |
-| `id_type` | string | `auto` | 标识符类型: `auto`/`doi`/`pmid`/`pmcid`/`arxiv_id` |
-| `sources` | list[] | `["europe_pmc", "crossref"]` | 数据源列表 |
-| `include_quality_metrics` | bool | false | 是否包含期刊质量指标 |
+| `pmcid` | string/list[] | 必填 | PMCID 标识符（单个或列表，最多20个） |
+| `sections` | list[] | `None` | 全文章节控制：`None`=全部章节，`["conclusion"]`=指定章节 |
+
+**支持的章节名称**:
+- `methods` (方法): methods, methodology, materials and methods
+- `introduction` (引言): introduction, intro, background
+- `results` (结果): results, findings
+- `discussion` (讨论): discussion
+- `conclusion` (结论): conclusion, conclusions
+- `abstract` (摘要): abstract, summary
+- `references` (参考文献): references, bibliography
 
 **返回数据**:
 ```json
 {
-  "success": true,
-  "identifier": "10.1038/nature12373",
-  "id_type": "doi",
-  "sources_found": ["europe_pmc", "crossref"],
-  "merged_detail": {
-    "title": "...",
-    "authors": [...],
-    "abstract": "...",
-    "journal": "...",
-    "publication_date": "...",
-    "doi": "..."
+  "total": 10,
+  "successful": 8,
+  "failed": 2,
+  "articles": [
+    {
+      "title": "...",
+      "authors": [...],
+      "abstract": "...",
+      "journal": "...",
+      "publication_date": "...",
+      "pmcid": "PMC1234567",
+      "fulltext": {
+        "pmc_id": "PMC1234567",
+        "fulltext_xml": "...",
+        "fulltext_markdown": "...",
+        "fulltext_text": "...",
+        "fulltext_available": true
+      }
+    }
+  ],
+  "fulltext_stats": {
+    "has_pmcid": 8,
+    "fulltext_fetched": 8,
+    "no_fulltext": 0
   },
-  "quality_metrics": {...},
-  "processing_time": 0.45
+  "processing_time": 1.5
 }
 ```
+
+**注意**: 此工具只接受 PMCID 输入，如需 DOI/PMID 查询请先使用工具1搜索获取 PMCID
 
 ---
 
@@ -705,25 +726,28 @@ uvx --from . article-mcp
 }
 ```
 
-### 获取文献详情（通过DOI）
+### 获取文献全文（通过PMCID）
 
 ```json
 {
-  "identifier": "10.1000/xyz123",
-  "id_type": "doi",
-  "sources": ["europe_pmc", "crossref"],
-  "include_quality_metrics": true
+  "pmcid": "PMC1234567"
 }
 ```
 
-### 获取文献详情（通过PMID）
+### 获取文献指定章节
 
 ```json
 {
-  "identifier": "12345678",
-  "id_type": "pmid",
-  "sources": ["europe_pmc"],
-  "include_quality_metrics": false
+  "pmcid": "PMC1234567",
+  "sections": ["conclusion", "discussion"]
+}
+```
+
+### 批量获取文献全文
+
+```json
+{
+  "pmcid": ["PMC1234567", "PMC2345678", "PMC3456789"]
 }
 ```
 
