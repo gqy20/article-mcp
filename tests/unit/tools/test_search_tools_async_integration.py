@@ -126,7 +126,10 @@ class TestSearchLiteratureAsyncIntegration:
 
             start = time.time()
             result = await search_literature_async(
-                keyword="machine learning", sources=["europe_pmc", "pubmed", "arxiv"], max_results=5
+                keyword="machine learning",
+                sources=["europe_pmc", "pubmed", "arxiv"],
+                max_results=5,
+                services=mock_search_services,
             )
             elapsed = time.time() - start
 
@@ -150,7 +153,7 @@ class TestSearchLiteratureAsyncIntegration:
 
             # 测试 fast 策略（只搜索2个数据源）
             result_fast = await search_literature_async(
-                keyword="test", search_type="fast", max_results=5
+                keyword="test", search_type="fast", max_results=5, services=mock_search_services
             )
 
             assert result_fast["success"] is True
@@ -160,7 +163,10 @@ class TestSearchLiteratureAsyncIntegration:
 
             # 测试 comprehensive 策略（搜索所有数据源）
             result_comprehensive = await search_literature_async(
-                keyword="test", search_type="comprehensive", max_results=5
+                keyword="test",
+                search_type="comprehensive",
+                max_results=5,
+                services=mock_search_services,
             )
 
             assert result_comprehensive["success"] is True
@@ -182,7 +188,11 @@ class TestSearchLiteratureAsyncIntegration:
             # 第一次搜索（缓存未命中）
             start = time.time()
             result1 = await search_literature_async(
-                keyword=keyword, sources=["europe_pmc", "pubmed"], max_results=5, use_cache=True
+                keyword=keyword,
+                sources=["europe_pmc", "pubmed"],
+                max_results=5,
+                use_cache=True,
+                services=mock_search_services,
             )
             time1 = time.time() - start
 
@@ -193,7 +203,11 @@ class TestSearchLiteratureAsyncIntegration:
             # 第二次搜索（缓存命中）
             start = time.time()
             result2 = await search_literature_async(
-                keyword=keyword, sources=["europe_pmc", "pubmed"], max_results=5, use_cache=True
+                keyword=keyword,
+                sources=["europe_pmc", "pubmed"],
+                max_results=5,
+                use_cache=True,
+                services=mock_search_services,
             )
             time2 = time.time() - start
 
@@ -216,6 +230,7 @@ class TestSearchLiteratureAsyncIntegration:
                 sources=["europe_pmc", "pubmed", "arxiv"],
                 max_results=10,
                 search_type="comprehensive",
+                services=mock_search_services,
             )
 
             assert result["success"] is True
@@ -252,6 +267,7 @@ class TestSearchLiteratureAsyncIntegration:
                 keyword="error test",
                 sources=["europe_pmc", "pubmed", "arxiv"],  # arxiv 会失败
                 max_results=5,
+                services=mock_search_services,
             )
 
             # 应该返回部分成功的结果
@@ -273,7 +289,10 @@ class TestSearchLiteratureAsyncIntegration:
             # 测试异步并行搜索
             start_async = time.time()
             result_async = await search_literature_async(
-                keyword="performance test", sources=sources, max_results=5
+                keyword="performance test",
+                sources=sources,
+                max_results=5,
+                services=mock_search_services,
             )
             async_time = time.time() - start_async
 
@@ -431,24 +450,36 @@ class TestSearchLiteratureAsyncWorkflow:
 
     @pytest.fixture
     def complete_services(self):
-        """创建完整的模拟服务（包括 Europe PMC 的现有异步方法）"""
-        from article_mcp.services.europe_pmc import EuropePMCService
-
+        """创建完整的模拟服务（包括 Europe PMC 的模拟异步方法）"""
         services = {
-            "europe_pmc": EuropePMCService(logger=Mock()),
+            "europe_pmc": Mock(),
             "pubmed": Mock(),
             "arxiv": Mock(),
         }
 
-        # 添加其他服务的异步方法
+        # 添加所有服务的异步搜索方法
+        async def mock_europe_pmc_search(query: str, max_results: int = 10) -> dict:
+            await asyncio.sleep(0.02)
+            return {
+                "articles": [{"title": f"EPMC: {query}", "pmid": "12345678"}],
+                "error": None,
+            }
+
         async def mock_pubmed_search(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.02)
-            return {"articles": [{"title": f"PubMed: {query}"}], "error": None}
+            return {
+                "articles": [{"title": f"PubMed: {query}", "pmid": "87654321"}],
+                "error": None,
+            }
 
         async def mock_arxiv_search(query: str, max_results: int = 10) -> dict:
             await asyncio.sleep(0.025)
-            return {"articles": [{"title": f"arXiv: {query}"}], "error": None}
+            return {
+                "articles": [{"title": f"arXiv: {query}"}],
+                "error": None,
+            }
 
+        services["europe_pmc"].search_async = mock_europe_pmc_search
         services["pubmed"].search_async = mock_pubmed_search
         services["arxiv"].search_async = mock_arxiv_search
 
@@ -466,7 +497,7 @@ class TestSearchLiteratureAsyncWorkflow:
                 sources=None,  # 使用策略默认
                 max_results=10,
                 search_type="fast",
-                use_cache=True,
+                use_cache=False,  # 禁用缓存，确保使用 mock 服务
                 services=complete_services,
                 logger=Mock(),
             )
