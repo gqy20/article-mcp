@@ -82,17 +82,13 @@ class TestRelationToolsUsesReferenceTools:
         # 模拟工具3的函数
         mock_get_references_async = AsyncMock(return_value=SAMPLE_REFERENCES_FROM_TOOL3)
 
-        # 使用正确的 patch 路径
-        with patch(
-            "article_mcp.tools.core.relation_tools.get_references_async",
+        # 由于 relation_tools 在文件顶部导入了 get_references_async
+        # 我们需要 mock 模块级别的导入
+        with patch.object(
+            relation_tools,
+            "get_references_async",
             mock_get_references_async,
         ):
-            # 先导入工具3的函数到工具4模块（模拟重构后的导入）
-            import article_mcp.tools.core.reference_tools as ref_tools
-
-            # 将工具3的函数注入到工具4模块的命名空间中
-            relation_tools.get_references_async = ref_tools.get_references_async
-
             # 调用工具4的 _get_references
             result = await relation_tools._get_references(
                 identifier="10.1234/test.2023",

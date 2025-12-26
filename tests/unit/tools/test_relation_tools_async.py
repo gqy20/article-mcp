@@ -4,11 +4,11 @@
 """
 
 import logging
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from article_mcp.tools.core import relation_tools
+from article_mcp.tools.core import reference_tools, relation_tools
 
 
 @pytest.fixture
@@ -67,12 +67,56 @@ def mock_pubmed_service():
 
 
 @pytest.fixture
-def mock_services(mock_crossref_service, mock_openalex_service, mock_pubmed_service):
+def mock_reference_service():
+    """模拟 Reference 服务（工具3需要）"""
+    service = Mock()
+    service.get_references_by_doi_async = AsyncMock(
+        return_value={
+            "references": [
+                {
+                    "title": "Reference 1",
+                    "doi": "10.1111/ref1.2020",
+                    "journal": "Journal One",
+                    "authors": ["Author A"],
+                },
+                {
+                    "title": "Reference 2",
+                    "doi": "10.2222/ref2.2021",
+                    "journal": "Journal Two",
+                    "authors": ["Author B"],
+                },
+            ]
+        }
+    )
+    service.get_references_crossref_async = AsyncMock(
+        return_value=[
+            {
+                "title": "Reference 1",
+                "doi": "10.1111/ref1.2020",
+                "journal": "Journal One",
+                "authors": ["Author A"],
+            },
+            {
+                "title": "Reference 2",
+                "doi": "10.2222/ref2.2021",
+                "journal": "Journal Two",
+                "authors": ["Author B"],
+            },
+        ]
+    )
+    return service
+
+
+@pytest.fixture
+def mock_services(
+    mock_crossref_service, mock_openalex_service, mock_pubmed_service, mock_reference_service
+):
     """模拟服务字典"""
     return {
         "crossref": mock_crossref_service,
         "openalex": mock_openalex_service,
         "pubmed": mock_pubmed_service,
+        "reference": mock_reference_service,
     }
 
 
@@ -86,9 +130,11 @@ class TestSingleLiteratureRelations:
         """测试单个文献的关系分析"""
         # 注册服务
         relation_tools._relation_services = mock_services
+        # 同时设置工具3的全局服务变量
+        reference_tools._reference_services = mock_services
 
         # 直接调用内部函数
-        result = relation_tools._single_literature_relations(
+        result = await relation_tools._single_literature_relations(
             identifier="10.1234/test.article.2023",
             id_type="doi",
             relation_types=["references"],
@@ -109,8 +155,10 @@ class TestSingleLiteratureRelations:
     ):
         """测试多种关系类型分析"""
         relation_tools._relation_services = mock_services
+        # 同时设置工具3的全局服务变量
+        reference_tools._reference_services = mock_services
 
-        result = relation_tools._single_literature_relations(
+        result = await relation_tools._single_literature_relations(
             identifier="10.1234/test.article.2023",
             id_type="doi",
             relation_types=["references", "citing"],
@@ -137,7 +185,7 @@ class TestSingleLiteratureRelations:
         ]
 
         for identifier, expected_type in test_cases:
-            result = relation_tools._single_literature_relations(
+            result = await relation_tools._single_literature_relations(
                 identifier=identifier,
                 id_type="auto",
                 relation_types=["references"],
@@ -151,7 +199,7 @@ class TestSingleLiteratureRelations:
         """测试空标识符错误处理"""
         relation_tools._relation_services = mock_services
 
-        result = relation_tools._single_literature_relations(
+        result = await relation_tools._single_literature_relations(
             identifier="",
             id_type="doi",
             relation_types=["references"],
@@ -196,7 +244,7 @@ class TestSingleLiteratureRelations:
         )
         relation_tools._relation_services = mock_services
 
-        result = relation_tools._single_literature_relations(
+        result = await relation_tools._single_literature_relations(
             identifier="10.1038/nature10144",
             id_type="doi",
             relation_types=["citing"],
@@ -320,77 +368,42 @@ class TestAnalyzeLiteratureNetwork:
 class TestHelperFunctions:
     """测试辅助函数"""
 
-    def test_extract_identifier_type_doi(self):
-        """测试 DOI 类型识别"""
+    def test_extract_identifier_type_simple_doi(self):
+        """测试 DOI 类型识别（使用 _extract_identifier_type_simple）"""
         test_cases = [
             "10.1234/test.doi",
             "doi:10.1234/test.doi",
             "https://doi.org/10.1234/test.doi",
         ]
         for case in test_cases:
-            result = relation_tools._extract_identifier_type(case)
+            result = relation_tools._extract_identifier_type_simple(case)
             assert result == "doi", f"Expected 'doi' for {case}, got {result}"
 
-    def test_extract_identifier_type_pmid(self):
-        """测试 PMID 类型识别"""
+    def test_extract_identifier_type_simple_pmid(self):
+        """测试 PMID 类型识别（使用 _extract_identifier_type_simple）"""
         test_cases = ["12345678", "pmid:12345678", "PMID:12345678"]
         for case in test_cases:
-            result = relation_tools._extract_identifier_type(case)
+            result = relation_tools._extract_identifier_type_simple(case)
             assert result == "pmid", f"Expected 'pmid' for {case}, got {result}"
 
-    def test_extract_identifier_type_pmcid(self):
-        """测试 PMCID 类型识别"""
+    def test_extract_identifier_type_simple_pmcid(self):
+        """测试 PMCID 类型识别（使用 _extract_identifier_type_simple）"""
         test_cases = ["PMC123456", "pmcid:PMC123456", "PMCID:PMC123456"]
         for case in test_cases:
-            result = relation_tools._extract_identifier_type(case)
+            result = relation_tools._extract_identifier_type_simple(case)
             assert result == "pmcid", f"Expected 'pmcid' for {case}, got {result}"
 
-    def test_extract_identifier_type_arxiv(self):
-        """测试 arXiv 类型识别"""
+    def test_extract_identifier_type_simple_arxiv(self):
+        """测试 arXiv 类型识别（使用 _extract_identifier_type_simple）"""
         test_cases = ["arXiv:2301.00001", "ARXIV:2301.00001"]
         for case in test_cases:
-            result = relation_tools._extract_identifier_type(case)
+            result = relation_tools._extract_identifier_type_simple(case)
             assert result == "arxiv_id", f"Expected 'arxiv_id' for {case}, got {result}"
 
-    def test_extract_identifier_type_default(self):
+    def test_extract_identifier_type_simple_default(self):
         """测试默认类型（当作DOI）"""
-        result = relation_tools._extract_identifier_type("unknown.format")
+        result = relation_tools._extract_identifier_type_simple("unknown.format")
         assert result == "doi"
 
-    def test_deduplicate_references(self):
-        """测试参考文献去重"""
-        references = [
-            {"title": "Article 1", "doi": "10.1111/art1.2020"},
-            {"title": "Article 2", "doi": "10.2222/art2.2021"},
-            {"title": "Article 1", "doi": "10.1111/art1.2020"},  # 重复
-            {"title": "Article 3", "doi": ""},  # 无DOI
-        ]
-
-        result = relation_tools._deduplicate_references(references, max_results=10)
-
-        # 应该去重
-        dois = [ref["doi"] for ref in result if ref["doi"]]
-        assert len(dois) == len(set(dois))  # DOI唯一
-
-    def test_deduplicate_references_by_title(self):
-        """测试基于标题的去重"""
-        references = [
-            {"title": "Same Title", "doi": "10.1111/same1.2020"},
-            {"title": "Same Title", "doi": "10.2222/same2.2021"},  # 相同标题
-            {"title": "Different Title", "doi": "10.3333/diff.2022"},
-        ]
-
-        result = relation_tools._deduplicate_references(references, max_results=10)
-
-        # 第一个和第二个有相同的标题，应该只保留第一个（有DOI的优先保留）
-        assert len(result) == 3  # 当前实现保留所有，因为两个都有DOI
-
-    def test_deduplicate_references_max_results_limit(self):
-        """测试最大结果数量限制"""
-        references = [{"title": f"Article {i}", "doi": f"10.1234/art{i}.2023"} for i in range(50)]
-
-        max_results = 20
-        result = relation_tools._deduplicate_references(references, max_results)
-
-        # 应该限制数量
-        assert len(result) == max_results
+    # 注意：_deduplicate_references 已被删除，去重逻辑现在由工具3处理
+    # 或在 _get_similar_articles 中内联实现

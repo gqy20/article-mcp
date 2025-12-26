@@ -1,4 +1,10 @@
-"""文献关系分析工具 - 核心工具4（统一关系分析工具）"""
+"""文献关系分析工具 - 核心工具4（统一关系分析工具）
+
+重构说明：
+- references 功能复用工具3的 get_references_async
+- 删除了重复的 _extract_identifier_type 和 _deduplicate_references 函数
+- 保留工具4独有的 similar 和 citing 分析功能
+"""
 
 import asyncio
 import logging
@@ -7,9 +13,32 @@ from typing import Any
 
 from fastmcp import FastMCP
 
+# 导入工具3的函数，用于获取参考文献
+from article_mcp.tools.core.reference_tools import get_references_async
+
 # 全局服务实例
 _relation_services = None
 _logger = None  # 全局 logger
+
+
+def _extract_identifier_type_simple(identifier: str) -> str:
+    """简单的标识符类型识别（本地实现，避免依赖工具3）
+
+    这是 _single_literature_relations 内部使用的简单版本，
+    用于将 id_type="auto" 时自动识别标识符类型。
+    """
+    identifier = identifier.strip().upper()
+
+    if identifier.startswith("DOI:") or "//" in identifier or identifier.startswith("10."):
+        return "doi"
+    elif identifier.startswith("PMCID:") or identifier.startswith("PMC"):
+        return "pmcid"
+    elif identifier.isdigit() or identifier.startswith("PMID:"):
+        return "pmid"
+    elif identifier.startswith("ARXIV:"):
+        return "arxiv_id"
+    else:
+        return "doi"  # 默认当作DOI处理
 
 
 def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -> None:
@@ -91,7 +120,7 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
             # 根据输入类型判断操作模式
             if isinstance(final_identifiers, str):
                 # 单个文献的基本关系分析
-                return _single_literature_relations(
+                return await _single_literature_relations(
                     final_identifiers, id_type, relation_types, max_results, sources, logger
                 )
             elif isinstance(final_identifiers, list):
@@ -123,7 +152,7 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
             }
 
 
-def _single_literature_relations(
+async def _single_literature_relations(
     identifier: str,
     id_type: str,
     relation_types: list[str],
@@ -149,15 +178,18 @@ def _single_literature_relations(
         relations: dict[str, Any] = {}
         statistics: dict[str, Any] = {}
 
-        # 自动识别标识符类型
+        # 自动识别标识符类型（简单的本地实现）
         if id_type == "auto":
-            id_type = _extract_identifier_type(identifier.strip())
+            id_type = _extract_identifier_type_simple(identifier.strip())
 
         # 获取各种类型的关系
         for relation_type in relation_types:
             try:
                 if relation_type == "references":
-                    references = _get_references(identifier, id_type, max_results, sources, logger)
+                    # 调用异步函数获取参考文献
+                    references = await _get_references(
+                        identifier, id_type, max_results, sources, logger
+                    )
                     relations["references"] = references
                     statistics["references_count"] = len(references)
 
@@ -238,7 +270,7 @@ async def _batch_literature_relations(
         async def analyze_single(identifier: str) -> tuple[str, dict[str, Any]]:
             """分析单个文献"""
             try:
-                result = _single_literature_relations(
+                result = await _single_literature_relations(
                     identifier, id_type, relation_types, max_results, sources, logger
                 )
                 return identifier, result
@@ -332,7 +364,7 @@ async def _analyze_literature_network(
         # 根据分析类型构建网络
         if analysis_type in ["comprehensive", "citation"]:
             # 引用网络分析
-            _build_citation_network(
+            await _build_citation_network(
                 identifiers, nodes, edges, node_map, max_depth, max_results, logger
             )
 
@@ -372,61 +404,48 @@ async def _analyze_literature_network(
         }
 
 
-# 辅助函数
-def _extract_identifier_type(identifier: str) -> str:
-    """提取标识符类型"""
-    identifier = identifier.strip().upper()
-
-    if identifier.startswith("DOI:") or "//" in identifier or identifier.startswith("10."):
-        return "doi"
-    elif identifier.startswith("PMCID:") or identifier.startswith("PMC"):
-        return "pmcid"
-    elif identifier.isdigit() or identifier.startswith("PMID:"):
-        return "pmid"
-    elif identifier.startswith("ARXIV:"):
-        return "arxiv_id"
-    else:
-        return "doi"  # 默认当作DOI处理
-
-
-def _get_references(
+async def _get_references(
     identifier: str, id_type: str, max_results: int, sources: list[str], logger: Any
 ) -> list[dict[str, Any]]:
-    """获取参考文献"""
+    """获取参考文献 - 复用工具3的完整逻辑
+
+    重构说明：不再自己实现获取逻辑，而是调用工具3的 get_references_async。
+    这样可以消除代码重复，确保参考文献获取逻辑的一致性。
+
+    Args:
+        identifier: 文献标识符
+        id_type: 标识符类型
+        max_results: 最大结果数
+        sources: 数据源列表
+        logger: 日志记录器
+
+    Returns:
+        参考文献列表
+    """
     try:
-        references = []
+        logger.info(f"使用工具3获取 {identifier} 的参考文献")
 
-        for source in sources:
-            try:
-                if source == "crossref" and "crossref" in _relation_services:  # type: ignore[operator]
-                    service = _relation_services["crossref"]  # type: ignore[index]
-                    doi = _ensure_doi_identifier(identifier, id_type, logger)
-                    if doi:
-                        logger.info(f"使用CrossRef获取 {doi} 的参考文献")
-                        result = service.get_references(doi, max_results)
-                        if result.get("success", False):
-                            crossref_refs = result.get("references", [])
-                            references.extend(crossref_refs)
-                            logger.info(f"CrossRef返回 {len(crossref_refs)} 篇参考文献")
-                        else:
-                            logger.warning(f"CrossRef获取参考文献失败: {result.get('error')}")
-                    else:
-                        logger.warning("无法转换标识符为DOI，跳过CrossRef查询")
+        # 调用工具3的异步函数获取参考文献
+        result = await get_references_async(
+            identifier=identifier,
+            id_type=id_type,
+            sources=sources,
+            max_results=max_results,
+            include_metadata=False,  # 关系分析不需要详细元数据
+        )
 
-            except Exception as e:
-                logger.error(f"从 {source} 获取参考文献失败: {e}")
-
-        # 去重和限制数量
-        unique_references = _deduplicate_references(references, max_results)
-        logger.info(f"参考文献去重后共 {len(unique_references)} 篇")
-
-        return unique_references
+        if result.get("success"):
+            references = result.get("merged_references", [])
+            logger.info(
+                f"工具3返回 {len(references)} 篇参考文献（来自 {result.get('sources_used', [])}）"
+            )
+            return references
+        else:
+            logger.warning(f"工具3获取参考文献失败: {result.get('error')}")
+            return []
 
     except Exception as e:
-        if "logger" in locals():
-            logger.error(f"获取参考文献失败: {e}")
-        else:
-            print(f"获取参考文献失败: {e}")
+        logger.error(f"获取参考文献失败: {e}")
         return []
 
 
@@ -473,8 +492,19 @@ def _get_similar_articles(
             except Exception as e:
                 logger.error(f"从 {source} 获取相似文献失败: {e}")
 
-        # 去重和限制数量
-        unique_similar = _deduplicate_references(similar_articles, max_results)
+        # 简单去重和限制数量（内联实现，避免调用已删除的函数）
+        seen_dois = set()
+        unique_similar = []
+        for article in similar_articles:
+            doi = article.get("doi", "")
+            if doi and doi not in seen_dois:
+                seen_dois.add(doi)
+                unique_similar.append(article)
+            elif not doi:  # 没有DOI的文章也保留
+                unique_similar.append(article)
+
+        # 限制数量
+        unique_similar = unique_similar[:max_results]
         logger.info(f"相似文献去重后共 {len(unique_similar)} 篇")
 
         return unique_similar
@@ -522,7 +552,7 @@ def _get_citing_articles(
         return []
 
 
-def _build_citation_network(
+async def _build_citation_network(
     identifiers: list[str],
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
@@ -537,8 +567,10 @@ def _build_citation_network(
             return
 
         for identifier in identifiers:
-            # 获取参考文献
-            references = _get_references(identifier, "auto", max_results, ["europe_pmc"], logger)
+            # 获取参考文献（异步调用）
+            references = await _get_references(
+                identifier, "auto", max_results, ["europe_pmc"], logger
+            )
 
             for ref in references:
                 ref_id = ref.get("doi", "") or ref.get("pmid", "") or ref.get("title", "")
@@ -988,39 +1020,3 @@ def _pmcid_to_doi_ncbi(pmcid: str, logger: Any) -> str | None:
     except Exception as e:
         logger.warning(f"NCBI API转换PMCID {pmcid} 失败: {e}")
         return None
-
-
-def _deduplicate_references(
-    references: list[dict[str, Any]], max_results: int
-) -> list[dict[str, Any]]:
-    """参考文献去重和限制数量"""
-    try:
-        seen_dois = set()
-        seen_titles = set()
-        unique_references = []
-
-        for ref in references:
-            doi = ref.get("doi", "")
-            title = ref.get("title", "")
-
-            # 优先使用DOI去重
-            if doi and doi not in seen_dois:
-                seen_dois.add(doi)
-                unique_references.append(ref)
-            # 如果没有DOI，使用标题去重
-            elif not doi and title and title not in seen_titles:
-                seen_titles.add(title)
-                unique_references.append(ref)
-            # 既没有DOI也没有标题的文献也保留（但数量很少）
-            elif not doi and not title:
-                unique_references.append(ref)
-
-        # 限制数量
-        final_references = unique_references[:max_results]
-
-        print(f"参考文献去重：{len(references)} -> {len(final_references)}")
-        return final_references
-
-    except Exception as e:
-        print(f"参考文献去重失败: {e}")
-        return references[:max_results]
