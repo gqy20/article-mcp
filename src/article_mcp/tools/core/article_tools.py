@@ -38,13 +38,18 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 - sections: 全文章节控制（可选，默认None获取全部章节）
             None → 获取全部章节（全文）
             ["conclusion", "discussion"] → 只获取指定章节
+- format: 全文格式（可选，默认"markdown"）
+            "markdown" → Markdown格式（推荐，适合AI处理）
+            "xml" → 原始XML格式
+            "text" → 纯文本格式
 
 数据源：Europe PMC + PMC 全文数据库
 返回数据包含标题、作者、摘要、期刊、发表日期和全文内容
 
 全文功能：
-- 自动获取全文（XML/Markdown/Text 格式）
+- 按需获取指定格式（默认Markdown）
 - 支持按章节提取（如方法、讨论、结论等）
+- 优化性能，只转换请求的格式
 
 批量返回结构：
 {
@@ -72,12 +77,14 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     async def get_article_details(
         pmcid: str | list[str],
         sections: list[str] | None = None,
+        format: str = "markdown",
     ) -> dict[str, Any]:
         """获取文献全文工具。通过 PMCID 获取文献的全文内容。
 
         Args:
             pmcid: PMCID 标识符或 PMCID 列表（最多20个）
             sections: 全文章节控制，None=全部章节，["xxx"]=指定章节
+            format: 全文格式，"markdown"|"xml"|"text"，默认"markdown"
 
         Returns:
             统一批量结果字典 {total, successful, failed, articles, fulltext_stats}
@@ -86,18 +93,21 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         return await get_article_details_async(
             pmcid=pmcid,
             sections=sections,
+            format=format,
         )
 
 
 async def get_article_details_async(
     pmcid: str | list[str],
     sections: list[str] | None = None,
+    format: str = "markdown",
 ) -> dict[str, Any]:
     """异步获取文献全文。
 
     Args:
         pmcid: PMCID 标识符或 PMCID 列表（最多20个）
         sections: 全文章节控制，None=全部章节，["xxx"]=指定章节
+        format: 全文格式，"markdown"|"xml"|"text"，默认"markdown"
 
     Returns:
         统一批量结果格式：
@@ -114,6 +124,21 @@ async def get_article_details_async(
         }
 
     """
+    # 验证 format 参数
+    valid_formats = ["markdown", "xml", "text"]
+    if format not in valid_formats:
+        logger = _logger or logging.getLogger(__name__)
+        logger.error(f"无效的 format 参数: {format}，有效值为: {valid_formats}")
+        return {
+            "total": 1 if isinstance(pmcid, str) else len(pmcid) if pmcid else 0,
+            "successful": 0,
+            "failed": 1 if isinstance(pmcid, str) else len(pmcid) if pmcid else 0,
+            "articles": [],
+            "fulltext_stats": None,
+            "processing_time": 0,
+            "error": f"无效的 format 参数: {format}，有效值为: {', '.join(valid_formats)}",
+        }
+
     # 统一转换为列表处理
     pmcids = [pmcid] if isinstance(pmcid, str) else pmcid
 
@@ -145,12 +170,14 @@ async def get_article_details_async(
     return await _batch_get_article_details(
         pmcids=pmcids,
         sections=sections,
+        format=format,
     )
 
 
 async def _fetch_single_article(
     pmcid: str,
     sections: list[str] | None,
+    format: str,
 ) -> dict[str, Any] | None:
     """获取单个文献全文（内部函数，不对外暴露）"""
 
@@ -193,11 +220,17 @@ async def _fetch_single_article(
         try:
             fulltext = pubmed_service.get_pmc_fulltext_html(pmcid, sections=sections)
             if fulltext.get("fulltext_available"):
+                # 根据 format 参数只返回请求的格式
+                format_key_map = {
+                    "xml": "fulltext_xml",
+                    "markdown": "fulltext_markdown",
+                    "text": "fulltext_text",
+                }
+                content_key = format_key_map[format]
+
                 article["fulltext"] = {
-                    "pmc_id": fulltext.get("pmc_id"),
-                    "fulltext_xml": fulltext.get("fulltext_xml"),
-                    "fulltext_markdown": fulltext.get("fulltext_markdown"),
-                    "fulltext_text": fulltext.get("fulltext_text"),
+                    "format": format,
+                    "content": fulltext.get(content_key),
                     "fulltext_available": True,
                 }
                 # 添加章节信息（如果有）
@@ -219,6 +252,7 @@ async def _fetch_single_article(
 async def _batch_get_article_details(
     pmcids: list[str],
     sections: list[str] | None = None,
+    format: str = "markdown",
 ) -> dict[str, Any]:
     """批量获取文献全文（内部函数）
 
@@ -239,6 +273,7 @@ async def _batch_get_article_details(
             result = await _fetch_single_article(
                 pmcid=pmcid,
                 sections=sections,
+                format=format,
             )
             return pmcid, result
 
