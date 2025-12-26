@@ -121,18 +121,35 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
             if isinstance(final_identifiers, str):
                 # 单个文献的基本关系分析
                 return await _single_literature_relations(
-                    final_identifiers, id_type, relation_types, max_results, sources, logger
+                    final_identifiers,
+                    id_type,
+                    relation_types,
+                    max_results,
+                    sources,
+                    services=_relation_services,
+                    logger=logger,
                 )
             elif isinstance(final_identifiers, list):
                 if analysis_type == "basic":
                     # 多个文献的基本关系分析（批量处理）
                     return await _batch_literature_relations(
-                        final_identifiers, id_type, relation_types, max_results, sources, logger
+                        final_identifiers,
+                        id_type,
+                        relation_types,
+                        max_results,
+                        sources,
+                        services=_relation_services,
+                        logger=logger,
                     )
                 else:
                     # 文献网络分析
                     return await _analyze_literature_network(
-                        final_identifiers, analysis_type, max_depth, max_results, logger
+                        final_identifiers,
+                        analysis_type,
+                        max_depth,
+                        max_results,
+                        services=_relation_services,
+                        logger=logger,
                     )
             else:
                 return {  # type: ignore[unreachable]
@@ -158,11 +175,14 @@ async def _single_literature_relations(
     relation_types: list[str],
     max_results: int,
     sources: list[str],
+    *,
+    services: dict[str, Any] | None = None,
     logger: Any = None,
 ) -> dict[str, Any]:
     """单个文献的关系分析"""
-    # 使用传入的 logger 或全局 logger
-    logger = logger or _logger or logging.getLogger(__name__)
+    # 使用闭包捕获的服务，或回退到全局变量
+    resolved_services = services or _relation_services
+    resolved_logger = logger or _logger or logging.getLogger(__name__)
 
     try:
         if not identifier or not identifier.strip():
@@ -188,25 +208,32 @@ async def _single_literature_relations(
                 if relation_type == "references":
                     # 调用异步函数获取参考文献
                     references = await _get_references(
-                        identifier, id_type, max_results, sources, logger
+                        identifier,
+                        id_type,
+                        max_results,
+                        sources,
+                        services=resolved_services,
+                        logger=resolved_logger,
                     )
                     relations["references"] = references
                     statistics["references_count"] = len(references)
 
                 elif relation_type == "similar":
                     similar = _get_similar_articles(
-                        identifier, id_type, max_results, sources, logger
+                        identifier, id_type, max_results, sources, resolved_logger
                     )
                     relations["similar"] = similar
                     statistics["similar_count"] = len(similar)
 
                 elif relation_type == "citing":
-                    citing = _get_citing_articles(identifier, id_type, max_results, sources, logger)
+                    citing = _get_citing_articles(
+                        identifier, id_type, max_results, sources, resolved_logger
+                    )
                     relations["citing"] = citing
                     statistics["citing_count"] = len(citing)
 
             except Exception as e:
-                logger.error(f"获取 {relation_type} 关系失败: {e}")
+                resolved_logger.error(f"获取 {relation_type} 关系失败: {e}")
                 relations[relation_type] = []
                 statistics[f"{relation_type}_count"] = 0
 
@@ -229,7 +256,7 @@ async def _single_literature_relations(
         }
 
     except Exception as e:
-        logger.error(f"单个文献关系分析异常: {e}")
+        resolved_logger.error(f"单个文献关系分析异常: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -245,11 +272,14 @@ async def _batch_literature_relations(
     relation_types: list[str],
     max_results: int,
     sources: list[str],
+    *,
+    services: dict[str, Any] | None = None,
     logger: Any = None,
 ) -> dict[str, Any]:
     """批量文献关系分析（异步并行版本）"""
-    # 使用传入的 logger 或全局 logger
-    logger = logger or _logger or logging.getLogger(__name__)
+    # 使用闭包捕获的服务，或回退到全局变量
+    resolved_services = services or _relation_services
+    resolved_logger = logger or _logger or logging.getLogger(__name__)
 
     try:
         if not identifiers:
@@ -271,11 +301,17 @@ async def _batch_literature_relations(
             """分析单个文献"""
             try:
                 result = await _single_literature_relations(
-                    identifier, id_type, relation_types, max_results, sources, logger
+                    identifier,
+                    id_type,
+                    relation_types,
+                    max_results,
+                    sources,
+                    services=resolved_services,
+                    logger=resolved_logger,
                 )
                 return identifier, result
             except Exception as e:
-                logger.error(f"分析文献 '{identifier}' 失败: {e}")
+                resolved_logger.error(f"分析文献 '{identifier}' 失败: {e}")
                 return identifier, {
                     "success": False,
                     "error": str(e),
@@ -290,7 +326,7 @@ async def _batch_literature_relations(
         # 处理结果
         for result in results:
             if isinstance(result, Exception):
-                logger.error(f"分析文献时发生异常: {result}")
+                resolved_logger.error(f"分析文献时发生异常: {result}")
                 continue
 
             identifier, analysis_result = result  # type: ignore[misc]
@@ -310,7 +346,7 @@ async def _batch_literature_relations(
         }
 
     except Exception as e:
-        logger.error(f"批量文献关系分析异常: {e}")
+        resolved_logger.error(f"批量文献关系分析异常: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -326,11 +362,13 @@ async def _analyze_literature_network(
     analysis_type: str,
     max_depth: int,
     max_results: int,
+    *,
+    services: dict[str, Any] | None = None,
     logger: Any = None,
 ) -> dict[str, Any]:
     """文献网络分析（异步版本）"""
-    # 使用传入的 logger 或全局 logger
-    logger = logger or _logger or logging.getLogger(__name__)
+    # 使用闭包捕获的 logger，或回退到全局变量
+    resolved_logger = logger or _logger or logging.getLogger(__name__)
 
     try:
         if not identifiers:
@@ -365,18 +403,20 @@ async def _analyze_literature_network(
         if analysis_type in ["comprehensive", "citation"]:
             # 引用网络分析
             await _build_citation_network(
-                identifiers, nodes, edges, node_map, max_depth, max_results, logger
+                identifiers, nodes, edges, node_map, max_depth, max_results, resolved_logger
             )
 
         if analysis_type in ["comprehensive", "collaboration"]:
             # 合作网络分析（基于作者信息）
-            _build_collaboration_network(identifiers, nodes, edges, node_map, max_results, logger)
+            _build_collaboration_network(
+                identifiers, nodes, edges, node_map, max_results, resolved_logger
+            )
 
         # 网络聚类分析
-        clusters = _detect_network_clusters(nodes, edges, logger)
+        clusters = _detect_network_clusters(nodes, edges, resolved_logger)
 
         # 计算网络指标
-        analysis_metrics = _calculate_network_metrics(nodes, edges, clusters, logger)
+        analysis_metrics = _calculate_network_metrics(nodes, edges, clusters, resolved_logger)
 
         processing_time = round(time.time() - start_time, 2)
 
@@ -394,7 +434,7 @@ async def _analyze_literature_network(
         }
 
     except Exception as e:
-        logger.error(f"文献网络分析异常: {e}")
+        resolved_logger.error(f"文献网络分析异常: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -405,7 +445,13 @@ async def _analyze_literature_network(
 
 
 async def _get_references(
-    identifier: str, id_type: str, max_results: int, sources: list[str], logger: Any
+    identifier: str,
+    id_type: str,
+    max_results: int,
+    sources: list[str],
+    *,
+    services: dict[str, Any] | None = None,
+    logger: Any = None,
 ) -> list[dict[str, Any]]:
     """获取参考文献 - 复用工具3的完整逻辑
 
@@ -417,13 +463,16 @@ async def _get_references(
         id_type: 标识符类型
         max_results: 最大结果数
         sources: 数据源列表
+        services: 服务依赖注入字典（闭包捕获模式）
         logger: 日志记录器
 
     Returns:
         参考文献列表
     """
+    resolved_logger = logger or _logger or logging.getLogger(__name__)
+
     try:
-        logger.info(f"使用工具3获取 {identifier} 的参考文献")
+        resolved_logger.info(f"使用工具3获取 {identifier} 的参考文献")
 
         # 调用工具3的异步函数获取参考文献
         result = await get_references_async(
@@ -431,21 +480,23 @@ async def _get_references(
             id_type=id_type,
             sources=sources,
             max_results=max_results,
+            services=services,
+            logger=resolved_logger,
             include_metadata=False,  # 关系分析不需要详细元数据
         )
 
         if result.get("success"):
             references = result.get("merged_references", [])
-            logger.info(
+            resolved_logger.info(
                 f"工具3返回 {len(references)} 篇参考文献（来自 {result.get('sources_used', [])}）"
             )
             return references
         else:
-            logger.warning(f"工具3获取参考文献失败: {result.get('error')}")
+            resolved_logger.warning(f"工具3获取参考文献失败: {result.get('error')}")
             return []
 
     except Exception as e:
-        logger.error(f"获取参考文献失败: {e}")
+        resolved_logger.error(f"获取参考文献失败: {e}")
         return []
 
 

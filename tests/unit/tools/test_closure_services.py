@@ -85,8 +85,16 @@ class TestClosureServicesArticleTools:
         """测试：get_article_details_async 通过闭包参数使用服务"""
 
         # Arrange: 创建模拟服务
-        async def mock_fetch(pmcid, sections=None):
-            await asyncio.sleep(0.01)
+        def mock_fetch(pmcid, id_type="pmcid"):
+            return {
+                "article": {
+                    "pmcid": pmcid,
+                    "title": "Test Article",
+                },
+                "error": None,
+            }
+
+        def mock_fulltext(pmcid, sections=None):
             return {
                 "fulltext_xml": "<xml>content</xml>",
                 "fulltext_markdown": "# content",
@@ -95,7 +103,8 @@ class TestClosureServicesArticleTools:
             }
 
         mock_services = {
-            "europe_pmc": Mock(fetch_fulltext_async=mock_fetch),
+            "europe_pmc": Mock(fetch=mock_fetch),
+            "pubmed": Mock(get_pmc_fulltext_html=mock_fulltext),
         }
 
         # Act: 调用函数并传入 services 参数
@@ -108,9 +117,10 @@ class TestClosureServicesArticleTools:
         )
 
         # Assert: 验证结果
-        assert result["success"] is True
-        assert "fulltext" in result
-        assert result["fulltext"]["fulltext_available"] is True
+        assert result["successful"] == 1
+        assert result["total"] == 1
+        assert len(result["articles"]) > 0
+        assert result["articles"][0]["fulltext"]["fulltext_available"] is True
 
 
 class TestClosureServicesReferenceTools:
@@ -120,16 +130,17 @@ class TestClosureServicesReferenceTools:
     async def test_get_references_async_uses_closure_services(self):
         """测试：get_references_async 通过闭包参数使用服务"""
 
-        # Arrange: 创建模拟服务
-        async def mock_get_refs(identifier, max_results=20):
+        # Arrange: 创建模拟服务 - reference_tools.py 调用 reference 服务
+        async def mock_get_refs_by_doi(identifier):
             await asyncio.sleep(0.01)
             return {
                 "references": [{"title": f"Ref {i}", "doi": f"10.1234/ref.{i}"} for i in range(5)],
-                "error": None,
+                "success": True,
             }
 
+        mock_reference_service = Mock(get_references_by_doi_async=mock_get_refs_by_doi)
         mock_services = {
-            "europe_pmc": Mock(get_references_async=mock_get_refs),
+            "reference": mock_reference_service,
         }
 
         # Act: 调用函数并传入 services 参数
@@ -137,13 +148,15 @@ class TestClosureServicesReferenceTools:
 
         result = await get_references_async(
             identifier="10.1234/test",
+            id_type="doi",
+            sources=["europe_pmc"],
             services=mock_services,
             logger=Mock(),
         )
 
         # Assert: 验证结果
         assert result["success"] is True
-        assert len(result["references"]) > 0
+        assert len(result["merged_references"]) > 0
 
 
 class TestClosureServicesRelationTools:

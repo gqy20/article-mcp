@@ -8,6 +8,7 @@
 
 import asyncio
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -178,7 +179,13 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                         "journal_results": {},
                         "processing_time": 0,
                     }
-                result = _batch_journal_quality(journal_name, include_metrics, use_cache, logger)
+                result = _batch_journal_quality(
+                    journal_name,
+                    include_metrics,
+                    use_cache,
+                    services=_quality_services,
+                    logger=logger,
+                )
                 # 应用排序（仅批量查询）
                 return _apply_sorting(result, sort_by, sort_order)
             else:
@@ -197,7 +204,11 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                         try:
                             result_container["result"] = new_loop.run_until_complete(
                                 _single_journal_quality(
-                                    journal_name, include_metrics, use_cache, logger
+                                    journal_name,
+                                    include_metrics,
+                                    use_cache,
+                                    services=_quality_services,
+                                    logger=logger,
                                 )
                             )
                         finally:
@@ -211,7 +222,13 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                 except RuntimeError:
                     # 没有运行的事件循环，使用 asyncio.run
                     return asyncio.run(
-                        _single_journal_quality(journal_name, include_metrics, use_cache, logger)
+                        _single_journal_quality(
+                            journal_name,
+                            include_metrics,
+                            use_cache,
+                            services=_quality_services,
+                            logger=logger,
+                        )
                     )
 
         except Exception as e:
@@ -226,9 +243,25 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
 
 
 async def _single_journal_quality(
-    journal_name: str, include_metrics: list[str] | None, use_cache: bool, logger: Any
+    journal_name: str,
+    include_metrics: list[str] | None,
+    use_cache: bool,
+    *,
+    services: dict[str, Any] | None = None,
+    logger: Any = None,
 ) -> dict[str, Any]:
-    """单个期刊质量评估（带文件缓存支持）"""
+    """单个期刊质量评估（带文件缓存支持）
+
+    Args:
+        journal_name: 期刊名称
+        include_metrics: 返回的指标列表
+        use_cache: 是否使用缓存
+        services: 服务依赖注入字典（闭包捕获模式）
+        logger: 日志记录器（闭包捕获模式）
+    """
+    # 使用闭包捕获的服务，或回退到全局变量
+    resolved_logger = logger or logging.getLogger(__name__)
+
     try:
         if not journal_name or not journal_name.strip():
             from fastmcp.exceptions import ToolError
@@ -248,22 +281,26 @@ async def _single_journal_quality(
         # ========== 缓存查询 ==========
         if use_cache and _CACHE_ENABLED:
             # 从文件缓存查询
-            cached_result = await asyncio.to_thread(_get_from_file_cache, normalized_name, logger)
+            cached_result = await asyncio.to_thread(
+                _get_from_file_cache, normalized_name, resolved_logger
+            )
             if cached_result:
-                logger.debug(f"缓存命中: {normalized_name}")
+                resolved_logger.debug(f"缓存命中: {normalized_name}")
                 result = cached_result
                 data_source = "cache"
                 cache_hit = True
 
         # API 调用（缓存未命中或禁用）
         if result is None:
-            easyscholar_service = _get_easyscholar_service(logger)
+            easyscholar_service = _get_easyscholar_service(resolved_logger)
             result = await easyscholar_service.get_journal_quality(normalized_name)
             data_source = result.get("data_source", "easyscholar")
 
             # 保存到缓存
             if use_cache and _CACHE_ENABLED and result.get("success", False):
-                await asyncio.to_thread(_save_to_file_cache, normalized_name, result, logger)
+                await asyncio.to_thread(
+                    _save_to_file_cache, normalized_name, result, resolved_logger
+                )
 
         if not result.get("success", False):
             return {
@@ -315,16 +352,16 @@ async def _single_journal_quality(
 
         # 集成 OpenAlex 指标补充（在当前异步上下文中运行）
         try:
-            openalex_service = _get_openalex_service(logger)
+            openalex_service = _get_openalex_service(resolved_logger)
             response = await openalex_service.enhance_quality_result(response, use_cache)
         except Exception as e:
             # OpenAlex 补充失败不影响主流程
-            logger.debug(f"OpenAlex 指标补充失败（非致命）: {e}")
+            resolved_logger.debug(f"OpenAlex 指标补充失败（非致命）: {e}")
 
         return response
 
     except Exception as e:
-        logger.error(f"单个期刊质量评估异常: {e}")
+        resolved_logger.error(f"单个期刊质量评估异常: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -336,9 +373,15 @@ async def _single_journal_quality(
 
 
 def _batch_journal_quality(
-    journal_names: list[str], include_metrics: list[str], use_cache: bool, logger: Any
+    journal_names: list[str],
+    include_metrics: list[str],
+    use_cache: bool,
+    *,
+    services: dict[str, Any] | None = None,
+    logger: Any = None,
 ) -> dict[str, Any]:
     """批量期刊质量评估（带文件缓存支持）"""
+    resolved_logger = logger or logging.getLogger(__name__)
     try:
         if not journal_names:
             return {
@@ -367,7 +410,7 @@ def _batch_journal_quality(
             if use_cache and _CACHE_ENABLED:
                 for journal_name in journal_names:
                     cached_result = await asyncio.to_thread(
-                        _get_from_file_cache, journal_name.strip(), logger
+                        _get_from_file_cache, journal_name.strip(), resolved_logger
                     )
                     if cached_result:
                         cached_journals[journal_name] = (cached_result, True)
@@ -378,7 +421,7 @@ def _batch_journal_quality(
                 journals_to_fetch = journal_names.copy()
 
             # 获取未缓存的数据
-            easyscholar_service = _get_easyscholar_service(logger)
+            easyscholar_service = _get_easyscholar_service(resolved_logger)
             fetched_results = await easyscholar_service.batch_get_journal_quality(journals_to_fetch)
 
             # 合并结果
@@ -423,7 +466,7 @@ def _batch_journal_quality(
 
                     # 集成 OpenAlex 指标补充
                     try:
-                        openalex_service = _get_openalex_service(logger)
+                        openalex_service = _get_openalex_service(resolved_logger)
                         journal_entry = await openalex_service.enhance_quality_result(
                             journal_entry, use_cache
                         )
@@ -436,7 +479,9 @@ def _batch_journal_quality(
 
                     # 保存到缓存（仅限新获取的数据）
                     if use_cache and _CACHE_ENABLED and not is_cached:
-                        await asyncio.to_thread(_save_to_file_cache, journal_name, result, logger)
+                        await asyncio.to_thread(
+                            _save_to_file_cache, journal_name, result, resolved_logger
+                        )
                 else:
                     journal_results[journal_name] = result
 
@@ -480,7 +525,7 @@ def _batch_journal_quality(
         }
 
     except Exception as e:
-        logger.error(f"批量期刊质量评估异常: {e}")
+        resolved_logger.error(f"批量期刊质量评估异常: {e}")
         return {
             "success": False,
             "error": str(e),
