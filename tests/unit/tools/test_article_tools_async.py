@@ -101,15 +101,20 @@ class TestGetArticleDetails:
 
         result = await article_tools.get_article_details_async("PMC1234567", "pmcid")
 
-        # 验证返回文章
+        # 验证返回批量结果格式
         assert result is not None
-        assert result["title"] == "Machine Learning in Healthcare"
-        assert result["pmcid"] == "PMC1234567"
+        assert "articles" in result
+        assert len(result["articles"]) == 1
+        article = result["articles"][0]
+
+        # 验证文章内容
+        assert article["title"] == "Machine Learning in Healthcare"
+        assert article["pmcid"] == "PMC1234567"
 
         # 验证包含全文
-        assert "fulltext" in result
-        assert result["fulltext"]["fulltext_available"] is True
-        assert result["fulltext"]["fulltext_markdown"] is not None
+        assert "fulltext" in article
+        assert article["fulltext"]["fulltext_available"] is True
+        assert article["fulltext"]["fulltext_markdown"] is not None
 
         # 验证调用了全文获取（默认 sections=None）
         mock_services["pubmed"].get_pmc_fulltext_html.assert_called_once_with(
@@ -128,12 +133,16 @@ class TestGetArticleDetails:
 
         result = await article_tools.get_article_details_async("10.5678/test.2023", "doi")
 
-        # 验证返回文章
+        # 验证返回批量结果格式
         assert result is not None
-        assert result["pmcid"] is None
+        assert "articles" in result
+        article = result["articles"][0]
+
+        # 验证文章内容
+        assert article["pmcid"] is None
 
         # 验证不包含全文
-        assert "fulltext" not in result
+        assert "fulltext" not in article
 
         # 验证没有调用全文获取
         mock_services["pubmed"].get_pmc_fulltext_html.assert_not_called()
@@ -150,21 +159,31 @@ class TestGetArticleDetails:
 
         result = await article_tools.get_article_details_async("PMC1234567", "pmcid")
 
-        # 验证仍返回文章（只是没有 fulltext）
+        # 验证返回批量结果格式
         assert result is not None
-        assert result["title"] == "Machine Learning in Healthcare"
-        assert "fulltext" not in result
+        assert "articles" in result
+        article = result["articles"][0]
 
-    async def test_empty_identifier_returns_none(self, mock_services, logger):
-        """测试：空标识符返回 None"""
+        # 验证仍返回文章（只是没有 fulltext）
+        assert article["title"] == "Machine Learning in Healthcare"
+        assert "fulltext" not in article
+
+    async def test_empty_identifier_returns_batch_with_failure(self, mock_services, logger):
+        """测试：空标识符返回批量结果中的失败统计"""
         article_tools._article_services = mock_services
         article_tools._logger = logger
 
         result = await article_tools.get_article_details_async("", "doi")
-        assert result is None
 
-    async def test_article_not_found_returns_none(self, mock_services, logger):
-        """测试：文献未找到返回 None"""
+        # 验证返回批量结果格式，但失败
+        assert result is not None
+        assert result["total"] == 1
+        assert result["failed"] == 1
+        assert result["successful"] == 0
+        assert len(result["articles"]) == 0
+
+    async def test_article_not_found_returns_batch_with_failure(self, mock_services, logger):
+        """测试：文献未找到返回批量结果中的失败统计"""
         mock_services["europe_pmc"].fetch = Mock(
             return_value={"article": None, "error": "未找到文献"}
         )
@@ -173,7 +192,13 @@ class TestGetArticleDetails:
         article_tools._logger = logger
 
         result = await article_tools.get_article_details_async("notfound", "doi")
-        assert result is None
+
+        # 验证返回批量结果格式，但失败
+        assert result is not None
+        assert result["total"] == 1
+        assert result["failed"] == 1
+        assert result["successful"] == 0
+        assert len(result["articles"]) == 0
 
 
 # ============================================================================
@@ -199,16 +224,20 @@ class TestArticleDetailsSectionExtraction:
             "PMC1234567", "pmcid", sections=["methods"]
         )
 
-        # 验证返回文章
+        # 验证返回批量结果格式
         assert result is not None
-        assert result["pmcid"] == "PMC1234567"
+        assert "articles" in result
+        article = result["articles"][0]
+
+        # 验证文章内容
+        assert article["pmcid"] == "PMC1234567"
 
         # 验证包含全文和章节信息
-        assert "fulltext" in result
-        assert result["fulltext"]["fulltext_available"] is True
-        assert result["fulltext"]["sections_requested"] == ["methods"]
-        assert result["fulltext"]["sections_found"] == ["methods"]
-        assert result["fulltext"]["sections_missing"] == []
+        assert "fulltext" in article
+        assert article["fulltext"]["fulltext_available"] is True
+        assert article["fulltext"]["sections_requested"] == ["methods"]
+        assert article["fulltext"]["sections_found"] == ["methods"]
+        assert article["fulltext"]["sections_missing"] == []
 
         # 验证调用了章节提取
         mock_services["pubmed"].get_pmc_fulltext_html.assert_called_once_with(
@@ -222,10 +251,14 @@ class TestArticleDetailsSectionExtraction:
 
         result = await article_tools.get_article_details_async("PMC1234567", "pmcid", sections=[])
 
-        # 验证返回文章但无全文
+        # 验证返回批量结果格式
         assert result is not None
-        assert result["pmcid"] == "PMC1234567"
-        assert "fulltext" not in result
+        assert "articles" in result
+        article = result["articles"][0]
+
+        # 验证文章内容但无全文
+        assert article["pmcid"] == "PMC1234567"
+        assert "fulltext" not in article
 
         # 验证没有调用全文获取
         mock_services["pubmed"].get_pmc_fulltext_html.assert_not_called()
@@ -237,12 +270,16 @@ class TestArticleDetailsSectionExtraction:
 
         result = await article_tools.get_article_details_async("PMC1234567", "pmcid", sections=None)
 
-        # 验证返回文章和全文
+        # 验证返回批量结果格式
         assert result is not None
-        assert "fulltext" in result
+        assert "articles" in result
+        article = result["articles"][0]
+
+        # 验证包含全文
+        assert "fulltext" in article
 
         # 验证不包含章节信息字段（全部章节时不标记）
-        assert "sections_requested" not in result.get("fulltext", {})
+        assert "sections_requested" not in article.get("fulltext", {})
 
         # 验证调用全文获取时 sections=None
         mock_services["pubmed"].get_pmc_fulltext_html.assert_called_once_with(

@@ -35,10 +35,12 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 主要参数：
 - identifier: 文献标识符（必填）：单个或列表[DOI、PMID、PMCID]
              单个字符串返回单个文献详情，列表返回批量结果
+             批量模式最多支持20个标识符
 - id_type: 标识符类型（默认auto自动识别）：auto/doi/pmid/pmcid
-- include_fulltext: 是否获取全文（默认true，有PMCID时）
-- sections: 要提取的全文章节（可选）：["methods", "discussion", "results"等]
-            None表示获取全部章节，空列表[]表示不获取全文
+- sections: 全文章节控制（可选，默认None获取全部章节）
+            None → 获取全部章节（全文）
+            ["conclusion"] → 只获取指定章节
+            [] → 不获取全文，只返回元数据
 
 数据源：Europe PMC（单一数据源）
 返回数据包含标题、作者、摘要、期刊、发表日期、DOI等完整信息
@@ -72,26 +74,22 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     async def get_article_details(
         identifier: str | list[str],
         id_type: str = "auto",
-        include_fulltext: bool = True,
         sections: list[str] | None = None,
-    ) -> dict[str, Any] | list[dict[str, Any]] | None:
+    ) -> dict[str, Any]:
         """获取文献详情工具。通过DOI、PMID、PMCID获取文献的详细信息。
 
         Args:
-            identifier: 文献标识符 (DOI, PMID, PMCID) 或标识符列表
+            identifier: 文献标识符 (DOI, PMID, PMCID) 或标识符列表（最多20个）
             id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
-            include_fulltext: 是否获取全文（有PMCID时）
-            sections: 要提取的全文章节列表，None表示全部，[]表示不获取全文
+            sections: 全文章节控制，None=全部章节，[]=不获取全文，["xxx"]=指定章节
 
         Returns:
-            单个标识符：返回文献详细信息字典或None
-            多个标识符：返回批量结果字典 {total, successful, failed, articles, fulltext_stats}
+            统一批量结果字典 {total, successful, failed, articles, fulltext_stats}
 
         """
         return await get_article_details_async(
             identifier=identifier,
             id_type=id_type,
-            include_fulltext=include_fulltext,
             sections=sections,
         )
 
@@ -99,16 +97,14 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 async def get_article_details_async(
     identifier: str | list[str],
     id_type: str = "auto",
-    include_fulltext: bool = True,
     sections: list[str] | None = None,
 ) -> dict[str, Any]:
     """异步获取文献详情。
 
     Args:
-        identifier: 文献标识符 (DOI, PMID, PMCID) 或标识符列表
+        identifier: 文献标识符 (DOI, PMID, PMCID) 或标识符列表（最多20个）
         id_type: 标识符类型 ["auto", "doi", "pmid", "pmcid"]
-        include_fulltext: 是否获取全文（有PMCID时）
-        sections: 要提取的全文章节列表，None表示全部，[]表示不获取全文
+        sections: 全文章节控制，None=全部章节，[]=不获取全文，["xxx"]=指定章节
 
     Returns:
         统一批量结果格式：
@@ -117,7 +113,7 @@ async def get_article_details_async(
             "successful": 8,          # 成功获取数
             "failed": 2,              # 失败数
             "articles": [...],        # 成功的文章列表
-            "fulltext_stats": {       # 全文统计（仅当 include_fulltext=True）
+            "fulltext_stats": {       # 全文统计
                 "has_pmcid": 5,
                 "fulltext_fetched": 3,
                 "no_pmcid": 3
@@ -140,10 +136,23 @@ async def get_article_details_async(
             "processing_time": 0,
         }
 
+    # 验证标识符数量上限
+    if len(identifiers) > 20:
+        logger = _logger or logging.getLogger(__name__)
+        logger.error(f"标识符数量超过限制：{len(identifiers)} > 20")
+        return {
+            "total": len(identifiers),
+            "successful": 0,
+            "failed": len(identifiers),
+            "articles": [],
+            "fulltext_stats": None,
+            "processing_time": 0,
+            "error": f"标识符数量超过限制，最多支持20个，当前传入{len(identifiers)}个",
+        }
+
     return await _batch_get_article_details(
         identifiers=identifiers,
         id_type=id_type,
-        include_fulltext=include_fulltext,
         sections=sections,
     )
 
@@ -151,7 +160,6 @@ async def get_article_details_async(
 async def _fetch_single_article(
     identifier: str,
     id_type: str,
-    include_fulltext: bool,
     sections: list[str] | None,
 ) -> dict[str, Any] | None:
     """获取单个文献详情（内部函数，不对外暴露）"""
@@ -186,37 +194,28 @@ async def _fetch_single_article(
 
         article = result["article"]
 
-        # 获取全文（如果启用）
-        if include_fulltext:
-            pmcid = article.get("pmcid")
-            if pubmed_service and pmcid:
-                try:
-                    # 如果 sections 是空列表，跳过全文获取
-                    if sections == []:
-                        logger.info("sections 为空列表，跳过全文获取")
-                    else:
-                        fulltext = pubmed_service.get_pmc_fulltext_html(pmcid, sections=sections)
-                        if fulltext.get("fulltext_available"):
-                            article["fulltext"] = {
-                                "pmc_id": fulltext.get("pmc_id"),
-                                "fulltext_xml": fulltext.get("fulltext_xml"),
-                                "fulltext_markdown": fulltext.get("fulltext_markdown"),
-                                "fulltext_text": fulltext.get("fulltext_text"),
-                                "fulltext_available": True,
-                            }
-                            # 添加章节信息（如果有）
-                            if "sections_requested" in fulltext:
-                                article["fulltext"]["sections_requested"] = fulltext.get(
-                                    "sections_requested"
-                                )
-                                article["fulltext"]["sections_found"] = fulltext.get(
-                                    "sections_found"
-                                )
-                                article["fulltext"]["sections_missing"] = fulltext.get(
-                                    "sections_missing"
-                                )
-                except Exception as e:
-                    logger.warning(f"获取全文失败: {e}")
+        # 获取全文：sections=[] 表示不获取全文，其他情况都获取
+        pmcid = article.get("pmcid")
+        if pubmed_service and pmcid and sections != []:
+            try:
+                fulltext = pubmed_service.get_pmc_fulltext_html(pmcid, sections=sections)
+                if fulltext.get("fulltext_available"):
+                    article["fulltext"] = {
+                        "pmc_id": fulltext.get("pmc_id"),
+                        "fulltext_xml": fulltext.get("fulltext_xml"),
+                        "fulltext_markdown": fulltext.get("fulltext_markdown"),
+                        "fulltext_text": fulltext.get("fulltext_text"),
+                        "fulltext_available": True,
+                    }
+                    # 添加章节信息（如果有）
+                    if "sections_requested" in fulltext:
+                        article["fulltext"]["sections_requested"] = fulltext.get(
+                            "sections_requested"
+                        )
+                        article["fulltext"]["sections_found"] = fulltext.get("sections_found")
+                        article["fulltext"]["sections_missing"] = fulltext.get("sections_missing")
+            except Exception as e:
+                logger.warning(f"获取全文失败: {e}")
 
         logger.info(f"成功获取文献详情: {identifier}")
         return article
@@ -229,17 +228,18 @@ async def _fetch_single_article(
 async def _batch_get_article_details(
     identifiers: list[str],
     id_type: str = "auto",
-    include_fulltext: bool = True,
     sections: list[str] | None = None,
-    max_concurrent: int = 5,
 ) -> dict[str, Any]:
-    """批量获取文献详情（内部函数）"""
+    """批量获取文献详情（内部函数）
+
+    内部使用 Semaphore(5) 控制并发，确保每次最多5个请求同时执行。
+    """
 
     logger = _logger or logging.getLogger(__name__)
     start_time = time.time()
 
-    # 控制并发数
-    semaphore = asyncio.Semaphore(max_concurrent)
+    # 控制并发数：内部固定为5
+    semaphore = asyncio.Semaphore(5)
 
     async def fetch_with_semaphore(identifier: str) -> tuple[str, dict | None]:
         """带并发控制的获取"""
@@ -249,7 +249,6 @@ async def _batch_get_article_details(
             result = await _fetch_single_article(
                 identifier=identifier,
                 id_type=id_type,
-                include_fulltext=include_fulltext,
                 sections=sections,
             )
             return identifier, result
@@ -263,6 +262,7 @@ async def _batch_get_article_details(
     failed_count = 0
     has_pmcid_count = 0
     fulltext_fetched_count = 0
+    should_fetch_fulltext = sections != []
 
     for result in results:
         if isinstance(result, Exception):
@@ -273,8 +273,8 @@ async def _batch_get_article_details(
         identifier, article = result
         if article:
             successful_articles.append(article)
-            # 统计全文信息
-            if include_fulltext:
+            # 统计全文信息（只要 sections 不是空列表就统计）
+            if should_fetch_fulltext:
                 pmcid = article.get("pmcid")
                 if pmcid:
                     has_pmcid_count += 1
@@ -285,9 +285,9 @@ async def _batch_get_article_details(
 
     processing_time = round(time.time() - start_time, 2)
 
-    # 构建全文统计
+    # 构建全文统计（只要 sections 不是空列表就统计）
     fulltext_stats = None
-    if include_fulltext:
+    if should_fetch_fulltext:
         fulltext_stats = {
             "has_pmcid": has_pmcid_count,
             "fulltext_fetched": fulltext_fetched_count,
