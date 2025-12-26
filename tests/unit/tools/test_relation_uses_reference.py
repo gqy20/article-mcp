@@ -76,9 +76,6 @@ class TestRelationToolsUsesReferenceTools:
 
     async def test_get_references_calls_tool3(self, mock_services, logger):
         """测试：_get_references 应该调用工具3的 get_references_async"""
-        relation_tools._relation_services = mock_services
-        relation_tools._logger = logger
-
         # 模拟工具3的函数
         mock_get_references_async = AsyncMock(return_value=SAMPLE_REFERENCES_FROM_TOOL3)
 
@@ -95,6 +92,7 @@ class TestRelationToolsUsesReferenceTools:
                 id_type="doi",
                 max_results=20,
                 sources=["crossref"],
+                services=mock_services,
                 logger=logger,
             )
 

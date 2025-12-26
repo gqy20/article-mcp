@@ -73,9 +73,6 @@ class TestGetReferencesAsync:
         self, mock_services, mock_reference_service, logger
     ):
         """测试通过 DOI 成功获取参考文献"""
-        # 注册服务
-        reference_tools._reference_services = mock_services
-
         # 调用工具
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
@@ -83,6 +80,8 @@ class TestGetReferencesAsync:
             sources=["europe_pmc"],
             max_results=20,
             include_metadata=True,
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证结果
@@ -102,13 +101,13 @@ class TestGetReferencesAsync:
         self, mock_services, mock_reference_service, logger
     ):
         """测试从多个数据源获取参考文献"""
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             id_type="doi",
             sources=["europe_pmc", "crossref"],
             max_results=50,
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证结果
@@ -151,11 +150,11 @@ class TestGetReferencesAsync:
             ],
         }
 
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证去重后只有2条
@@ -182,13 +181,13 @@ class TestGetReferencesAsync:
             "references": many_references,
         }
 
-        reference_tools._reference_services = mock_services
-
         max_results = 20
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
             max_results=max_results,
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证结果被限制
@@ -197,11 +196,11 @@ class TestGetReferencesAsync:
 
     async def test_get_references_empty_identifier(self, mock_services, logger):
         """测试空标识符错误处理"""
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="",
             id_type="doi",
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证错误处理
@@ -212,8 +211,6 @@ class TestGetReferencesAsync:
 
     async def test_get_references_auto_id_type(self, mock_services, logger):
         """测试自动标识符类型识别"""
-        reference_tools._reference_services = mock_services
-
         test_cases = [
             ("10.1234/test.doi", "doi"),
             ("12345678", "pmid"),
@@ -238,11 +235,11 @@ class TestGetReferencesAsync:
             "references": [],
         }
 
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证空结果处理
@@ -257,11 +254,11 @@ class TestGetReferencesAsync:
         # 设置服务抛出异常
         mock_reference_service.get_references_by_doi_async.side_effect = Exception("API Error")
 
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证错误处理 - 应该优雅地处理异常，返回空结果
@@ -291,12 +288,12 @@ class TestGetReferencesAsync:
             ],
         }
 
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
             include_metadata=True,
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证元数据被包含
@@ -327,12 +324,12 @@ class TestGetReferencesAsync:
             ],
         }
 
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
             include_metadata=False,
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证元数据不被包含
@@ -348,11 +345,11 @@ class TestGetReferencesAsync:
         self, mock_services, mock_reference_service, logger
     ):
         """测试默认数据源"""
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             # 不指定 sources，应该使用默认值
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证默认使用 europe_pmc 和 crossref
@@ -362,11 +359,11 @@ class TestGetReferencesAsync:
         self, mock_services, mock_reference_service, logger
     ):
         """测试数据源优先级排序"""
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc", "crossref"],
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证排序：europe_pmc > crossref
@@ -397,12 +394,12 @@ class TestGetReferencesAsync:
         mock_reference_service.get_references_by_doi_async = delayed_europe_pmc
         mock_reference_service.get_references_crossref_async = delayed_crossref
 
-        reference_tools._reference_services = mock_services
-
         start = time.time()
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc", "crossref"],
+            services=mock_services,
+            logger=logger,
         )
         elapsed = time.time() - start
 
@@ -439,11 +436,11 @@ class TestGetReferencesAsync:
             ],
         }
 
-        reference_tools._reference_services = mock_services
-
         result = await reference_tools.get_references_async(
             identifier="10.1234/test.article.2023",
             sources=["europe_pmc"],
+            services=mock_services,
+            logger=logger,
         )
 
         # 验证基于标题的去重

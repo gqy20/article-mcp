@@ -88,11 +88,10 @@ class TestArticleDetailsPMCidOnly:
 
     async def test_accepts_pmcid_only(self, mock_services, logger):
         """测试：只接受 PMCID 作为输入"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
         # 使用 PMCID 应该成功
-        result = await article_tools.get_article_details_async("PMC1234567")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", services=mock_services, logger=logger
+        )
 
         assert result is not None
         assert result["total"] == 1
@@ -114,10 +113,9 @@ class TestArticleDetailsPMCidOnly:
 
     async def test_sections_default_gets_all(self, mock_services, logger):
         """测试：默认 sections=None 获取全部章节"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", services=mock_services, logger=logger
+        )
 
         assert result is not None
         assert result["successful"] == 1
@@ -136,11 +134,8 @@ class TestArticleDetailsPMCidOnly:
             return_value=SAMPLE_FULLTEXT_CONCLUSION.copy()
         )
 
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
         result = await article_tools.get_article_details_async(
-            "PMC1234567", sections=["conclusion"]
+            "PMC1234567", sections=["conclusion"], services=mock_services, logger=logger
         )
 
         assert result is not None
@@ -153,12 +148,11 @@ class TestArticleDetailsPMCidOnly:
 
     async def test_sections_empty_list_not_allowed(self, mock_services, logger):
         """测试：sections=[] 不应该被允许（这是全文获取工具）"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
         # sections=[] 应该报错或被忽略
         # 根据新设计，这应该被视为无效参数
-        result = await article_tools.get_article_details_async("PMC1234567", sections=[])
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", sections=[], services=mock_services, logger=logger
+        )
 
         # 既然是全文获取工具，sections=[] 应该被当作无效输入
         # 返回错误或者直接当作 sections=None 处理都可以
@@ -169,11 +163,10 @@ class TestArticleDetailsPMCidOnly:
 
     async def test_non_pmcid_input_returns_error(self, mock_services, logger):
         """测试：非 PMCID 输入应该返回明确的错误"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
         # PMID 输入应该失败
-        result = await article_tools.get_article_details_async("12345678")
+        result = await article_tools.get_article_details_async(
+            "12345678", services=mock_services, logger=logger
+        )
 
         assert result is not None
         assert result["successful"] == 0
@@ -182,11 +175,10 @@ class TestArticleDetailsPMCidOnly:
 
     async def test_doi_input_returns_error(self, mock_services, logger):
         """测试：DOI 输入应该返回明确的错误"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
         # DOI 输入应该失败
-        result = await article_tools.get_article_details_async("10.1234/test.2023")
+        result = await article_tools.get_article_details_async(
+            "10.1234/test.2023", services=mock_services, logger=logger
+        )
 
         assert result is not None
         assert result["successful"] == 0

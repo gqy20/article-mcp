@@ -76,10 +76,9 @@ class TestArticleToolsFormatParam:
 
     async def test_format_defaults_to_markdown(self, mock_services, logger):
         """测试：默认 format="markdown" 返回 markdown 格式"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", services=mock_services, logger=logger
+        )
 
         assert result is not None
         assert result["successful"] == 1
@@ -104,10 +103,9 @@ class TestArticleToolsFormatParam:
 
     async def test_format_markdown_returns_only_markdown(self, mock_services, logger):
         """测试：format="markdown" 只返回 markdown 格式"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567", format="markdown")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", format="markdown", services=mock_services, logger=logger
+        )
 
         assert result is not None
         article = result["articles"][0]
@@ -120,10 +118,9 @@ class TestArticleToolsFormatParam:
 
     async def test_format_xml_returns_only_xml(self, mock_services, logger):
         """测试：format="xml" 只返回 XML 格式"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567", format="xml")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", format="xml", services=mock_services, logger=logger
+        )
 
         assert result is not None
         article = result["articles"][0]
@@ -136,10 +133,9 @@ class TestArticleToolsFormatParam:
 
     async def test_format_text_returns_only_text(self, mock_services, logger):
         """测试：format="text" 只返回纯文本格式"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567", format="text")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", format="text", services=mock_services, logger=logger
+        )
 
         assert result is not None
         article = result["articles"][0]
@@ -152,10 +148,9 @@ class TestArticleToolsFormatParam:
 
     async def test_format_invalid_raises_error(self, mock_services, logger):
         """测试：无效的 format 值应该返回错误"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567", format="invalid")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", format="invalid", services=mock_services, logger=logger
+        )
 
         # 应该失败
         assert result["successful"] == 0
@@ -164,10 +159,9 @@ class TestArticleToolsFormatParam:
 
     async def test_format_preserves_fulltext_available(self, mock_services, logger):
         """测试：format 参数保留 fulltext_available 字段"""
-        article_tools._article_services = mock_services
-        article_tools._logger = logger
-
-        result = await article_tools.get_article_details_async("PMC1234567", format="markdown")
+        result = await article_tools.get_article_details_async(
+            "PMC1234567", format="markdown", services=mock_services, logger=logger
+        )
 
         article = result["articles"][0]
         fulltext = article["fulltext"]

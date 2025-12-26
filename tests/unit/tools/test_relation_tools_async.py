@@ -128,9 +128,7 @@ class TestSingleLiteratureRelations:
         self, mock_services, mock_crossref_service, logger
     ):
         """测试单个文献的关系分析"""
-        # 注册服务
-        relation_tools._relation_services = mock_services
-        # 同时设置工具3的全局服务变量
+        # 注册服务（工具3需要）
         reference_tools._reference_services = mock_services
 
         # 直接调用内部函数
@@ -140,6 +138,7 @@ class TestSingleLiteratureRelations:
             relation_types=["references"],
             max_results=20,
             sources=["crossref"],
+            services=mock_services,
             logger=logger,
         )
 
@@ -154,8 +153,7 @@ class TestSingleLiteratureRelations:
         self, mock_services, mock_crossref_service, mock_openalex_service, logger
     ):
         """测试多种关系类型分析"""
-        relation_tools._relation_services = mock_services
-        # 同时设置工具3的全局服务变量
+        # 注册服务（工具3需要）
         reference_tools._reference_services = mock_services
 
         result = await relation_tools._single_literature_relations(
@@ -164,6 +162,7 @@ class TestSingleLiteratureRelations:
             relation_types=["references", "citing"],
             max_results=20,
             sources=["crossref", "openalex"],
+            services=mock_services,
             logger=logger,
         )
 
@@ -175,8 +174,6 @@ class TestSingleLiteratureRelations:
 
     async def test_single_literature_relations_auto_id_type(self, mock_services, logger):
         """测试自动标识符类型识别"""
-        relation_tools._relation_services = mock_services
-
         test_cases = [
             ("10.1234/test.doi", "doi"),
             ("12345678", "pmid"),
@@ -191,20 +188,20 @@ class TestSingleLiteratureRelations:
                 relation_types=["references"],
                 max_results=20,
                 sources=["crossref"],
+                services=mock_services,
                 logger=logger,
             )
             assert result["id_type"] == expected_type
 
     async def test_single_literature_relations_empty_identifier(self, mock_services, logger):
         """测试空标识符错误处理"""
-        relation_tools._relation_services = mock_services
-
         result = await relation_tools._single_literature_relations(
             identifier="",
             id_type="doi",
             relation_types=["references"],
             max_results=20,
             sources=["crossref"],
+            services=mock_services,
             logger=logger,
         )
 
@@ -242,7 +239,6 @@ class TestSingleLiteratureRelations:
                 "total_count": 2,
             }
         )
-        relation_tools._relation_services = mock_services
 
         result = await relation_tools._single_literature_relations(
             identifier="10.1038/nature10144",
@@ -250,6 +246,7 @@ class TestSingleLiteratureRelations:
             relation_types=["citing"],
             max_results=10,
             sources=["openalex"],
+            services=mock_services,
             logger=logger,
         )
 
@@ -278,8 +275,6 @@ class TestBatchLiteratureRelations:
         self, mock_services, mock_crossref_service, logger
     ):
         """测试批量文献关系分析"""
-        relation_tools._relation_services = mock_services
-
         identifiers = ["10.1234/test.1", "10.1234/test.2"]
 
         result = await relation_tools._batch_literature_relations(
@@ -288,6 +283,7 @@ class TestBatchLiteratureRelations:
             relation_types=["references"],
             max_results=20,
             sources=["crossref"],
+            services=mock_services,
             logger=logger,
         )
 
@@ -300,14 +296,13 @@ class TestBatchLiteratureRelations:
 
     async def test_batch_literature_relations_empty_list(self, mock_services, logger):
         """测试空列表错误处理"""
-        relation_tools._relation_services = mock_services
-
         result = await relation_tools._batch_literature_relations(
             identifiers=[],
             id_type="doi",
             relation_types=["references"],
             max_results=20,
             sources=["crossref"],
+            services=mock_services,
             logger=logger,
         )
 
@@ -322,8 +317,6 @@ class TestAnalyzeLiteratureNetwork:
 
     async def test_analyze_literature_network_success(self, mock_services, logger):
         """测试文献网络分析"""
-        relation_tools._relation_services = mock_services
-
         identifiers = ["10.1234/test.1", "10.1234/test.2"]
 
         result = await relation_tools._analyze_literature_network(
@@ -331,6 +324,7 @@ class TestAnalyzeLiteratureNetwork:
             analysis_type="citation",
             max_depth=1,
             max_results=20,
+            services=mock_services,
             logger=logger,
         )
 
@@ -345,8 +339,6 @@ class TestAnalyzeLiteratureNetwork:
 
     async def test_analyze_literature_network_comprehensive(self, mock_services, logger):
         """测试综合网络分析"""
-        relation_tools._relation_services = mock_services
-
         identifiers = ["10.1234/test.1"]
 
         result = await relation_tools._analyze_literature_network(
@@ -354,6 +346,7 @@ class TestAnalyzeLiteratureNetwork:
             analysis_type="comprehensive",
             max_depth=1,
             max_results=20,
+            services=mock_services,
             logger=logger,
         )
 
