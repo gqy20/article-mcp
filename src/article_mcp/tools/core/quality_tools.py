@@ -5,6 +5,7 @@
 - 移除了 evaluation、field_analysis、ranking 模式
 - 移除了模拟数据和降级机制
 - 服务依赖：使用闭包捕获模式，无全局变量
+- 缓存并发安全：使用文件锁保护缓存读写操作
 """
 
 import asyncio
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
+from filelock import FileLock, Timeout
 
 # ========== 缓存配置 ==========
 # 缓存目录
@@ -542,6 +544,8 @@ def _get_openalex_service(logger: Any) -> Any:
 def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | None:
     """从文件缓存获取期刊质量信息（合并 EasyScholar 和 OpenAlex 数据）
 
+    使用文件锁确保并发读安全性。
+
     Args:
         journal_name: 期刊名称
         logger: 日志记录器
@@ -553,8 +557,11 @@ def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | Non
         return None
 
     try:
-        with open(_CACHE_FILE, encoding="utf-8") as f:
-            cache_data = json.load(f)
+        # 使用文件锁保护读取操作（超时5秒）
+        lock_file = _CACHE_FILE.with_suffix(".lock")
+        with FileLock(lock_file, timeout=5):
+            with open(_CACHE_FILE, encoding="utf-8") as f:
+                cache_data = json.load(f)
 
         # 检查是否过期
         cached = cache_data.get("journals", {}).get(journal_name)
@@ -587,6 +594,9 @@ def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | Non
                 return data
 
         return None
+    except Timeout:
+        logger.warning(f"获取缓存文件锁超时: {journal_name}")
+        return None
     except Exception as e:
         logger.error(f"读取文件缓存失败: {e}")
         return None
@@ -594,6 +604,8 @@ def _get_from_file_cache(journal_name: str, logger: Any) -> dict[str, Any] | Non
 
 def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) -> None:
     """保存到文件缓存（与 OpenAlex 共享缓存文件）
+
+    使用文件锁确保并发写安全性，防止数据丢失或损坏。
 
     Args:
         journal_name: 期刊名称
@@ -604,32 +616,37 @@ def _save_to_file_cache(journal_name: str, data: dict[str, Any], logger: Any) ->
         # 确保缓存目录存在
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-        # 读取现有缓存
-        if _CACHE_FILE.exists():
-            with open(_CACHE_FILE, encoding="utf-8") as f:
-                cache_data = json.load(f)
-        else:
-            cache_data = {"journals": {}, "version": "2.0", "created_at": time.time()}
+        # 使用文件锁保护写操作（超时5秒）
+        lock_file = _CACHE_FILE.with_suffix(".lock")
+        with FileLock(lock_file, timeout=5):
+            # 读取现有缓存
+            if _CACHE_FILE.exists():
+                with open(_CACHE_FILE, encoding="utf-8") as f:
+                    cache_data = json.load(f)
+            else:
+                cache_data = {"journals": {}, "version": "2.0", "created_at": time.time()}
 
-        # 更新缓存（保留可能已存在的 openalex_metrics）
-        if journal_name in cache_data["journals"]:
-            # 期刊已存在，保留 openalex_metrics，更新 data 和 timestamp
-            cache_data["journals"][journal_name]["data"] = data
-            cache_data["journals"][journal_name]["timestamp"] = time.time()
-        else:
-            # 期刊不存在，创建新条目
-            cache_data["journals"][journal_name] = {
-                "data": data,
-                "timestamp": time.time(),
-            }
+            # 更新缓存（保留可能已存在的 openalex_metrics）
+            if journal_name in cache_data["journals"]:
+                # 期刊已存在，保留 openalex_metrics，更新 data 和 timestamp
+                cache_data["journals"][journal_name]["data"] = data
+                cache_data["journals"][journal_name]["timestamp"] = time.time()
+            else:
+                # 期刊不存在，创建新条目
+                cache_data["journals"][journal_name] = {
+                    "data": data,
+                    "timestamp": time.time(),
+                }
 
-        cache_data["last_updated"] = time.time()
+            cache_data["last_updated"] = time.time()
 
-        # 写入文件
-        with open(_CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            # 写入文件
+            with open(_CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
         logger.debug(f"已保存到文件缓存: {journal_name}")
+    except Timeout:
+        logger.error(f"获取缓存文件锁超时（写入失败）: {journal_name}")
     except Exception as e:
         logger.error(f"写入文件缓存失败: {e}")
 
