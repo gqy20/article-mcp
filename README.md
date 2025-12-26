@@ -273,9 +273,11 @@ python main.py server
 **关系类型**:
 | 类型 | 说明 | 数据来源 |
 |------|------|----------|
-| `references` | 该文献引用的参考文献 | Europe PMC, CrossRef |
+| `references` | 该文献引用的参考文献 | Europe PMC, CrossRef, PubMed (复用工具3) |
 | `similar` | 相似文献 | Europe PMC |
 | `citing` | 引用该文献的文献 | Europe PMC, OpenAlex |
+
+> **说明**: `references` 功能内部调用工具3 (`get_references`)，享受相同的智能去重和多源合并能力
 
 **主要参数**:
 | 参数 | 类型 | 默认值 | 说明 |

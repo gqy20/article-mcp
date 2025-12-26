@@ -267,6 +267,8 @@ Article MCP提供了一套完整的学术文献搜索和分析工具，支持文
 #### 功能概述
 获取文献的所有关联信息，包括参考文献、相似文献和引用文献。
 
+> **注意**: `references` 功能内部调用工具3 (`get_references`)，享受相同的智能去重和多源合并能力，支持 Europe PMC、CrossRef、PubMed 数据源。
+
 #### 主要参数
 - `identifier` (必需): 文献标识符
 - `id_type` (可选): 标识符类型，默认"auto"
