@@ -1,12 +1,6 @@
 """PMC 全文转换测试 - TDD 驱动开发
 
-⚠️ 测试状态说明（2024-12-27）：
-这些测试使用 mock requests.get，但 get_pmc_fulltext_html() 同步版本
-内部调用 get_pmc_fulltext_html_async()，使用 aiohttp 而非 requests。
-
-由于同步版本已废弃（推荐使用异步版本），这些测试暂时跳过。
-
-TODO: 重写测试以支持异步版本（需要 mock aiohttp.ClientSession）
+✅ v0.2.1 更新：所有测试已重写为异步版本，使用 aiohttp mock
 
 设计原则：
 1. 必须有 PMCID 才能获取全文
@@ -16,16 +10,9 @@ TODO: 重写测试以支持异步版本（需要 mock aiohttp.ClientSession）
 5. 支持按章节提取内容
 """
 
-import pytest
-
-# 跳过整个测试模块，待更新为异步测试
-pytestmark = pytest.mark.skip(
-    reason="PMC 全文转换测试需要重写为异步版本。同步版本已废弃，推荐使用 get_pmc_fulltext_html_async()"
-)
-
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -110,6 +97,52 @@ SAMPLE_PMC_XML_WITH_SECTIONS = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 # ============================================================================
+# aiohttp Mock 辅助函数
+# ============================================================================
+
+
+def create_mock_aiohttp_response(text_content: str, status: int = 200) -> Mock:
+    """创建模拟的 aiohttp 响应对象"""
+    mock_response = Mock()
+    mock_response.status = status
+    mock_response.text = AsyncMock(return_value=text_content)
+    return mock_response
+
+
+def create_mock_aiohttp_session(xml_content: str) -> Mock:
+    """创建模拟的 aiohttp.ClientSession
+
+    返回一个可以用于 patch('aiohttp.ClientSession') 的 mock 对象
+    """
+    # 创建 mock 响应
+    mock_response = create_mock_aiohttp_response(xml_content, 200)
+
+    # 创建模拟的 async context manager (用于 session.get() 的返回值)
+    # 关键：不能使用 AsyncMock，因为它本身就是一个 coroutine
+    # 我们需要一个普通对象，但有 __aenter__ 和 __aexit__ 异步方法
+    class MockGetContextManager:
+        async def __aenter__(self):
+            return mock_response
+
+        async def __aexit__(self, *args):
+            pass
+
+    # 创建 mock session
+    mock_session = Mock()
+    mock_session.get = Mock(return_value=MockGetContextManager())
+
+    # session 本身也需要是 async context manager
+    class MockSessionContextManager:
+        async def __aenter__(self):
+            return mock_session
+
+        async def __aexit__(self, *args):
+            pass
+
+    return MockSessionContextManager()
+
+
+# ============================================================================
 # 测试类
 # ============================================================================
 
@@ -124,16 +157,13 @@ class TestPMCFulltextCore:
 
         return PubMedService(logger=Mock())
 
-    def test_with_pmcid_returns_three_formats(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_with_pmcid_returns_three_formats(self, pubmed_service):
         """测试：有 PMCID 时返回 XML、Markdown、Text 三种格式"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML
-            mock_response.content = SAMPLE_PMC_XML.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(SAMPLE_PMC_XML)
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567")
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567")
 
             # 核心验证：三种格式都存在
             assert result["pmc_id"] == "PMC1234567"
@@ -162,16 +192,13 @@ class TestPMCFulltextCore:
             assert "pmc_link" not in result or result.get("pmc_link") is None
             assert "fulltext_html" not in result or result.get("fulltext_html") is None
 
-    def test_markdown_format_is_valid(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_markdown_format_is_valid(self, pubmed_service):
         """测试：Markdown 格式只包含正文，不包含标题、作者、摘要"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML
-            mock_response.content = SAMPLE_PMC_XML.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(SAMPLE_PMC_XML)
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567")
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567")
 
             markdown = result["fulltext_markdown"]
 
@@ -192,16 +219,13 @@ class TestPMCFulltextCore:
                 "Introduction"
             )
 
-    def test_text_format_is_clean(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_text_format_is_clean(self, pubmed_service):
         """测试：纯文本格式干净，无标签"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML
-            mock_response.content = SAMPLE_PMC_XML.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(SAMPLE_PMC_XML)
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567")
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567")
 
             text = result["fulltext_text"]
 
@@ -227,7 +251,7 @@ class TestPMCFulltextErrors:
         return PubMedService(logger=Mock())
 
     def test_empty_pmcid_returns_error(self, pubmed_service):
-        """测试：空 PMCID 返回错误"""
+        """测试：空 PMCID 返回错误（不需要网络调用，保持同步测试）"""
         result = pubmed_service.get_pmc_fulltext_html("")
 
         # 应该返回错误
@@ -236,35 +260,44 @@ class TestPMCFulltextErrors:
         assert result["pmc_id"] is None
 
     def test_none_pmcid_returns_error(self, pubmed_service):
-        """测试：None PMCID 返回错误"""
+        """测试：None PMCID 返回错误（不需要网络调用，保持同步测试）"""
         result = pubmed_service.get_pmc_fulltext_html(None)
 
         # 应该返回错误
         assert result["error"] is not None
         assert result["fulltext_available"] is False
 
-    def test_network_error_returns_error(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_network_error_returns_error(self, pubmed_service):
         """测试：网络错误返回错误"""
-        with patch("requests.get") as mock_get:
-            mock_get.side_effect = Exception("Network error")
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            # 模拟网络错误 - 在 text() 调用时抛出异常
+            mock_session = AsyncMock()
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567")
+            mock_get_cm = AsyncMock()
+            mock_get_cm.__aenter__.side_effect = Exception("Network error")
+            mock_get_cm.__aexit__.return_value = None
+
+            mock_session.get.return_value = mock_get_cm
+            mock_session.__aenter__.return_value = mock_session
+            mock_session.__aexit__.return_value = None
+
+            mock_session_class.return_value = mock_session
+
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567")
 
             # 应该返回错误
             assert result["error"] is not None
             assert result["fulltext_available"] is False
             assert result["pmc_id"] == "PMC1234567"
 
-    def test_empty_xml_returns_error(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_empty_xml_returns_error(self, pubmed_service):
         """测试：空 XML 返回错误"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = ""
-            mock_response.content = b""
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session("")
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567")
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567")
 
             # 应该返回错误
             assert result.get("error") is not None or result.get("fulltext_available") is False
@@ -280,16 +313,13 @@ class TestPMCFulltextNormalization:
 
         return PubMedService(logger=Mock())
 
-    def test_pmcid_without_prefix_normalized(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_pmcid_without_prefix_normalized(self, pubmed_service):
         """测试：不带 PMC 前缀的 ID 被标准化"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML
-            mock_response.content = SAMPLE_PMC_XML.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(SAMPLE_PMC_XML)
 
-            result = pubmed_service.get_pmc_fulltext_html("1234567")
+            result = await pubmed_service.get_pmc_fulltext_html_async("1234567")
 
             # 应该自动添加 PMC 前缀
             assert result["pmc_id"] == "PMC1234567"
@@ -311,16 +341,17 @@ class TestPMCSectionExtraction:
 
         return PubMedService(logger=Mock())
 
-    def test_extract_single_section_methods(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_extract_single_section_methods(self, pubmed_service):
         """测试：提取单个章节（Methods）"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
-            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(
+                SAMPLE_PMC_XML_WITH_SECTIONS
+            )
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567", sections=["methods"])
+            result = await pubmed_service.get_pmc_fulltext_html_async(
+                "PMC1234567", sections=["methods"]
+            )
 
             # 验证返回值
             assert result["fulltext_available"] is True
@@ -345,16 +376,15 @@ class TestPMCSectionExtraction:
             assert result.get("sections_found") == ["methods"]
             assert result.get("sections_missing") == []
 
-    def test_extract_multiple_sections(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_extract_multiple_sections(self, pubmed_service):
         """测试：提取多个章节（Methods + Discussion）"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
-            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(
+                SAMPLE_PMC_XML_WITH_SECTIONS
+            )
 
-            result = pubmed_service.get_pmc_fulltext_html(
+            result = await pubmed_service.get_pmc_fulltext_html_async(
                 "PMC1234567", sections=["methods", "discussion"]
             )
 
@@ -376,16 +406,15 @@ class TestPMCSectionExtraction:
             assert set(result.get("sections_found", [])) == {"methods", "discussion"}
             assert result.get("sections_missing") == []
 
-    def test_extract_nonexistent_section(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_extract_nonexistent_section(self, pubmed_service):
         """测试：提取不存在的章节"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
-            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(
+                SAMPLE_PMC_XML_WITH_SECTIONS
+            )
 
-            result = pubmed_service.get_pmc_fulltext_html(
+            result = await pubmed_service.get_pmc_fulltext_html_async(
                 "PMC1234567",
                 sections=["appendix"],  # 不存在的章节
             )
@@ -399,16 +428,15 @@ class TestPMCSectionExtraction:
             markdown = result.get("fulltext_markdown", "")
             assert len(markdown) == 0 or "appendix" not in markdown.lower()
 
-    def test_sections_none_returns_all(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_sections_none_returns_all(self, pubmed_service):
         """测试：sections=None 返回全部章节"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
-            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(
+                SAMPLE_PMC_XML_WITH_SECTIONS
+            )
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567", sections=None)
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567", sections=None)
 
             markdown = result["fulltext_markdown"]
 
@@ -423,16 +451,15 @@ class TestPMCSectionExtraction:
             assert "sections_requested" not in result
             assert "sections_found" not in result
 
-    def test_partial_sections_found(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_partial_sections_found(self, pubmed_service):
         """测试：部分章节找到，部分未找到"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
-            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(
+                SAMPLE_PMC_XML_WITH_SECTIONS
+            )
 
-            result = pubmed_service.get_pmc_fulltext_html(
+            result = await pubmed_service.get_pmc_fulltext_html_async(
                 "PMC1234567", sections=["methods", "appendix"]
             )
 
@@ -445,16 +472,15 @@ class TestPMCSectionExtraction:
             assert "Methods" in markdown
             assert "appendix" not in markdown.lower()
 
-    def test_empty_sections_list(self, pubmed_service):
+    @pytest.mark.asyncio
+    async def test_empty_sections_list(self, pubmed_service):
         """测试：空章节列表"""
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = SAMPLE_PMC_XML_WITH_SECTIONS
-            mock_response.content = SAMPLE_PMC_XML_WITH_SECTIONS.encode("utf-8")
-            mock_get.return_value = mock_response
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            mock_session_class.return_value = create_mock_aiohttp_session(
+                SAMPLE_PMC_XML_WITH_SECTIONS
+            )
 
-            result = pubmed_service.get_pmc_fulltext_html("PMC1234567", sections=[])
+            result = await pubmed_service.get_pmc_fulltext_html_async("PMC1234567", sections=[])
 
             # 返回空内容
             assert result["fulltext_available"] is True
