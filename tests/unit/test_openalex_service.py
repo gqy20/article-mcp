@@ -19,9 +19,10 @@ class TestOpenAlexService:
     def test_init(self, service):
         """测试服务初始化"""
         assert service.base_url == "https://api.openalex.org"
-        assert service.api_client is not None
+        # 移除同步 api_client，使用异步客户端
+        assert service._async_api_client is None  # 延迟初始化
         assert hasattr(service, "search_works_async")
-        assert hasattr(service, "get_work_by_doi")
+        assert hasattr(service, "get_work_by_doi_async")  # 新的异步方法
 
     @patch("article_mcp.services.openalex_service.get_async_api_client")
     async def test_search_works_async_success(self, mock_get_client, service):
@@ -211,10 +212,11 @@ class TestOpenAlexService:
         result = service._format_articles([])
         assert result == []
 
-    @patch("article_mcp.services.api_utils.UnifiedAPIClient.get")
-    def test_get_work_by_doi_success(self, mock_get, service):
-        """测试通过 DOI 获取文章成功"""
-        mock_get.return_value = {
+    @patch("article_mcp.services.openalex_service.get_async_api_client")
+    async def test_get_work_by_doi_success(self, mock_get_client):
+        """测试通过 DOI 获取文章成功（异步版本）"""
+        mock_client = AsyncMock()
+        mock_client.get.return_value = {
             "success": True,
             "data": {
                 "results": [
@@ -232,21 +234,32 @@ class TestOpenAlexService:
                 ]
             },
         }
+        mock_get_client.return_value = mock_client
 
-        result = service.get_work_by_doi("10.1234/test")
+        service = OpenAlexService(None)
+        service._async_api_client = mock_client
+
+        result = await service.get_work_by_doi_async("10.1234/test")
 
         assert result["success"] is True
         assert result["article"]["title"] == "Test Article"
+        assert result["source"] == "openalex"
 
-    @patch("article_mcp.services.api_utils.UnifiedAPIClient.get")
-    def test_get_work_by_doi_not_found(self, mock_get, service):
-        """测试通过 DOI 获取文章未找到"""
-        mock_get.return_value = {"success": True, "data": {"results": []}}
+    @patch("article_mcp.services.openalex_service.get_async_api_client")
+    async def test_get_work_by_doi_not_found(self, mock_get_client):
+        """测试通过 DOI 获取文章未找到（异步版本）"""
+        mock_client = AsyncMock()
+        mock_client.get.return_value = {"success": True, "data": {"results": []}}
+        mock_get_client.return_value = mock_client
 
-        result = service.get_work_by_doi("10.9999/nonexistent")
+        service = OpenAlexService(None)
+        service._async_api_client = mock_client
+
+        result = await service.get_work_by_doi_async("10.9999/nonexistent")
 
         assert result["success"] is False
         assert result["article"] is None
+        assert result["source"] == "openalex"
 
     @patch("article_mcp.services.openalex_service.get_async_api_client")
     async def test_search_works_async_performance(self, mock_get_client):

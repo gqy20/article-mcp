@@ -155,13 +155,16 @@ class TestCrossRefService:
 
     @pytest.mark.unit
     def test_get_work_by_doi(self, service):
-        """测试通过DOI获取作品"""
-        assert hasattr(service, "get_work_by_doi")
-        assert hasattr(service, "get_references")
+        """测试通过DOI获取作品（使用异步方法）"""
+        # 检查异步方法存在
+        assert hasattr(service, "get_work_by_doi_async")
+        assert hasattr(service, "get_references_async")
         import inspect
 
-        sig = inspect.signature(service.get_work_by_doi)
+        sig = inspect.signature(service.get_work_by_doi_async)
         assert "doi" in sig.parameters
+        # 验证是异步函数
+        assert inspect.iscoroutinefunction(service.get_work_by_doi_async)
 
 
 class TestOpenAlexService:

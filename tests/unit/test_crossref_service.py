@@ -19,10 +19,11 @@ class TestCrossRefService:
     def test_init(self, service):
         """测试服务初始化"""
         assert service.base_url == "https://api.crossref.org"
-        assert service.api_client is not None
+        # 移除同步 api_client，使用异步客户端
+        assert service._async_api_client is None  # 延迟初始化
         assert hasattr(service, "search_works_async")
-        assert hasattr(service, "get_work_by_doi")
-        assert hasattr(service, "get_references")
+        assert hasattr(service, "get_work_by_doi_async")  # 新的异步方法
+        assert hasattr(service, "get_references_async")  # 新的异步方法
 
     @patch("article_mcp.services.crossref_service.get_async_api_client")
     async def test_search_works_async_success(self, mock_get_client, service):
@@ -205,10 +206,10 @@ class TestCrossRefService:
         assert result[1]["authors"] == []
         assert result[1]["year"] == ""
 
-    @patch("article_mcp.services.crossref_service.get_api_client")
-    def test_get_work_by_doi_success(self, mock_get_client):
-        """测试通过 DOI 获取文章成功"""
-        mock_client = Mock()
+    @patch("article_mcp.services.crossref_service.get_async_api_client")
+    async def test_get_work_by_doi_success(self, mock_get_client):
+        """测试通过 DOI 获取文章成功（异步版本）"""
+        mock_client = AsyncMock()
         mock_client.get.return_value = {
             "success": True,
             "data": {
@@ -222,24 +223,26 @@ class TestCrossRefService:
         mock_get_client.return_value = mock_client
 
         service = CrossRefService(None)
+        service._async_api_client = mock_client
 
-        result = service.get_work_by_doi("10.1234/test")
+        result = await service.get_work_by_doi_async("10.1234/test")
 
         assert result["success"] is True
         assert result["article"]["title"] == "Test Article"
         assert result["source"] == "crossref"
 
-    @patch("article_mcp.services.crossref_service.get_api_client")
-    def test_get_work_by_doi_not_found(self, mock_get_client):
-        """测试通过 DOI 获取文章未找到"""
-        mock_client = Mock()
+    @patch("article_mcp.services.crossref_service.get_async_api_client")
+    async def test_get_work_by_doi_not_found(self, mock_get_client):
+        """测试通过 DOI 获取文章未找到（异步版本）"""
+        mock_client = AsyncMock()
         # CrossRef API 返回空消息表示未找到
         mock_client.get.return_value = {"success": True, "data": {"message": {}}}
         mock_get_client.return_value = mock_client
 
         service = CrossRefService(None)
+        service._async_api_client = mock_client
 
-        result = service.get_work_by_doi("10.9999/nonexistent")
+        result = await service.get_work_by_doi_async("10.9999/nonexistent")
 
         # 空消息会返回 success=True 但文章为空
         assert result["success"] is True
