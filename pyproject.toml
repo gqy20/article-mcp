@@ -1,6 +1,6 @@
 [project]
 name = "article-mcp"
-version = "0.1.9"
+version = "0.2.0"
 description = "Article MCP文献搜索服务器 - 基于Europe PMC、arXiv等多个数据源的学术文献搜索工具"
 authors = [
     {name = "gqy20", email = "qingyu_ge@foxmail.com"}

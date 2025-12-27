@@ -12,7 +12,7 @@ def register_config_resources(mcp: FastMCP) -> None:
     @mcp.resource("config://version")
     def get_version() -> str:
         """获取服务器版本信息"""
-        return "2.0.0"
+        return "0.2.0"
 
     @mcp.resource("config://status")
     def get_system_status() -> dict[str, Any]:
@@ -20,7 +20,7 @@ def register_config_resources(mcp: FastMCP) -> None:
         return {
             "status": "running",
             "server": "Article MCP Server",
-            "version": "0.1.9",
+            "version": "0.2.0",
             "timestamp": time.time(),
             "uptime": "N/A",  # 可以后续实现
             "supported_data_sources": ["europe_pmc", "pubmed", "arxiv", "crossref", "openalex"],
@@ -30,13 +30,29 @@ def register_config_resources(mcp: FastMCP) -> None:
     def get_available_tools() -> list[dict[str, str]]:
         """获取可用工具列表"""
         return [
-            {"name": "search_literature", "description": "多源文献搜索工具", "category": "search"},
-            {"name": "get_article_details", "description": "获取文献详情", "category": "details"},
-            {"name": "get_references", "description": "获取参考文献", "category": "references"},
+            {
+                "name": "search_literature",
+                "description": "多源文献搜索工具 - 支持 Europe PMC, PubMed, arXiv, CrossRef, OpenAlex",
+                "category": "search",
+            },
+            {
+                "name": "get_article_details",
+                "description": "获取文献详情 - 支持参数容错自动修正，数据源：Europe PMC, CrossRef, OpenAlex, arXiv, PubMed",
+                "category": "details",
+            },
+            {
+                "name": "get_references",
+                "description": "获取参考文献 - 数据源：Europe PMC, CrossRef, PubMed",
+                "category": "references",
+            },
             {
                 "name": "get_literature_relations",
-                "description": "文献关系分析",
+                "description": "文献关系分析 - 数据源：Europe PMC, PubMed, CrossRef, OpenAlex",
                 "category": "analysis",
             },
-            {"name": "get_journal_quality", "description": "期刊质量评估", "category": "quality"},
+            {
+                "name": "get_journal_quality",
+                "description": "期刊质量评估 - 数据源：EasyScholar, OpenAlex",
+                "category": "quality",
+            },
         ]

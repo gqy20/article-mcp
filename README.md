@@ -40,16 +40,15 @@ uv run python -m article_mcp
 
 同上，如遇 Unicode 问题添加 `env: {"PYTHONIOENCODING": "utf-8"}`
 
-## 6 个核心工具
+## 5 个核心工具
 
 | 工具 | 功能 | 数据源 | 主要参数 |
 |------|------|--------|----------|
 | `search_literature` | 多源文献搜索 | Europe PMC, PubMed, arXiv, CrossRef, OpenAlex | `keyword`, `max_results` |
-| `get_article_details` | 获取文献全文 | Europe PMC, PMC 全文库 | `pmcid`, `sections`, `format` |
-| `get_references` | 获取参考文献 | Europe PMC, CrossRef | `identifier`, `max_results` |
-| `get_literature_relations` | 文献关系分析 | Europe PMC, OpenAlex | `identifiers`, `relation_types` |
+| `get_article_details` | 获取文献详情（支持参数容错） | Europe PMC, CrossRef, OpenAlex, arXiv, PubMed | `identifier`, `id_type`, `sources` |
+| `get_references` | 获取参考文献 | Europe PMC, CrossRef, PubMed | `identifier`, `max_results` |
+| `get_literature_relations` | 文献关系分析 | Europe PMC, PubMed, CrossRef, OpenAlex | `identifiers`, `relation_types` |
 | `get_journal_quality` | 期刊质量评估 | EasyScholar, OpenAlex | `journal_name`, `include_metrics` |
-| `export_batch_results` | 批量结果导出 | - | `results`, `format_type` |
 
 ## 数据源说明
 
