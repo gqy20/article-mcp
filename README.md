@@ -34,7 +34,7 @@ uv run python -m article_mcp
 }
 ```
 
-`EASYSCHOLAR_SECRET_KEY` 为可选项，用于获取更完整的期刊质量数据。
+`EASYSCHOLAR_SECRET_KEY` 为可选项，访问 [EasyScholar](https://www.easyscholar.cc) 注册获取。
 
 ### Cherry Studio
 
