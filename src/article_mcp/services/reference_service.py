@@ -1,5 +1,9 @@
-"""统一的参考文献获取服务
-整合同步和异步功能，减少代码重复
+"""统一的参考文献获取服务 - 纯异步实现
+
+重构目标：
+- 移除同步的 requests.Session
+- 所有方法改为纯异步
+- 只使用 AsyncAPIClient
 """
 
 import asyncio
@@ -9,7 +13,6 @@ import time
 from typing import Any
 
 import aiohttp
-import requests
 
 
 class UnifiedReferenceService:
@@ -17,10 +20,6 @@ class UnifiedReferenceService:
 
     def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
-
-        # 同步会话
-        self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "Europe-PMC-Reference-Tool/1.0"})
 
         # 异步配置
         self.crossref_delay = 0.02  # 50 requests/second
@@ -307,68 +306,6 @@ class UnifiedReferenceService:
 
         except Exception as e:
             self.logger.error(f"异步批量 Europe PMC 搜索异常: {e}")
-            return {}
-
-    # 新增批量查询方法
-    def batch_search_europe_pmc_by_dois(self, dois: list[str]) -> dict[str, dict[str, Any]]:
-        """批量搜索 Europe PMC - 使用 OR 操作符"""
-        if not dois:
-            return {}
-
-        try:
-            # 限制批量大小
-            if len(dois) > self.max_batch_size:
-                self.logger.warning(
-                    f"DOI数量 {len(dois)} 超过最大批量大小 {self.max_batch_size}，将进行分批处理"
-                )
-                # 分批处理
-                all_results = {}
-                for i in range(0, len(dois), self.max_batch_size):
-                    batch = dois[i : i + self.max_batch_size]
-                    batch_results = self.batch_search_europe_pmc_by_dois(batch)
-                    all_results.update(batch_results)
-                return all_results
-
-            # 构建 OR 操作符查询
-            doi_queries = [f'DOI:"{doi}"' for doi in dois]
-            query = " OR ".join(doi_queries)
-
-            url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-            params = {
-                "query": query,
-                "format": "json",
-                "resultType": "core",
-                "pageSize": len(dois) * 2,  # 确保能获取所有结果
-                "cursorMark": "*",
-            }
-
-            self.logger.info(f"批量搜索 Europe PMC: {len(dois)} 个 DOI")
-
-            resp = self.session.get(url, params=params, timeout=self.batch_timeout)  # type: ignore[arg-type]
-
-            if resp.status_code != 200:
-                self.logger.warning(f"批量 Europe PMC 搜索失败: {resp.status_code}")
-                return {}
-
-            data = resp.json()
-            results = data.get("resultList", {}).get("result", [])
-
-            # 建立 DOI 到结果的映射
-            doi_to_result = {}
-            for result in results:
-                result_doi = result.get("doi", "").lower()
-                if result_doi:
-                    # 查找匹配的原始DOI
-                    for original_doi in dois:
-                        if original_doi.lower() == result_doi:
-                            doi_to_result[original_doi] = result
-                            break
-
-            self.logger.info(f"批量搜索找到 {len(doi_to_result)} 个匹配的DOI")
-            return doi_to_result
-
-        except Exception as e:
-            self.logger.error(f"批量 Europe PMC 搜索异常: {e}")
             return {}
 
 

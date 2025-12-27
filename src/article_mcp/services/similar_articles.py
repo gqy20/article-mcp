@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from typing import Any
 
-import requests
+import aiohttp
 
 # 创建日志记录器
 logger = logging.getLogger(__name__)
@@ -144,10 +144,10 @@ def parse_pubmed_article(article_xml: ET.Element) -> dict[str, Any] | None:
         return None
 
 
-def get_similar_articles_by_doi(
+async def get_similar_articles_by_doi_async(
     doi: str, email: str = None, max_results: int = 20
 ) -> dict[str, Any]:
-    """根据DOI获取相似文章"""
+    """异步根据DOI获取相似文章"""
     try:
         # 验证DOI
         if not doi or not doi.strip():
@@ -164,167 +164,177 @@ def get_similar_articles_by_doi(
 
         headers = {"User-Agent": f"{TOOL_NAME}/1.0 ({email})"}
 
-        # 步骤1：通过DOI获取初始文章的PMID
-        logger.info(f"正在为 DOI {doi} 搜索 PMID")
-        esearch_params = {
-            "db": "pubmed",
-            "term": doi,
-            "retmax": 1,
-            "retmode": "xml",
-            "email": email,
-            "tool": TOOL_NAME,
-        }
-
-        response = requests.get(
-            f"{NCBI_BASE_URL}esearch.fcgi", params=esearch_params, headers=headers
-        )
-        response.raise_for_status()
-
-        esearch_xml = ET.fromstring(response.content)
-        ids = esearch_xml.findall(".//Id")
-
-        if not ids:
-            return {
-                "original_article": None,
-                "similar_articles": [],
-                "total_similar_count": 0,
-                "message": f"未找到 DOI: {doi} 对应的 PubMed 记录",
+        # 使用 aiohttp ClientSession
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            # 步骤1：通过DOI获取初始文章的PMID
+            logger.info(f"正在为 DOI {doi} 搜索 PMID")
+            esearch_params = {
+                "db": "pubmed",
+                "term": doi,
+                "retmax": 1,
+                "retmode": "xml",
+                "email": email,
+                "tool": TOOL_NAME,
             }
 
-        initial_pmid = ids[0].text
-        logger.info(f"找到初始文章 PMID: {initial_pmid}")
+            async with session.get(
+                f"{NCBI_BASE_URL}esearch.fcgi", params=esearch_params, headers=headers
+            ) as response:
+                response.raise_for_status()
+                esearch_content = await response.text()
 
-        # 步骤2：获取初始文章详情
-        efetch_params = {
-            "db": "pubmed",
-            "id": initial_pmid,
-            "rettype": "xml",
-            "retmode": "xml",
-            "email": email,
-            "tool": TOOL_NAME,
-        }
+            esearch_xml = ET.fromstring(esearch_content.encode())
+            ids = esearch_xml.findall(".//Id")
 
-        response = requests.get(
-            f"{NCBI_BASE_URL}efetch.fcgi", params=efetch_params, headers=headers
-        )
-        response.raise_for_status()
+            if not ids:
+                return {
+                    "original_article": None,
+                    "similar_articles": [],
+                    "total_similar_count": 0,
+                    "message": f"未找到 DOI: {doi} 对应的 PubMed 记录",
+                }
 
-        efetch_xml = ET.fromstring(response.content)
-        original_article_xml = efetch_xml.find(".//PubmedArticle")
-        original_article = parse_pubmed_article(original_article_xml)
+            initial_pmid = ids[0].text
+            logger.info(f"找到初始文章 PMID: {initial_pmid}")
 
-        if not original_article:
-            return {
-                "original_article": None,
-                "similar_articles": [],
-                "total_similar_count": 0,
-                "error": f"无法解析初始 PMID: {initial_pmid} 的文章信息",
+            # 步骤2：获取初始文章详情
+            efetch_params = {
+                "db": "pubmed",
+                "id": initial_pmid,
+                "rettype": "xml",
+                "retmode": "xml",
+                "email": email,
+                "tool": TOOL_NAME,
             }
 
-        # 步骤3：使用elink查找相关文章
-        elink_params = {
-            "dbfrom": "pubmed",
-            "db": "pubmed",
-            "id": initial_pmid,
-            "linkname": "pubmed_pubmed",
-            "cmd": "neighbor_history",
-            "email": email,
-            "tool": TOOL_NAME,
-        }
+            async with session.get(
+                f"{NCBI_BASE_URL}efetch.fcgi", params=efetch_params, headers=headers
+            ) as response:
+                response.raise_for_status()
+                efetch_content = await response.text()
 
-        response = requests.get(f"{NCBI_BASE_URL}elink.fcgi", params=elink_params, headers=headers)
-        response.raise_for_status()
+            efetch_xml = ET.fromstring(efetch_content.encode())
+            original_article_xml = efetch_xml.find(".//PubmedArticle")
+            original_article = parse_pubmed_article(original_article_xml)
 
-        elink_xml = ET.fromstring(response.content)
-        webenv_elink = elink_xml.findtext(".//WebEnv")
-        query_key_elink = elink_xml.findtext(".//LinkSetDbHistory/QueryKey")
+            if not original_article:
+                return {
+                    "original_article": None,
+                    "similar_articles": [],
+                    "total_similar_count": 0,
+                    "error": f"无法解析初始 PMID: {initial_pmid} 的文章信息",
+                }
 
-        if not webenv_elink or not query_key_elink:
+            # 步骤3：使用elink查找相关文章
+            elink_params = {
+                "dbfrom": "pubmed",
+                "db": "pubmed",
+                "id": initial_pmid,
+                "linkname": "pubmed_pubmed",
+                "cmd": "neighbor_history",
+                "email": email,
+                "tool": TOOL_NAME,
+            }
+
+            async with session.get(
+                f"{NCBI_BASE_URL}elink.fcgi", params=elink_params, headers=headers
+            ) as response:
+                response.raise_for_status()
+                elink_content = await response.text()
+
+            elink_xml = ET.fromstring(elink_content.encode())
+            webenv_elink = elink_xml.findtext(".//WebEnv")
+            query_key_elink = elink_xml.findtext(".//LinkSetDbHistory/QueryKey")
+
+            if not webenv_elink or not query_key_elink:
+                return {
+                    "original_article": original_article,
+                    "similar_articles": [],
+                    "total_similar_count": 0,
+                    "message": "找到了原始文章，但未找到相关文章",
+                }
+
+            # 步骤4：使用日期过滤获取相关文章
+            today = datetime.now()
+            five_years_ago = today - timedelta(days=5 * 365.25)
+            min_date = five_years_ago.strftime("%Y/%m/%d")
+            max_date = today.strftime("%Y/%m/%d")
+
+            esearch_params2 = {
+                "db": "pubmed",
+                "query_key": query_key_elink,
+                "WebEnv": webenv_elink,
+                "retmax": str(max_results),
+                "retmode": "xml",
+                "datetype": "pdat",
+                "mindate": min_date,
+                "maxdate": max_date,
+                "email": email,
+                "tool": TOOL_NAME,
+                "usehistory": "y",
+            }
+
+            async with session.get(
+                f"{NCBI_BASE_URL}esearch.fcgi", params=esearch_params2, headers=headers
+            ) as response:
+                response.raise_for_status()
+                esearch_content2 = await response.text()
+
+            esearch_xml2 = ET.fromstring(esearch_content2.encode())
+            total_count = int(esearch_xml2.findtext(".//Count", "0"))
+            webenv_filtered = esearch_xml2.findtext(".//WebEnv")
+            query_key_filtered = esearch_xml2.findtext(".//QueryKey")
+
+            if total_count == 0:
+                return {
+                    "original_article": original_article,
+                    "similar_articles": [],
+                    "total_similar_count": 0,
+                    "message": "在最近5年内未找到相关文章",
+                }
+
+            # 步骤5：批量获取相关文章详情
+            similar_articles = []
+            actual_fetch_count = min(total_count, max_results)
+
+            efetch_params_batch = {
+                "db": "pubmed",
+                "query_key": query_key_filtered,
+                "WebEnv": webenv_filtered,
+                "retstart": "0",
+                "retmax": str(actual_fetch_count),
+                "rettype": "xml",
+                "retmode": "xml",
+                "email": email,
+                "tool": TOOL_NAME,
+            }
+
+            async with session.get(
+                f"{NCBI_BASE_URL}efetch.fcgi", params=efetch_params_batch, headers=headers
+            ) as response:
+                response.raise_for_status()
+                efetch_content_batch = await response.text()
+
+            efetch_xml_batch = ET.fromstring(efetch_content_batch.encode())
+            article_elements = efetch_xml_batch.findall(".//PubmedArticle")
+
+            for article_xml in article_elements:
+                article_details = parse_pubmed_article(article_xml)
+                if article_details:
+                    similar_articles.append(article_details)
+
+            logger.info(f"成功获取了 {len(similar_articles)} 篇相关文章")
+
             return {
                 "original_article": original_article,
-                "similar_articles": [],
-                "total_similar_count": 0,
-                "message": "找到了原始文章，但未找到相关文章",
+                "similar_articles": similar_articles,
+                "total_similar_count": total_count,
+                "retrieved_count": len(similar_articles),
+                "message": f"成功找到并获取了 {len(similar_articles)} 篇相关文章",
             }
 
-        # 步骤4：使用日期过滤获取相关文章
-        today = datetime.now()
-        five_years_ago = today - timedelta(days=5 * 365.25)
-        min_date = five_years_ago.strftime("%Y/%m/%d")
-        max_date = today.strftime("%Y/%m/%d")
-
-        esearch_params2 = {
-            "db": "pubmed",
-            "query_key": query_key_elink,
-            "WebEnv": webenv_elink,
-            "retmax": str(max_results),
-            "retmode": "xml",
-            "datetype": "pdat",
-            "mindate": min_date,
-            "maxdate": max_date,
-            "email": email,
-            "tool": TOOL_NAME,
-            "usehistory": "y",
-        }
-
-        response = requests.get(
-            f"{NCBI_BASE_URL}esearch.fcgi", params=esearch_params2, headers=headers
-        )
-        response.raise_for_status()
-
-        esearch_xml2 = ET.fromstring(response.content)
-        total_count = int(esearch_xml2.findtext(".//Count", "0"))
-        webenv_filtered = esearch_xml2.findtext(".//WebEnv")
-        query_key_filtered = esearch_xml2.findtext(".//QueryKey")
-
-        if total_count == 0:
-            return {
-                "original_article": original_article,
-                "similar_articles": [],
-                "total_similar_count": 0,
-                "message": "在最近5年内未找到相关文章",
-            }
-
-        # 步骤5：批量获取相关文章详情
-        similar_articles = []
-        actual_fetch_count = min(total_count, max_results)
-
-        efetch_params_batch = {
-            "db": "pubmed",
-            "query_key": query_key_filtered,
-            "WebEnv": webenv_filtered,
-            "retstart": "0",
-            "retmax": str(actual_fetch_count),
-            "rettype": "xml",
-            "retmode": "xml",
-            "email": email,
-            "tool": TOOL_NAME,
-        }
-
-        response = requests.get(
-            f"{NCBI_BASE_URL}efetch.fcgi", params=efetch_params_batch, headers=headers
-        )
-        response.raise_for_status()
-
-        efetch_xml_batch = ET.fromstring(response.content)
-        article_elements = efetch_xml_batch.findall(".//PubmedArticle")
-
-        for article_xml in article_elements:
-            article_details = parse_pubmed_article(article_xml)
-            if article_details:
-                similar_articles.append(article_details)
-
-        logger.info(f"成功获取了 {len(similar_articles)} 篇相关文章")
-
-        return {
-            "original_article": original_article,
-            "similar_articles": similar_articles,
-            "total_similar_count": total_count,
-            "retrieved_count": len(similar_articles),
-            "message": f"成功找到并获取了 {len(similar_articles)} 篇相关文章",
-        }
-
-    except requests.exceptions.RequestException as e:
+    except aiohttp.ClientError as e:
         logger.error(f"网络请求错误: {e}")
         return {"error": f"网络请求错误: {e}"}
     except ET.ParseError as e:
@@ -333,3 +343,55 @@ def get_similar_articles_by_doi(
     except Exception as e:
         logger.error(f"获取相似文章时出错: {e}")
         return {"error": f"获取相似文章时出错: {e}"}
+
+
+# 兼容性函数：保留同步版本（已废弃）
+def get_similar_articles_by_doi(
+    doi: str, email: str = None, max_results: int = 20
+) -> dict[str, Any]:
+    """根据DOI获取相似文章（同步版本，已废弃）
+
+    注意：此函数保留仅为向后兼容，请使用 get_similar_articles_by_doi_async() 代替。
+    """
+    import asyncio
+
+    # 警告用户
+    logger.warning(
+        "get_similar_articles_by_doi() 是同步版本，已废弃。请使用 get_similar_articles_by_doi_async()"
+    )
+
+    # 在新事件循环中运行异步函数
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # 如果循环正在运行，创建新线程运行
+            import threading
+
+            result = [None]
+            exception = [None]
+
+            def run_async():
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    result[0] = new_loop.run_until_complete(
+                        get_similar_articles_by_doi_async(doi, email, max_results)
+                    )
+                    new_loop.close()
+                except Exception as e:
+                    exception[0] = e
+
+            thread = threading.Thread(target=run_async)
+            thread.start()
+            thread.join(timeout=120)
+
+            if exception[0]:
+                raise exception[0]
+            return result[0] if result[0] else {"error": "同步调用超时"}
+        else:
+            return loop.run_until_complete(
+                get_similar_articles_by_doi_async(doi, email, max_results)
+            )
+    except Exception as e:
+        logger.error(f"同步包装器错误: {e}")
+        return {"error": f"同步包装器错误: {e}"}

@@ -293,14 +293,14 @@ class PubMedService:
                 return {"articles": [], "error": f"处理错误: {e}", "message": None}
 
     # ------------------------ 引用文献获取 ------------------------ #
-    def get_citing_articles(
+    async def get_citing_articles_async(
         self, pmid: str, email: str | None = None, max_results: int = 20
     ) -> dict[str, Any]:
-        """获取引用该 PMID 的文献信息（Semantic Scholar → PubMed 补全）"""
+        """异步获取引用该 PMID 的文献信息（Semantic Scholar → PubMed 补全）"""
         import time
         import xml.etree.ElementTree as ET
 
-        import requests
+        import aiohttp
 
         start_time = time.time()
         try:
@@ -309,116 +309,161 @@ class PubMedService:
             if email and not self._validate_email(email):
                 email = None
 
-            # 1. 使用 Semantic Scholar Graph API 获取引用列表
-            ss_url = f"https://api.semanticscholar.org/graph/v1/paper/PMID:{pmid}/citations"
-            ss_params = {
-                "fields": "title,year,authors,venue,externalIds,publicationDate",
-                "limit": max_results,
-            }
-            self.logger.info(f"Semantic Scholar 查询引用: {ss_url}")
-            ss_resp = requests.get(ss_url, params=ss_params, timeout=20)  # type: ignore[arg-type]
-            if ss_resp.status_code != 200:
-                return {
-                    "citing_articles": [],
-                    "error": f"Semantic Scholar 错误 {ss_resp.status_code}",
-                    "message": None,
+            timeout = aiohttp.ClientTimeout(total=60)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                # 1. 使用 Semantic Scholar Graph API 获取引用列表
+                ss_url = f"https://api.semanticscholar.org/graph/v1/paper/PMID:{pmid}/citations"
+                ss_params = {
+                    "fields": "title,year,authors,venue,externalIds,publicationDate",
+                    "limit": max_results,
                 }
+                self.logger.info(f"Semantic Scholar 查询引用: {ss_url}")
 
-            ss_data = ss_resp.json()
-            ss_items = ss_data.get("data", [])
-            if not ss_items:
-                return {
-                    "citing_articles": [],
-                    "total_count": 0,
-                    "message": "未找到引用文献",
-                    "error": None,
-                }
-
-            pmid_list = []
-            interim_articles = []
-            for item in ss_items:
-                paper = item.get("citingPaper") or item.get("paper") or {}
-                ext_ids = paper.get("externalIds", {})
-                ss_pmid = ext_ids.get("PubMed") or ext_ids.get("PMID")
-                if ss_pmid and str(ss_pmid).isdigit():
-                    pmid_list.append(str(ss_pmid))
-                else:
-                    # 为没有PMID的文献构建完整信息
-                    doi = ext_ids.get("DOI")
-                    arxiv_id = ext_ids.get("ArXiv")
-                    ss_paper_id = paper.get("paperId")
-
-                    # 构建各种链接
-                    doi_link = f"https://doi.org/{doi}" if doi else None
-                    arxiv_link = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else None
-                    ss_link = (
-                        f"https://www.semanticscholar.org/paper/{ss_paper_id}"
-                        if ss_paper_id
-                        else None
-                    )
-
-                    # 优先级：DOI > ArXiv > Semantic Scholar
-                    primary_link = doi_link or arxiv_link or ss_link
-
-                    interim_articles.append(
-                        {
-                            "pmid": None,
-                            "pmid_link": primary_link,
-                            "title": paper.get("title"),
-                            "authors": (
-                                [a.get("name") for a in paper.get("authors", [])]
-                                if paper.get("authors")
-                                else None
-                            ),
-                            "journal_name": paper.get("venue"),
-                            "publication_date": paper.get("publicationDate")
-                            or str(paper.get("year")),
-                            "abstract": None,
-                            "doi": doi,
-                            "doi_link": doi_link,
-                            "arxiv_id": arxiv_id,
-                            "arxiv_link": arxiv_link,
-                            "semantic_scholar_id": ss_paper_id,
-                            "semantic_scholar_link": ss_link,
+                async with session.get(ss_url, params=ss_params) as ss_resp:
+                    if ss_resp.status != 200:
+                        return {
+                            "citing_articles": [],
+                            "error": f"Semantic Scholar 错误 {ss_resp.status}",
+                            "message": None,
                         }
-                    )
 
-            # 2. 使用 PubMed EFetch 批量补全
-            citing_articles = []
-            if pmid_list:
-                efetch_params = {
-                    "db": "pubmed",
-                    "id": ",".join(pmid_list),
-                    "retmode": "xml",
-                    "rettype": "xml",
+                    ss_data = await ss_resp.json()
+
+                ss_items = ss_data.get("data", [])
+                if not ss_items:
+                    return {
+                        "citing_articles": [],
+                        "total_count": 0,
+                        "message": "未找到引用文献",
+                        "error": None,
+                    }
+
+                pmid_list = []
+                interim_articles = []
+                for item in ss_items:
+                    paper = item.get("citingPaper") or item.get("paper") or {}
+                    ext_ids = paper.get("externalIds", {})
+                    ss_pmid = ext_ids.get("PubMed") or ext_ids.get("PMID")
+                    if ss_pmid and str(ss_pmid).isdigit():
+                        pmid_list.append(str(ss_pmid))
+                    else:
+                        # 为没有PMID的文献构建完整信息
+                        doi = ext_ids.get("DOI")
+                        arxiv_id = ext_ids.get("ArXiv")
+                        ss_paper_id = paper.get("paperId")
+
+                        # 构建各种链接
+                        doi_link = f"https://doi.org/{doi}" if doi else None
+                        arxiv_link = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else None
+                        ss_link = (
+                            f"https://www.semanticscholar.org/paper/{ss_paper_id}"
+                            if ss_paper_id
+                            else None
+                        )
+
+                        # 优先级：DOI > ArXiv > Semantic Scholar
+                        primary_link = doi_link or arxiv_link or ss_link
+
+                        interim_articles.append(
+                            {
+                                "pmid": None,
+                                "pmid_link": primary_link,
+                                "title": paper.get("title"),
+                                "authors": (
+                                    [a.get("name") for a in paper.get("authors", [])]
+                                    if paper.get("authors")
+                                    else None
+                                ),
+                                "journal_name": paper.get("venue"),
+                                "publication_date": paper.get("publicationDate")
+                                or str(paper.get("year")),
+                                "abstract": None,
+                                "doi": doi,
+                                "doi_link": doi_link,
+                                "arxiv_id": arxiv_id,
+                                "arxiv_link": arxiv_link,
+                                "semantic_scholar_id": ss_paper_id,
+                                "semantic_scholar_link": ss_link,
+                            }
+                        )
+
+                # 2. 使用 PubMed EFetch 批量补全
+                citing_articles = []
+                if pmid_list:
+                    efetch_params = {
+                        "db": "pubmed",
+                        "id": ",".join(pmid_list),
+                        "retmode": "xml",
+                        "rettype": "xml",
+                    }
+                    if email:
+                        efetch_params["email"] = email
+
+                    async with session.get(
+                        self.base_url + "efetch.fcgi",
+                        params=efetch_params,
+                        headers=self.headers,
+                    ) as r2:
+                        r2.raise_for_status()
+                        efetch_content = await r2.text()
+
+                    root = ET.fromstring(efetch_content.encode())
+                    for art in root.findall(".//PubmedArticle"):
+                        info = self._process_article(art)
+                        if info:
+                            citing_articles.append(info)
+
+                citing_articles.extend(interim_articles)
+                return {
+                    "citing_articles": citing_articles,
+                    "total_count": len(ss_items),
+                    "error": None,
+                    "message": f"获取 {len(citing_articles)} 条引用文献 (Semantic Scholar + PubMed)",
+                    "processing_time": round(time.time() - start_time, 2),
                 }
-                if email:
-                    efetch_params["email"] = email
-                r2 = requests.get(
-                    self.base_url + "efetch.fcgi",
-                    params=efetch_params,
-                    headers=self.headers,
-                    timeout=20,
-                )
-                r2.raise_for_status()
-                root = ET.fromstring(r2.content)
-                for art in root.findall(".//PubmedArticle"):
-                    info = self._process_article(art)
-                    if info:
-                        citing_articles.append(info)
 
-            citing_articles.extend(interim_articles)
-            return {
-                "citing_articles": citing_articles,
-                "total_count": len(ss_items),
-                "error": None,
-                "message": f"获取 {len(citing_articles)} 条引用文献 (Semantic Scholar + PubMed)",
-                "processing_time": round(time.time() - start_time, 2),
-            }
-        except requests.exceptions.RequestException as e:
+        except aiohttp.ClientError as e:
             return {"citing_articles": [], "error": f"网络请求错误: {e}", "message": None}
         except Exception as e:
             return {"citing_articles": [], "error": f"处理错误: {e}", "message": None}
+
+    # 保留同步版本作为向后兼容
+    def get_citing_articles(
+        self, pmid: str, email: str | None = None, max_results: int = 20
+    ) -> dict[str, Any]:
+        """获取引用该 PMID 的文献信息（同步版本，已废弃）
+
+        注意：此函数保留仅为向后兼容，请使用 get_citing_articles_async() 代替。
+        """
+        import asyncio
+
+        self.logger.warning(
+            "get_citing_articles() 是同步版本，已废弃。请使用 get_citing_articles_async()"
+        )
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果循环正在运行，使用 asyncio.create_task
+                import warnings
+
+                warnings.warn(
+                    "在异步上下文中调用同步方法，请使用 get_citing_articles_async()",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                # 无法在运行的循环中运行，返回错误
+                return {
+                    "citing_articles": [],
+                    "error": "请在异步上下文中使用 get_citing_articles_async()",
+                    "message": None,
+                }
+            else:
+                return loop.run_until_complete(
+                    self.get_citing_articles_async(pmid, email, max_results)
+                )
+        except Exception as e:
+            return {"citing_articles": [], "error": f"同步包装器错误: {e}", "message": None}
 
     def _extract_sections_from_xml(
         self,
@@ -503,10 +548,10 @@ class PubMedService:
             sections_missing.extend(requested_sections)
             return ""
 
-    def get_pmc_fulltext_html(
+    async def get_pmc_fulltext_html_async(
         self, pmc_id: str, sections: list[str] | None = None
     ) -> dict[str, Any]:
-        """通过 PMC ID 获取全文内容（三种格式）
+        """异步通过 PMC ID 获取全文内容（三种格式）
 
         设计原则：
         - 必须有 PMCID 才能获取全文
@@ -548,7 +593,8 @@ class PubMedService:
             "references": ["references", "bibliography"],
             "appendix": ["appendix", "supplementary"],
         }
-        import requests
+
+        import aiohttp
 
         try:
             # 前置条件：必须有 PMCID
@@ -571,12 +617,21 @@ class PubMedService:
             xml_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
             params = {"db": "pmc", "id": normalized_pmc_id, "rettype": "xml", "retmode": "xml"}
 
-            self.logger.info(f"请求 PMC 全文: {normalized_pmc_id}")
-            response = requests.get(xml_url, params=params, timeout=30)
-            response.raise_for_status()
+            self.logger.info(f"异步请求 PMC 全文: {normalized_pmc_id}")
 
-            # 原始 XML
-            fulltext_xml = response.text
+            timeout = aiohttp.ClientTimeout(total=60)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(xml_url, params=params) as response:
+                    if response.status != 200:
+                        return {
+                            "pmc_id": pmc_id if pmc_id else None,
+                            "fulltext_xml": None,
+                            "fulltext_markdown": None,
+                            "fulltext_text": None,
+                            "fulltext_available": False,
+                            "error": f"HTTP 错误: {response.status}",
+                        }
+                    fulltext_xml = await response.text()
 
             # 检查是否为空内容
             if not fulltext_xml or not fulltext_xml.strip():
@@ -670,7 +725,7 @@ class PubMedService:
 
             return result
 
-        except requests.exceptions.RequestException as e:
+        except aiohttp.ClientError as e:
             return {
                 "pmc_id": pmc_id if pmc_id else None,
                 "fulltext_xml": None,
@@ -688,6 +743,44 @@ class PubMedService:
                 "fulltext_text": None,
                 "fulltext_available": False,
                 "error": f"处理错误: {str(e)}",
+            }
+
+    # 保留同步版本作为向后兼容
+    def get_pmc_fulltext_html(
+        self, pmc_id: str, sections: list[str] | None = None
+    ) -> dict[str, Any]:
+        """通过 PMC ID 获取全文内容（同步版本，已废弃）
+
+        注意：此函数保留仅为向后兼容，请使用 get_pmc_fulltext_html_async() 代替。
+        """
+        import asyncio
+
+        self.logger.warning(
+            "get_pmc_fulltext_html() 是同步版本，已废弃。请使用 get_pmc_fulltext_html_async()"
+        )
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果循环正在运行，返回错误
+                return {
+                    "pmc_id": None,
+                    "fulltext_xml": None,
+                    "fulltext_markdown": None,
+                    "fulltext_text": None,
+                    "fulltext_available": False,
+                    "error": "请在异步上下文中使用 get_pmc_fulltext_html_async()",
+                }
+            else:
+                return loop.run_until_complete(self.get_pmc_fulltext_html_async(pmc_id, sections))
+        except Exception as e:
+            return {
+                "pmc_id": pmc_id if pmc_id else None,
+                "fulltext_xml": None,
+                "fulltext_markdown": None,
+                "fulltext_text": None,
+                "fulltext_available": False,
+                "error": f"同步包装器错误: {str(e)}",
             }
 
 

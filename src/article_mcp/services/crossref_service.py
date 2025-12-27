@@ -1,17 +1,23 @@
-"""CrossRef API服务 - 使用统一API调用"""
+"""CrossRef API服务 - 纯异步实现
+
+重构目标：
+- 移除同步的 get_api_client
+- 所有方法改为纯异步
+- 只使用 AsyncAPIClient
+"""
 
 import logging
 from typing import Any
 
-from .api_utils import get_api_client, get_async_api_client
+from .api_utils import get_async_api_client
 
 
 class CrossRefService:
     def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
         self.base_url = "https://api.crossref.org"
-        self.api_client = get_api_client(logger)
-        self._async_api_client: Any = None  # 延迟初始化异步客户端
+        # 异步客户端（延迟初始化）
+        self._async_api_client: Any = None
 
     def _get_async_client(self) -> Any:
         """获取异步API客户端（延迟初始化）"""
@@ -52,15 +58,15 @@ class CrossRefService:
                 "error": str(e),
             }
 
-    def get_work_by_doi(self, doi: str) -> dict[str, Any]:
-        """通过DOI获取文献详情"""
+    async def get_work_by_doi_async(self, doi: str) -> dict[str, Any]:
+        """异步通过DOI获取文献详情"""
         try:
             import urllib.parse
 
             # 对DOI进行URL编码处理，保留斜杠
             encoded_doi = urllib.parse.quote(doi, safe="/")
             url = f"{self.base_url}/works/{encoded_doi}"
-            api_result = self.api_client.get(url)
+            api_result = await self._get_async_client().get(url)
 
             if not api_result.get("success", False):
                 raise Exception(api_result.get("error", "API调用失败"))
@@ -78,8 +84,8 @@ class CrossRefService:
             self.logger.error(f"CrossRef获取详情失败: {e}")
             return {"success": False, "article": None, "source": "crossref", "error": str(e)}
 
-    def get_references(self, doi: str, max_results: int = 20) -> dict[str, Any]:
-        """获取参考文献列表"""
+    async def get_references_async(self, doi: str, max_results: int = 20) -> dict[str, Any]:
+        """异步获取参考文献列表"""
         try:
             import urllib.parse
 
@@ -88,7 +94,7 @@ class CrossRefService:
             encoded_doi = urllib.parse.quote(doi, safe="/")
             url = f"{self.base_url}/works/{encoded_doi}"
             # 简化API调用，不使用select参数避免400错误
-            api_result = self.api_client.get(url)
+            api_result = await self._get_async_client().get(url)
 
             if not api_result.get("success", False):
                 raise Exception(api_result.get("error", "API调用失败"))
@@ -115,14 +121,14 @@ class CrossRefService:
             }
 
     def _format_articles(self, items: list[dict]) -> list[dict]:
-        """格式化文章列表"""
+        """格式化文章列表（纯数据处理，保持同步）"""
         articles = []
         for item in items:
             articles.append(self._format_single_article(item))
         return articles
 
     def _format_single_article(self, item: dict) -> dict:
-        """格式化单篇文章"""
+        """格式化单篇文章（纯数据处理，保持同步）"""
         return {
             "title": self._extract_title(item.get("title") or []),
             "authors": self._extract_authors(item.get("author") or []),
@@ -138,7 +144,7 @@ class CrossRefService:
         }
 
     def _format_references(self, references: list[dict]) -> list[dict]:
-        """格式化参考文献"""
+        """格式化参考文献（纯数据处理，保持同步）"""
         formatted_refs = []
         for ref in references:
             if not ref:  # 跳过空引用
@@ -165,11 +171,11 @@ class CrossRefService:
         return formatted_refs
 
     def _extract_title(self, title_list: list) -> str:
-        """提取标题"""
+        """提取标题（纯数据处理，保持同步）"""
         return title_list[0] if title_list else ""
 
     def _extract_authors(self, author_list: list) -> list[str]:
-        """提取作者"""
+        """提取作者（纯数据处理，保持同步）"""
         authors = []
         for author in author_list:
             if not author:  # 跳过None值
@@ -181,7 +187,7 @@ class CrossRefService:
         return authors
 
     def _extract_ref_authors(self, ref: dict) -> list[str]:
-        """提取参考文献的作者"""
+        """提取参考文献的作者（纯数据处理，保持同步）"""
         authors = []
         if "author" in ref:
             author_list = ref["author"]
@@ -197,7 +203,7 @@ class CrossRefService:
         return authors
 
     def _extract_ref_year(self, ref: dict) -> str:
-        """提取参考文献的年份"""
+        """提取参考文献的年份（纯数据处理，保持同步）"""
         # 尝试从不同字段提取年份
         year = ""
 

@@ -1,4 +1,10 @@
-"""OpenAlex API服务 - 使用统一API调用"""
+"""OpenAlex API服务 - 纯异步实现
+
+重构目标：
+- 移除同步的 UnifiedAPIClient
+- 所有方法改为纯异步
+- 只使用 AsyncAPIClient
+"""
 
 import logging
 from typing import Any
@@ -10,17 +16,6 @@ class OpenAlexService:
     def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
         self.base_url = "https://api.openalex.org"
-        # OpenAlex需要特定的User-Agent以避免403错误
-        from .api_utils import UnifiedAPIClient
-
-        self.api_client = UnifiedAPIClient(logger)
-        # 添加符合OpenAlex要求的User-Agent
-        self.api_client.session.headers.update(
-            {
-                "User-Agent": "Article-MCP/2.0 (mailto:user@example.com)",
-                "Accept": "application/json",
-            }
-        )
         # 异步客户端（延迟初始化）
         self._async_api_client: Any = None
 
@@ -28,8 +23,6 @@ class OpenAlexService:
         """获取异步API客户端（延迟初始化）"""
         if self._async_api_client is None:
             self._async_api_client = get_async_api_client(self.logger)
-            # OpenAlex需要特定的User-Agent以避免403错误
-            # 注意：asyncio中需要异步设置headers
         return self._async_api_client
 
     async def search_works_async(
@@ -76,8 +69,8 @@ class OpenAlexService:
                 "error": str(e),
             }
 
-    def get_work_by_doi(self, doi: str) -> dict[str, Any]:
-        """通过DOI获取文献详情"""
+    async def get_work_by_doi_async(self, doi: str) -> dict[str, Any]:
+        """异步通过DOI获取文献详情"""
         try:
             url = f"{self.base_url}/works"
             params = {
@@ -85,7 +78,13 @@ class OpenAlexService:
                 "select": "id,title,authorships,publication_year,primary_location,open_access",
             }
 
-            api_result = self.api_client.get(url, params=params)
+            # OpenAlex 需要特定的 User-Agent
+            headers = {
+                "User-Agent": "Article-MCP/2.0-Async (mailto:user@example.com)",
+                "Accept": "application/json",
+            }
+
+            api_result = await self._get_async_client().get(url, params=params, headers=headers)
 
             if not api_result.get("success", False):
                 raise Exception(api_result.get("error", "API调用失败"))
@@ -112,18 +111,18 @@ class OpenAlexService:
             return {"success": False, "article": None, "source": "openalex", "error": str(e)}
 
     def filter_open_access(self, works: list[dict]) -> list[dict]:
-        """过滤开放获取文献"""
+        """过滤开放获取文献（纯数据处理，保持同步）"""
         open_access_works = []
         for work in works:
             if work.get("open_access", {}).get("is_oa", False):
                 open_access_works.append(work)
         return open_access_works
 
-    def get_citations(self, doi: str, max_results: int = 20) -> dict[str, Any]:
-        """获取引用文献"""
+    async def get_citations_async(self, doi: str, max_results: int = 20) -> dict[str, Any]:
+        """异步获取引用文献"""
         try:
             # 首先通过DOI查找OpenAlex Work ID
-            openalex_id = self._find_openalex_id_by_doi(doi)
+            openalex_id = await self._find_openalex_id_by_doi_async(doi)
             if not openalex_id:
                 self.logger.warning(f"无法找到DOI {doi} 对应的OpenAlex ID")
                 return {
@@ -142,7 +141,13 @@ class OpenAlexService:
                 "select": "id,title,authorships,publication_year,primary_location,doi",
             }
 
-            api_result = self.api_client.get(url, params=params)
+            # OpenAlex 需要特定的 User-Agent
+            headers = {
+                "User-Agent": "Article-MCP/2.0-Async (mailto:user@example.com)",
+                "Accept": "application/json",
+            }
+
+            api_result = await self._get_async_client().get(url, params=params, headers=headers)
 
             if not api_result.get("success", False):
                 raise Exception(api_result.get("error", "API调用失败"))
@@ -168,13 +173,19 @@ class OpenAlexService:
                 "error": str(e),
             }
 
-    def _find_openalex_id_by_doi(self, doi: str) -> str | None:
-        """通过DOI查找OpenAlex Work ID"""
+    async def _find_openalex_id_by_doi_async(self, doi: str) -> str | None:
+        """异步通过DOI查找OpenAlex Work ID"""
         try:
             url = f"{self.base_url}/works"
             params = {"filter": f"doi:{doi}", "select": "id", "per-page": 1}
 
-            api_result = self.api_client.get(url, params=params)
+            # OpenAlex 需要特定的 User-Agent
+            headers = {
+                "User-Agent": "Article-MCP/2.0-Async (mailto:user@example.com)",
+                "Accept": "application/json",
+            }
+
+            api_result = await self._get_async_client().get(url, params=params, headers=headers)
 
             if api_result.get("success", False):
                 data = api_result.get("data", {})
@@ -193,14 +204,14 @@ class OpenAlexService:
             return None
 
     def _format_articles(self, items: list[dict]) -> list[dict]:
-        """格式化文章列表"""
+        """格式化文章列表（纯数据处理，保持同步）"""
         articles = []
         for item in items:
             articles.append(self._format_single_article(item))
         return articles
 
     def _format_single_article(self, item: dict) -> dict:
-        """格式化单篇文章"""
+        """格式化单篇文章（纯数据处理，保持同步）"""
         # 提取作者信息
         authors = []
         authorships = item.get("authorships") or []
