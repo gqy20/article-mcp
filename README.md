@@ -240,8 +240,22 @@ python main.py server
 **主要参数**:
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `pmcid` | string/list[] | 必填 | PMCID 标识符（单个或列表，最多20个） |
-| `sections` | list[] | `None` | 全文章节控制：`None`=全部章节，`["conclusion"]`=指定章节 |
+| `pmcid` | string/list[] | 必填 | PMCID 标识符（单个或列表，最多20个）**支持自动规范化** |
+| `sections` | string/list[] | `None` | 全文章节控制（支持字符串或数组）**支持自动规范化** |
+| `format` | string | `markdown` | 输出格式：`markdown`/`xml`/`text` |
+
+**🎯 参数自动规范化特性**（用户体验优化）：
+
+工具会自动修正以下常见格式错误：
+
+| 错误格式 | 自动修正为 |
+|----------|-----------|
+| `"pmcid": "[\"a\", \"b\"]"` | `["a", "b"]` (字符串化数组自动解析) |
+| `"sections": "methods"` | `["methods"]` (字符串自动转数组) |
+| `"pmcid": "PMC123"` | `"PMC123"` (单个字符串保持不变) |
+| `"sections": ["a", "b"]` | `["a", "b"]` (数组保持不变) |
+
+无需手动转换格式，工具会智能识别并自动处理。
 
 **支持的章节名称**:
 - `methods` (方法): methods, methodology, materials and methods
@@ -447,6 +461,46 @@ get_journal_quality("Nature", include_metrics=["impact_factor", "cas_zone", "h_i
   "processing_time": 0.34
 }
 ```
+
+---
+
+## 🎯 参数容错特性
+
+为提升用户体验，工具实现了智能参数规范化，自动修正常见的参数格式错误：
+
+### `get_article_details` 工具容错
+
+#### pmcid 参数
+
+| 输入格式 | 自动修正为 | 说明 |
+|----------|-----------|------|
+| `"PMC1234567"` | `"PMC1234567"` | 单个字符串（保持不变） |
+| `["PMC123", "PMC456"]` | `["PMC123", "PMC456"]` | 正常数组（保持不变） |
+| `"[\"PMC123\", \"PMC456\"]"` | `["PMC123", "PMC456"]` | 字符串化数组（自动解析） |
+
+#### sections 参数
+
+| 输入格式 | 自动修正为 | 说明 |
+|----------|-----------|------|
+| `null` | `null` | 空值（保持不变） |
+| `"methods"` | `["methods"]` | 单个字符串（自动转数组） |
+| `["methods", "results"]` | `["methods", "results"]` | 正常数组（保持不变） |
+
+### 错误处理
+
+对于无法自动修正的格式，工具会返回友好的错误提示：
+
+```json
+{
+  "error": "pmcid 参数格式错误：检测到字符串化的数组，但 JSON 解析失败。请使用 JSON 数组格式：[\"PMC123\", \"PMC456\"]。错误详情：..."
+}
+```
+
+### 兼容性
+
+✅ **完全向后兼容** - 正确格式的参数行为保持不变
+✅ **渐进增强** - 只有错误格式才会被自动修正
+✅ **测试覆盖** - 所有边界情况都有单元测试覆盖
 
 ---
 
@@ -803,6 +857,22 @@ uvx --from . article-mcp
 {
   "pmcid": "PMC1234567",
   "sections": ["conclusion", "discussion"]
+}
+```
+
+**✨ 参数容错示例**（以下格式都会自动修正）：
+
+```json
+// sections 使用字符串（自动转数组）
+{
+  "pmcid": "PMC1234567",
+  "sections": "methods"
+}
+
+// pmcid 使用字符串化数组（自动解析）
+{
+  "pmcid": "[\"PMC1234567\", \"PMC2345678\"]",
+  "sections": "methods"
 }
 ```
 
