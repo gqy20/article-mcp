@@ -97,6 +97,61 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         )
 
 
+def _normalize_pmcid_param(pmcid: str | list[str]) -> str | list[str]:
+    """规范化 pmcid 参数，自动修复字符串化的数组。
+
+    支持的格式：
+    1. 正常的 JSON 数组: ["PMC123", "PMC456"]
+    2. 字符串化的数组: '["PMC123", "PMC456"]' (自动解析)
+    3. 单个字符串: "PMC123"
+
+    Args:
+        pmcid: 原始 pmcid 参数
+
+    Returns:
+        规范化后的 pmcid（字符串或字符串数组）
+
+    Raises:
+        ValueError: 如果字符串化的数组格式无效
+    """
+    import json
+
+    # 如果是字符串，检查是否是字符串化的数组
+    if isinstance(pmcid, str):
+        # 检测字符串化的数组：以 [ 开头，以 ] 结尾
+        if pmcid.startswith("[") and pmcid.endswith("]"):
+            try:
+                parsed = json.loads(pmcid)
+                if isinstance(parsed, list):
+                    # 验证解析后的数组元素都是字符串
+                    for item in parsed:
+                        if not isinstance(item, str):
+                            raise ValueError(f"数组元素必须是字符串，发现 {type(item)}")
+                    return parsed
+                else:
+                    # 解析结果不是数组，返回原字符串
+                    return pmcid
+            except json.JSONDecodeError as e:
+                # JSON 解析失败，返回友好的错误
+                raise ValueError(
+                    f"pmcid 参数格式错误：检测到字符串化的数组，但 JSON 解析失败。"
+                    f'请使用 JSON 数组格式：["PMC123", "PMC456"]。'
+                    f"错误详情：{e}"
+                )
+        # 单个字符串，直接返回
+        return pmcid
+
+    # 如果已经是列表，验证元素类型
+    if isinstance(pmcid, list):
+        for item in pmcid:
+            if not isinstance(item, str):
+                raise ValueError(f"数组元素必须是字符串，发现 {type(item)}")
+        return pmcid
+
+    # 其他类型，直接返回
+    return pmcid
+
+
 async def get_article_details_async(
     pmcid: str | list[str],
     sections: list[str] | None = None,
@@ -129,6 +184,24 @@ async def get_article_details_async(
         }
 
     """
+    # 规范化 pmcid 参数（自动修复字符串化的数组）
+    try:
+        pmcid = _normalize_pmcid_param(pmcid)
+    except ValueError as e:
+        # 返回友好的错误信息
+        total_estimate = (
+            1 if isinstance(pmcid, str) else len(pmcid) if isinstance(pmcid, list) else 1
+        )
+        return {
+            "total": total_estimate,
+            "successful": 0,
+            "failed": total_estimate,
+            "articles": [],
+            "fulltext_stats": None,
+            "processing_time": 0,
+            "error": str(e),
+        }
+
     # 验证 format 参数
     valid_formats = ["markdown", "xml", "text"]
     if format not in valid_formats:

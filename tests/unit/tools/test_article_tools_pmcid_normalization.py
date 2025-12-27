@@ -137,33 +137,31 @@ def mock_logger():
 def mock_services():
     """模拟服务"""
 
-    async def mock_fetch(pmcid, id_type="pmcid"):
-        return {
+    europe_pmc = Mock()
+    europe_pmc.fetch = Mock(
+        return_value={
             "article": {
                 "pmid": "12345678",
-                "title": f"Test Article {pmcid}",
+                "title": "Test Article",
                 "authors": ["Author A", "Author B"],
                 "journal_name": "Test Journal",
                 "publication_date": "2025-01-01",
                 "abstract": "Test abstract",
-                "doi": f"10.1234/test.{pmcid}",
-                "pmcid": pmcid,
+                "doi": "10.1234/test",
+                "pmcid": "PMC12700438",
             },
             "error": None,
         }
-
-    async def mock_fulltext(pmcid, sections=None):
-        return {
-            "fulltext_xml": f"<xml>{pmcid}</xml>",
-            "fulltext_markdown": f"# {pmcid}",
-            "fulltext_text": pmcid,
-            "fulltext_available": True,
-        }
-
-    europe_pmc = Mock()
-    europe_pmc.fetch = mock_fetch
+    )
 
     pubmed = Mock()
-    pubmed.get_pmc_fulltext_html_async = mock_fulltext
+    pubmed.get_pmc_fulltext_html_async = AsyncMock(
+        return_value={
+            "fulltext_xml": "<xml>content</xml>",
+            "fulltext_markdown": "# content",
+            "fulltext_text": "content",
+            "fulltext_available": True,
+        }
+    )
 
     return {"europe_pmc": europe_pmc, "pubmed": pubmed}
