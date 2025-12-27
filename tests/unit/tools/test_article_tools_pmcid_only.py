@@ -72,7 +72,10 @@ def mock_services():
     )
 
     pubmed = Mock()
-    pubmed.get_pmc_fulltext_html = Mock(return_value=SAMPLE_FULLTEXT.copy())
+    # 使用异步 mock
+    from unittest.mock import AsyncMock
+
+    pubmed.get_pmc_fulltext_html_async = AsyncMock(return_value=SAMPLE_FULLTEXT.copy())
 
     return {"europe_pmc": europe_pmc, "pubmed": pubmed}
 
@@ -124,13 +127,15 @@ class TestArticleDetailsPMCidOnly:
         assert article["fulltext"]["fulltext_available"] is True
 
         # 验证调用时 sections=None（获取全部）
-        mock_services["pubmed"].get_pmc_fulltext_html.assert_called_once_with(
+        mock_services["pubmed"].get_pmc_fulltext_html_async.assert_called_once_with(
             "PMC1234567", sections=None
         )
 
     async def test_sections_list_gets_specific(self, mock_services, logger):
         """测试：sections=["conclusion"] 获取指定章节"""
-        mock_services["pubmed"].get_pmc_fulltext_html = Mock(
+        from unittest.mock import AsyncMock
+
+        mock_services["pubmed"].get_pmc_fulltext_html_async = AsyncMock(
             return_value=SAMPLE_FULLTEXT_CONCLUSION.copy()
         )
 
@@ -142,7 +147,7 @@ class TestArticleDetailsPMCidOnly:
         article = result["articles"][0]
         assert article["fulltext"]["sections_requested"] == ["conclusion"]
 
-        mock_services["pubmed"].get_pmc_fulltext_html.assert_called_once_with(
+        mock_services["pubmed"].get_pmc_fulltext_html_async.assert_called_once_with(
             "PMC1234567", sections=["conclusion"]
         )
 

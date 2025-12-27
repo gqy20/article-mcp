@@ -97,7 +97,7 @@ class TestClosureServicesArticleTools:
                 "error": None,
             }
 
-        def mock_fulltext(pmcid, sections=None):
+        async def mock_fulltext(pmcid, sections=None):
             return {
                 "fulltext_xml": "<xml>content</xml>",
                 "fulltext_markdown": "# content",
@@ -107,7 +107,7 @@ class TestClosureServicesArticleTools:
 
         mock_services = {
             "europe_pmc": Mock(fetch=mock_fetch),
-            "pubmed": Mock(get_pmc_fulltext_html=mock_fulltext),
+            "pubmed": Mock(get_pmc_fulltext_html_async=mock_fulltext),
         }
 
         # Act: 调用函数并传入 services 参数

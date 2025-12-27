@@ -60,7 +60,10 @@ def mock_services():
     )
 
     pubmed = Mock()
-    pubmed.get_pmc_fulltext_html = Mock(return_value=SAMPLE_FULLTEXT_ALL_FORMATS.copy())
+    # 使用异步 mock
+    from unittest.mock import AsyncMock
+
+    pubmed.get_pmc_fulltext_html_async = AsyncMock(return_value=SAMPLE_FULLTEXT_ALL_FORMATS.copy())
 
     return {"europe_pmc": europe_pmc, "pubmed": pubmed}
 
