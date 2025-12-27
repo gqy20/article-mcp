@@ -49,9 +49,9 @@ class TestRealAPIIntegration:
             # 创建服务实例
             service = EuropePMCService(logger)
 
-            # 执行搜索
+            # 执行搜索 - 使用新的异步方法名
             with TestTimer() as timer:
-                result = await service.search_articles(keyword="machine learning", max_results=5)
+                result = await service.search_async(keyword="machine learning", max_results=5)
 
             # 验证结果
             assert timer.stop() < 30.0  # 应该在30秒内完成
@@ -88,9 +88,9 @@ class TestRealAPIIntegration:
             # 创建服务实例
             service = create_arxiv_service(logger)
 
-            # 执行搜索
+            # 执行搜索 - 使用新的异步方法名
             with TestTimer() as timer:
-                result = await service.search_papers(
+                result = await service.search_async(
                     keyword="artificial intelligence", max_results=3
                 )
 
@@ -132,15 +132,17 @@ class TestRealAPIIntegration:
             # 使用一个已知的DOI进行测试
             test_doi = "10.1016/j.neuron.2023.01.001"
 
-            # 执行DOI解析
+            # 执行DOI解析 - 使用新的异步方法名
             with TestTimer() as timer:
-                result = await service.resolve_doi(test_doi)
+                result = await service.get_work_by_doi_async(test_doi)
 
             # 验证结果
             assert timer.stop() < 15.0  # 应该在15秒内完成
-            assert "title" in result
-            assert len(result["title"]) > 0
-            assert result.get("doi") == test_doi
+            assert result["success"] is True
+            assert "article" in result
+            assert "title" in result["article"]
+            assert len(result["article"]["title"]) > 0
+            assert result["article"].get("doi") == test_doi
 
         except ImportError:
             pytest.skip("CrossRef服务不可用")
@@ -178,12 +180,12 @@ class TestAPIPerformance:
             europe_pmc_service = EuropePMCService(logger)
             arxiv_service = create_arxiv_service(logger)
 
-            # 并发调用测试
+            # 并发调用测试 - 使用新的异步方法名
             with TestTimer() as timer:
                 tasks = [
-                    europe_pmc_service.search_articles("machine learning", max_results=3),
-                    arxiv_service.search_papers("deep learning", max_results=3),
-                    europe_pmc_service.search_articles("neural networks", max_results=3),
+                    europe_pmc_service.search_async("machine learning", max_results=3),
+                    arxiv_service.search_async("deep learning", max_results=3),
+                    europe_pmc_service.search_async("neural networks", max_results=3),
                 ]
 
                 results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -215,12 +217,12 @@ class TestAPIPerformance:
             logger = logging.getLogger(__name__)
             service = EuropePMCService(logger)
 
-            # 快速连续调用测试
+            # 快速连续调用测试 - 使用新的异步方法名
             call_times = []
             for i in range(3):
                 with TestTimer() as timer:
                     try:
-                        await service.search_articles(f"test query {i}", max_results=1)
+                        await service.search_async(f"test query {i}", max_results=1)
                         call_times.append(timer.stop())
                     except Exception as e:
                         if "rate limit" in str(e).lower():
@@ -293,8 +295,8 @@ class TestAPIReliability:
             # 替换请求方法
             service._make_request = counting_request
 
-            # 执行搜索（应该会重试）
-            result = await service.search_articles("test query", max_results=1)
+            # 执行搜索（应该会重试）- 使用新的异步方法名
+            result = await service.search_async("test query", max_results=1)
 
             # 验证重试机制
             assert retry_count >= 2  # 应该至少重试了2次
@@ -328,10 +330,10 @@ class TestAPIReliability:
 
             service._make_request = slow_request
 
-            # 测试超时处理
+            # 测试超时处理 - 使用新的异步方法名
             with pytest.raises((asyncio.TimeoutError, Exception)):
                 await run_async_with_timeout(
-                    service.search_articles("test query", max_results=1), timeout=30.0
+                    service.search_async("test query", max_results=1), timeout=30.0
                 )
 
         except ImportError:

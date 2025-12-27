@@ -15,7 +15,7 @@ class MockMCP:
     def __init__(self):
         self.tools = {}
 
-    def tool(self):
+    def tool(self, **kwargs):  # 接受 FastMCP v2 的参数
         def decorator(func):
             self.tools[func.__name__] = func
             return func
