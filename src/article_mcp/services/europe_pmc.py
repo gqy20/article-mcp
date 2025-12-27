@@ -219,6 +219,7 @@ class EuropePMCService:
                                 return {
                                     "error": f"API 请求失败: {response.status}",
                                     "articles": [],
+                                    "total_count": 0,
                                     "message": None,
                                 }
 
@@ -227,7 +228,12 @@ class EuropePMCService:
                             hit_count = data.get("hitCount", 0)
 
                             if not results:
-                                return {"message": "未找到相关文献", "articles": [], "error": None}
+                                return {
+                                    "message": "未找到相关文献",
+                                    "articles": [],
+                                    "total_count": 0,
+                                    "error": None,
+                                }
 
                             articles = []
                             for article_json in results:
@@ -241,14 +247,25 @@ class EuropePMCService:
 
                             return {
                                 "articles": articles,
+                                "total_count": hit_count,
                                 "error": None,
                                 "message": f"找到 {len(articles)} 篇相关文献 (共 {hit_count} 条)",
                             }
 
                 except ValueError as e:
-                    return {"error": f"参数错误: {str(e)}", "articles": [], "message": None}
+                    return {
+                        "error": f"参数错误: {str(e)}",
+                        "articles": [],
+                        "total_count": 0,
+                        "message": None,
+                    }
                 except Exception as e:
-                    return {"error": f"搜索失败: {str(e)}", "articles": [], "message": None}
+                    return {
+                        "error": f"搜索失败: {str(e)}",
+                        "articles": [],
+                        "total_count": 0,
+                        "message": None,
+                    }
 
             return await self._get_cached_or_fetch(cache_key, fetch_from_api)
 
