@@ -12,7 +12,7 @@ def register_config_resources(mcp: FastMCP) -> None:
     @mcp.resource("config://version")
     def get_version() -> str:
         """获取服务器版本信息"""
-        return "0.2.0"
+        return "0.2.1"
 
     @mcp.resource("config://status")
     def get_system_status() -> dict[str, Any]:
@@ -20,7 +20,7 @@ def register_config_resources(mcp: FastMCP) -> None:
         return {
             "status": "running",
             "server": "Article MCP Server",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "timestamp": time.time(),
             "uptime": "N/A",  # 可以后续实现
             "supported_data_sources": ["europe_pmc", "pubmed", "arxiv", "crossref", "openalex"],

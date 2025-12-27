@@ -52,7 +52,7 @@ class TestCLIBasics:
                                     server = create_mcp_server()
 
             # 验证服务器创建
-            mock_fastmcp.assert_called_once_with("Article MCP Server", version="0.2.0")
+            mock_fastmcp.assert_called_once_with("Article MCP Server", version="0.2.1")
             assert server is not None
 
     @pytest.mark.unit
