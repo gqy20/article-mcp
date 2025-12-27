@@ -491,16 +491,36 @@ class PubMedService:
             # 解析 XML
             root = ET.fromstring(xml_content)
 
-            # 查找 body 元素
-            body = root.find(".//body")
-            if body is None:
-                # 如果找不到 body，返回空内容
-                sections_missing.extend(requested_sections)
-                return ""
-
             # 收集所有匹配的章节元素
             matched_sections: list[ET.Element] = []
 
+            # 特殊处理：abstract 不在 body 内，而是独立的 abstract 元素
+            if "abstract" in requested_sections:
+                abstract_elem = root.find(".//abstract")
+                if abstract_elem is not None:
+                    matched_sections.append(abstract_elem)
+                    sections_found.append("abstract")
+                else:
+                    sections_missing.append("abstract")
+
+            # 查找 body 元素
+            body = root.find(".//body")
+            if body is None:
+                # 如果找不到 body 且没有找到 abstract，返回空内容
+                if not matched_sections:
+                    sections_missing.extend(
+                        [s for s in requested_sections if s not in sections_found]
+                    )
+                # 只有 abstract 的情况，直接构建 XML
+                root_elem = ET.Element("root")
+                for section in matched_sections:
+                    root_elem.append(section)
+                result_parts = []
+                for child in root_elem:
+                    result_parts.append(ET.tostring(child, encoding="unicode"))
+                return "".join(result_parts)
+
+            # 在 body 内查找其他章节
             for section_elem in body.findall(".//sec"):
                 # 获取 sec-type 属性和标题
                 sec_type = section_elem.get("sec-type", "").lower()
@@ -531,13 +551,30 @@ class PubMedService:
                 return ""
 
             # 构建只包含匹配章节的 XML
-            # 创建新的 body 元素
-            new_body = ET.Element("body")
-            for section in matched_sections:
-                new_body.append(section)
+            # abstract 和其他章节（在 body 内）分开处理
+            # 创建根元素
+            root_elem = ET.Element("root")
 
-            # 转换回字符串
-            return ET.tostring(new_body, encoding="unicode")
+            # 提取 abstract（在根级别）
+            body_sections = []
+            for section in matched_sections:
+                if section.tag == "abstract":
+                    root_elem.append(section)
+                else:
+                    body_sections.append(section)
+
+            # 如果有 body 内的章节，创建 body 元素
+            if body_sections:
+                body_elem = ET.Element("body")
+                for section in body_sections:
+                    body_elem.append(section)
+                root_elem.append(body_elem)
+
+            # 转换回字符串（只返回子元素的内容，不包含 root 标签）
+            result_parts = []
+            for child in root_elem:
+                result_parts.append(ET.tostring(child, encoding="unicode"))
+            return "".join(result_parts)
 
         except ET.ParseError as e:
             self.logger.warning(f"XML 解析失败: {e}")

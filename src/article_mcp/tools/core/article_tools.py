@@ -23,7 +23,11 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="""获取文献全文工具。通过 PMCID 获取文献的全文内容。
+        description="""获取文献全文工具。
+
+前置条件：需要 PMCID 标识符
+- 如果您有 PMCID（如 PMC1234567），直接使用此工具
+- 如果您只有关键词或标题，请先使用"文献搜索"工具查找并获取 PMCID
 
 主要参数：
 - pmcid: PMCID 标识符（必填）：单个或列表[PMC1234567, PMC2345678, ...]
@@ -219,7 +223,7 @@ async def _fetch_single_article(
 
         # 获取全文（这是全文获取工具，总是获取全文）
         try:
-            fulltext = pubmed_service.get_pmc_fulltext_html(pmcid, sections=sections)
+            fulltext = await pubmed_service.get_pmc_fulltext_html_async(pmcid, sections=sections)
             if fulltext.get("fulltext_available"):
                 # 根据 format 参数只返回请求的格式
                 format_key_map = {

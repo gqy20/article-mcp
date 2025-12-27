@@ -520,7 +520,10 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
     from mcp.types import ToolAnnotations
 
     @mcp.tool(
-        description="""多源文献搜索工具。并行搜索多个学术数据库（Europe PMC、PubMed、arXiv、CrossRef、OpenAlex），支持关键词检索和智能结果合并。
+        description="""多源文献搜索工具。用于查找文献并获取 PMCID。
+
+⚠️ 此工具只返回元数据（标题、作者、摘要、PMCID等），不包含全文内容。
+   如需获取全文，请使用返回结果中的 pmcid 调用"文献全文"工具。
 
 搜索策略：
 - comprehensive: 全面搜索，使用所有可用数据源（并集）
@@ -535,7 +538,7 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
 - search_type: 搜索策略（默认comprehensive）
 - use_cache: 是否使用24小时缓存（默认true）
 
-返回数据包含合并结果、各源结果、搜索时间、缓存命中等信息""",
+返回数据包含：标题、作者、期刊、摘要、PMCID、DOI等元数据（不含全文）""",
         annotations=ToolAnnotations(title="文献搜索", readOnlyHint=True, openWorldHint=False),
         tags={"search", "literature", "academic"},
     )
