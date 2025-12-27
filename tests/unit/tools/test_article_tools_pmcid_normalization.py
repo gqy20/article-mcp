@@ -117,6 +117,37 @@ class TestPmcidNormalization:
         assert "error" in result
         assert "超过限制" in result["error"] or "20" in result["error"]
 
+    @pytest.mark.asyncio
+    async def test_sections_string_auto_converted_to_list(self, mock_services, mock_logger):
+        """sections 字符串应自动转换为数组"""
+        result = await get_article_details_async(
+            pmcid="PMC12700438",
+            sections="methods",  # 字符串而不是数组
+            format="markdown",
+            services=mock_services,
+            logger=mock_logger,
+        )
+
+        # 应该成功处理，自动将 "methods" 转换为 ["methods"]
+        assert "total" in result
+        assert result["total"] == 1
+        assert result["successful"] > 0
+
+    @pytest.mark.asyncio
+    async def test_sections_list_unchanged(self, mock_services, mock_logger):
+        """sections 数组应保持不变"""
+        result = await get_article_details_async(
+            pmcid="PMC12700438",
+            sections=["methods", "results"],  # 已经是数组
+            format="markdown",
+            services=mock_services,
+            logger=mock_logger,
+        )
+
+        assert "total" in result
+        assert result["total"] == 1
+        assert result["successful"] > 0
+
 
 # ===== Fixtures =====
 import asyncio

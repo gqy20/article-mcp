@@ -73,14 +73,14 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
     )
     async def get_article_details(
         pmcid: str | list[str],
-        sections: list[str] | None = None,
+        sections: str | list[str] | None = None,
         format: str = "markdown",
     ) -> dict[str, Any]:
         """获取文献全文工具。通过 PMCID 获取文献的全文内容。
 
         Args:
             pmcid: PMCID 标识符或 PMCID 列表（最多20个）
-            sections: 全文章节控制，None=全部章节，["xxx"]=指定章节
+            sections: 全文章节控制，None=全部章节，"xxx"或["xxx"]=指定章节
             format: 全文格式，"markdown"|"xml"|"text"，默认"markdown"
 
         Returns:
@@ -95,6 +95,34 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
             services=services,
             logger=logger,
         )
+
+
+def _normalize_sections_param(sections: str | list[str] | None) -> list[str] | None:
+    """规范化 sections 参数，自动转换字符串为数组。
+
+    支持的格式：
+    1. 数组: ["methods", "results"]
+    2. 字符串: "methods" → ["methods"]
+    3. None: None
+
+    Args:
+        sections: 原始 sections 参数
+
+    Returns:
+        规范化后的 sections（None 或字符串数组）
+    """
+    if sections is None:
+        return None
+    if isinstance(sections, str):
+        return [sections]
+    if isinstance(sections, list):
+        # 验证所有元素都是字符串
+        for item in sections:
+            if not isinstance(item, str):
+                raise ValueError(f"sections 数组元素必须是字符串，发现 {type(item)}")
+        return sections
+    # 其他类型，返回 None
+    return None
 
 
 def _normalize_pmcid_param(pmcid: str | list[str]) -> str | list[str]:
@@ -154,7 +182,7 @@ def _normalize_pmcid_param(pmcid: str | list[str]) -> str | list[str]:
 
 async def get_article_details_async(
     pmcid: str | list[str],
-    sections: list[str] | None = None,
+    sections: str | list[str] | None = None,
     format: str = "markdown",
     *,
     services: dict[str, Any],
@@ -164,7 +192,7 @@ async def get_article_details_async(
 
     Args:
         pmcid: PMCID 标识符或 PMCID 列表（最多20个）
-        sections: 全文章节控制，None=全部章节，["xxx"]=指定章节
+        sections: 全文章节控制，None=全部章节，"xxx"或["xxx"]=指定章节
         format: 全文格式，"markdown"|"xml"|"text"，默认"markdown"
         services: 服务依赖注入字典（必需，闭包捕获模式）
         logger: 日志记录器（必需，闭包捕获模式）
@@ -187,6 +215,24 @@ async def get_article_details_async(
     # 规范化 pmcid 参数（自动修复字符串化的数组）
     try:
         pmcid = _normalize_pmcid_param(pmcid)
+    except ValueError as e:
+        # 返回友好的错误信息
+        total_estimate = (
+            1 if isinstance(pmcid, str) else len(pmcid) if isinstance(pmcid, list) else 1
+        )
+        return {
+            "total": total_estimate,
+            "successful": 0,
+            "failed": total_estimate,
+            "articles": [],
+            "fulltext_stats": None,
+            "processing_time": 0,
+            "error": str(e),
+        }
+
+    # 规范化 sections 参数（自动转换字符串为数组）
+    try:
+        sections = _normalize_sections_param(sections)
     except ValueError as e:
         # 返回友好的错误信息
         total_estimate = (
