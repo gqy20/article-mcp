@@ -299,7 +299,8 @@ class TestToolIntegration:
         }
 
         quality_services = {
-            "pubmed": Mock(),
+            "easyscholar": Mock(),
+            "openalex": Mock(),
         }
 
         # 注册所有工具（5个核心工具）

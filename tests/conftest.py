@@ -277,7 +277,8 @@ def six_tool_services(logger):
             "pubmed": Mock(),
         },
         "quality_services": {
-            "pubmed": Mock(),
+            "easyscholar": Mock(),
+            "openalex": Mock(),
         },
         "batch_services": {
             "europe_pmc": Mock(),
