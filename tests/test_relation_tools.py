@@ -3,7 +3,7 @@
 
 import logging
 
-from src.article_mcp.tools.core import relation_tools
+from article_mcp.tools.core import relation_tools
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -32,10 +32,10 @@ def test_relation_tools():
     # 创建服务实例
 
     # 获取实际的服务实例
-    from src.article_mcp.services.crossref_service import CrossRefService
-    from src.article_mcp.services.europe_pmc import create_europe_pmc_service
-    from src.article_mcp.services.openalex_service import OpenAlexService
-    from src.article_mcp.services.pubmed_search import create_pubmed_service
+    from article_mcp.services.crossref_service import CrossRefService
+    from article_mcp.services.europe_pmc import create_europe_pmc_service
+    from article_mcp.services.openalex_service import OpenAlexService
+    from article_mcp.services.pubmed_search import create_pubmed_service
 
     # 初始化服务
     crossref_service = CrossRefService(logger)
