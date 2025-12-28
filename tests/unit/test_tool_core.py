@@ -325,15 +325,28 @@ class TestToolIntegration:
         # 4. get_literature_relations
         # 5. get_journal_quality
 
-        from fastmcp import FastMCP
+        import asyncio
 
         from article_mcp.cli import create_mcp_server
 
         server = create_mcp_server()
-        # FastMCP 存储工具 - 检查公开属性
-        public_attrs = [name for name in dir(server) if not name.startswith("_")]
-        # 应该至少有5个工具函数
-        tool_funcs = [name for name in public_attrs if callable(getattr(server, name, None))]
-        assert len(tool_funcs) >= 5, (
-            f"Expected at least 5 tools, got {len(tool_funcs)}: {tool_funcs}"
+        # 使用 get_tools() 方法替代遍历属性
+        # 这样避免触发 FastMCP .settings 废弃警告
+        tools = asyncio.run(server.get_tools())
+        tool_names = list(tools.keys())
+
+        # 验证5个核心工具存在
+        expected_tools = [
+            "search_literature",
+            "get_article_details",
+            "get_references",
+            "get_literature_relations",
+            "get_journal_quality",
+        ]
+
+        for tool_name in expected_tools:
+            assert tool_name in tool_names, f"缺少工具: {tool_name}"
+
+        assert len(tool_names) >= 5, (
+            f"Expected at least 5 tools, got {len(tool_names)}: {tool_names}"
         )
