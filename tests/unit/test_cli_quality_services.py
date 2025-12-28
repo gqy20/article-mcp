@@ -135,8 +135,6 @@ class TestServicesInitExports:
 
     def test_services_init_exports_openalex_metrics(self):
         """验证：services/__init__.py 导出了 create_openalex_metrics_service"""
-        # 这个测试会失败，因为当前 __init__.py 没有导出这个函数
-        with pytest.raises(ImportError):
-            from article_mcp.services import create_openalex_metrics_service
+        from article_mcp.services import create_openalex_metrics_service
 
-            assert callable(create_openalex_metrics_service)
+        assert callable(create_openalex_metrics_service)

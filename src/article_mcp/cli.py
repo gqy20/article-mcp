@@ -40,9 +40,11 @@ def create_mcp_server() -> "FastMCP":
     from .services.crossref_service import CrossRefService
 
     # 导入新架构服务（使用新的包结构）
+    from .services.easyscholar_service import create_easyscholar_service
     from .services.europe_pmc import create_europe_pmc_service
 
     # from .services.literature_relation_service import create_literature_relation_service
+    from .services.openalex_metrics_service import create_openalex_metrics_service
     from .services.openalex_service import OpenAlexService
     from .services.pubmed_search import create_pubmed_service
     from .services.reference_service import create_unified_reference_service
@@ -81,6 +83,8 @@ def create_mcp_server() -> "FastMCP":
     openalex_service = OpenAlexService(logger)
     arxiv_service = create_arxiv_service(logger)
     reference_service = create_unified_reference_service(logger)
+    easyscholar_service = create_easyscholar_service(logger)
+    openalex_metrics_service = create_openalex_metrics_service(logger)
     # literature_relation_service 在关系工具中使用，不需要单独创建
 
     # 注册新架构核心工具
@@ -123,7 +127,10 @@ def create_mcp_server() -> "FastMCP":
     register_relation_tools(mcp, relation_services, logger)
 
     # 工具5: 期刊质量评估工具
-    quality_services = {"pubmed": pubmed_service}
+    quality_services = {
+        "easyscholar": easyscholar_service,
+        "openalex": openalex_metrics_service,
+    }
     register_quality_tools(mcp, quality_services, logger)
 
     return mcp
