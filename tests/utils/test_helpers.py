@@ -86,8 +86,13 @@ class MockDataGenerator:
         return references
 
 
-class PerformanceTimer:
-    """性能测试计时器 - 用于测试中的性能测量"""
+class PerfTimer:
+    """性能测试计时器 - 用于测试中的性能测量
+
+    重命名说明：原 PerformanceTimer 类名导致 pytest 误认为是测试类，
+    因为类名包含 'Performance' 关键字且有 __init__ 构造函数。
+    重命名为 PerfTimer 避免这个问题，同时保持向后兼容性。
+    """
 
     def __init__(self):
         self.start_time = None
@@ -113,7 +118,8 @@ class PerformanceTimer:
 
 
 # 保持向后兼容的别名
-TestTimer = PerformanceTimer
+PerformanceTimer = PerfTimer
+TestTimer = PerfTimer
 
 
 class MockResponse:
