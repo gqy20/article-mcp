@@ -1,5 +1,42 @@
 # 版本更新说明
 
+## v0.2.2 (2025-01-04) - 文档修正与代码质量提升
+
+### 文档修正 📚
+- **CLAUDE.md**: 更正核心工具数量从 6 个改为 5 个
+  - 移除不存在的 `export_batch_results` (batch_tools.py)
+  - 添加 `test_six_tools.py` 命名遗留问题的说明
+- **README.md**: 更新 FastMCP 版本描述为 v2.13+
+
+### 代码质量改进 🔧
+- **FastMCP API 适配**: 修复 `.settings` 废弃警告，使用新的 API
+- **性能计时器重构**: 重命名 `PerformanceTimer` 为 `PerfTimer`，提升代码一致性
+- **服务依赖注入**: 修复 `quality_tools` 服务依赖注入问题
+- **工具参数描述**: 修正 `show_info()` 工具参数描述（TDD 完成）
+
+### 测试改进 ✅
+- 添加 `PerfTimer` 类命名问题的测试
+- 添加 `RuntimeWarning` 协程未等待问题的测试
+- 修复 `test_relation_tools.py` 中的导入路径问题
+- 更新测试文件中的 `quality_services` Mock 定义以保持一致性
+- 添加 `quality_tools` 服务依赖注入的失败测试
+
+### 提交记录
+```
+0b80ad2 docs: 修正文档与代码一致性
+e44f44a refactor: 修复 FastMCP .settings 废弃警告
+4520411 refactor: 重命名 PerformanceTimer 为 PerfTimer
+dc752c5 test: 添加 PerformanceTimer 类命名问题的测试
+c3e6af1 fix: 修复 test_relation_tools.py 中的导入路径问题
+77412e2 test: 添加 RuntimeWarning 协程未等待问题的测试
+4986a03 test: 更新测试文件中的 quality_services Mock 定义以保持一致性
+286ee93 feat: 修复 quality_tools 服务依赖注入问题
+0c875f0 test: 添加 quality_tools 服务依赖注入的失败测试
+461998a feat: 修正 show_info() 工具参数描述（TDD 完成）
+```
+
+---
+
 ## v0.2.0 (2024-12-27) - 异步架构重大升级 🚀
 
 ### 重大变更 - 纯异步架构迁移

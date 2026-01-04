@@ -22,7 +22,7 @@ from typing import Any
 # 设置编码环境，确保emoji字符正确处理
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __author__ = "gqy20"
 __email__ = "qingyu_ge@foxmail.com"
 
