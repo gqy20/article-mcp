@@ -17,7 +17,7 @@ The project follows a standard Python src layout with layered architecture:
 - **Resource Layer** (`resources/`): MCP resources for config and journal data
 - **Compatibility Layer** (`main.py`): Backward-compatible CLI entry point
 
-### The 6 Core Tools
+### The 5 Core Tools
 
 All tools are registered in `cli.py:create_mcp_server()` with their respective service dependencies:
 
@@ -26,7 +26,8 @@ All tools are registered in `cli.py:create_mcp_server()` with their respective s
 3. **get_references** (`tools/core/reference_tools.py`): Reference list retrieval
 4. **get_literature_relations** (`tools/core/relation_tools.py`): Citation relationship analysis
 5. **get_journal_quality** (`tools/core/quality_tools.py`): Journal quality assessment
-6. **export_batch_results** (`tools/core/batch_tools.py`): Batch result export
+
+Note: The test file `test_six_tools.py` is a legacy name - it tests these 5 core tools.
 
 ### Service Injection Pattern
 
@@ -99,7 +100,7 @@ pytest                    # Run all tests
 pytest tests/unit/        # Unit tests only
 pytest -m integration     # Integration tests only
 pytest -m "not slow"      # Exclude slow tests
-pytest tests/unit/test_six_tools.py  # Test all 6 core tools
+pytest tests/unit/test_six_tools.py  # Test all 5 core tools (legacy filename)
 ```
 
 ### Code Quality

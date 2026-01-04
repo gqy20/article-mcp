@@ -2,7 +2,7 @@
 
 [![MCP Server](https://glama.ai/mcp/servers/@gqy20/article-mcp/badge)](https://glama.ai/mcp/servers/@gqy20/article-mcp)
 
-基于 FastMCP v2 的异步文献搜索工具，集成 Europe PMC、PubMed、arXiv、CrossRef、OpenAlex 等数据源。
+基于 FastMCP v2.13+ 的异步文献搜索工具，集成 Europe PMC、PubMed、arXiv、CrossRef、OpenAlex 等数据源。
 
 ## 快速开始
 
