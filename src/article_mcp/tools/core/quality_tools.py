@@ -20,7 +20,7 @@ from filelock import FileLock, Timeout
 
 # ========== 缓存配置 ==========
 # 缓存目录
-_CACHE_DIR = Path(os.getenv("JOURNAL_CACHE_DIR", ".cache/journal_quality"))
+_CACHE_DIR = Path(os.getenv("JOURNAL_CACHE_DIR", Path.home() / ".article_mcp_cache" / "journal_quality"))
 _CACHE_FILE = _CACHE_DIR / "journal_data.json"
 
 # 缓存过期时间（秒），默认24小时

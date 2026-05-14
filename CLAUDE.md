@@ -141,7 +141,7 @@ New features should be implemented using TDD methodology:
 ### Caching Strategy
 
 The project implements intelligent caching with 24-hour expiry:
-- Cache file: `.cache/journal_quality/journal_data.json` (unified cache)
+- Cache file: `~/.article_mcp_cache/journal_quality/journal_data.json` (unified cache)
 - OpenAlex and EasyScholar share the same cache file with merged data structure:
   ```json
   {
@@ -241,7 +241,7 @@ OpenAlex provides free metrics that complement EasyScholar:
 - EasyScholar provides: `impact_factor`, `quartile`, `jci`, `cas_zone` variants
 - OpenAlex provides: `h_index`, `citation_rate`, `cited_by_count`, `works_count`, `i10_index`
 - Reserved metrics (not available): `acceptance_rate`, `eigenfactor`, `sjr`, `snip`
-- Cache is at `.cache/journal_quality/journal_data.json`
+- Cache is at `~/.article_mcp_cache/journal_quality/journal_data.json`
 - Deprecated `get_journal_quality()` in `pubmed_search.py` - use quality_tools instead
 
 ### Relation Tools Async Refactoring
