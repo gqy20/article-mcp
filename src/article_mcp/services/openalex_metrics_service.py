@@ -9,7 +9,7 @@
 官方 API: https://openalex.org/
 无需注册，无频率限制
 
-缓存：与 EasyScholar 共享统一的缓存文件 .cache/journal_quality/journal_data.json
+缓存：统一使用用户主目录下的缓存文件 ~/.article_mcp_cache/journal_quality/journal_data.json
 """
 
 import asyncio
@@ -21,8 +21,7 @@ from pathlib import Path
 
 import aiohttp
 
-# 缓存配置 - 使用统一的期刊质量缓存文件
-_CACHE_DIR = Path(os.getenv("JOURNAL_CACHE_DIR", ".cache/journal_quality"))
+_CACHE_DIR = Path(os.getenv("JOURNAL_CACHE_DIR", Path.home() / ".article_mcp_cache" / "journal_quality"))
 _CACHE_FILE = _CACHE_DIR / "journal_data.json"
 _CACHE_TTL = int(os.getenv("JOURNAL_CACHE_TTL", "86400"))  # 24小时
 
