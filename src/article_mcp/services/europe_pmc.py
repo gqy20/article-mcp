@@ -521,7 +521,7 @@ class EuropePMCService:
             doi_queries = [f'DOI:"{doi}"' for doi in dois]
             query = " OR ".join(doi_queries)
 
-            params = {
+            params: dict[str, Any] = {
                 "query": query,
                 "format": "json",
                 "resultType": "core",

@@ -154,7 +154,7 @@ class EasyScholarService:
         await _enforce_rate_limit(self._request_times, self.RATE_LIMIT_PER_SECOND)
 
         # 构造请求参数
-        params = {
+        params: dict[str, Any] = {
             "secretKey": self.api_key,
             "publicationName": journal_name,
         }

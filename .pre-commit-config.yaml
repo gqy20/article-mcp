@@ -20,23 +20,26 @@ repos:
       # Ruff linter - 代码质量检查 + 自动修复
       - id: ruff
         args: [--fix, --show-fixes]
+        # markdown 一并纳入：ruff 0.17 起会格式化 Markdown 里的 Python 代码块，
+        # CI 的 `ruff format --check .` 同样会检查 .md，两边保持一致
+        types_or: [python, pyi, jupyter, markdown]
       # Ruff formatter - 替代 black (快 100 倍)
       - id: ruff-format
-
-  # MyPy: 类型检查 (Ruff 无法替代)
-  # 暂时禁用：项目需要逐步修复类型注释问题
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.18.2
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies: [types-requests]
-  #       args: [--ignore-missing-imports, --explicit-package-bases]
+        types_or: [python, pyi, jupyter, markdown]
 
   - repo: local
     hooks:
+      - id: mypy-check
+        name: mypy-check
+        # 用项目自身的环境跑（uv run），保证 fastmcp / aiohttp 等依赖的类型信息可用
+        entry: uv run mypy src
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: pytest-check
         name: pytest-check
-        entry: python -m pytest tests/unit/test_six_tools.py::TestSixToolIntegration::test_all_tools_registered -q
+        entry: uv run pytest tests/unit/test_six_tools.py::TestSixToolIntegration::test_all_tools_registered -q
         language: system
         pass_filenames: false
         always_run: false

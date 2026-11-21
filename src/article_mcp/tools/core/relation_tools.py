@@ -465,7 +465,7 @@ async def _get_references(
         )
 
         if result.get("success"):
-            references = result.get("merged_references", [])
+            references: list[dict[str, Any]] = result.get("merged_references", [])
             logger.info(
                 f"工具3返回 {len(references)} 篇参考文献（来自 {result.get('sources_used', [])}）"
             )

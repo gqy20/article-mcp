@@ -10,10 +10,10 @@
 # 安装
 uvx article-mcp
 
-# 或本地开发
+# 或本地开发（需要 Python 3.11+）
 git clone https://github.com/gqy20/article-mcp.git && cd article-mcp
-uv sync
-uv run python -m article_mcp
+uv sync --extra dev
+uv run article-mcp server
 ```
 
 ## 配置

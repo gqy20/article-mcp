@@ -6,7 +6,6 @@
 
 ### 🚀 核心技术文档
 
-- **`API_Integration_Fix_Report.md`** - API集成修复的完整技术报告
 - **`PROJECT_STRUCTURE.md`** - 项目架构和目录结构说明
 - **`TOOLS_REFERENCE.md`** - 所有工具的详细参考文档
 - **`Feature_Usage_Guide.md`** - 统一的功能使用指南（新增）
@@ -28,6 +27,10 @@
 
 - **`Testing_Guide.md`** - 统一的测试指南
 
+### 🗄️ 历史归档
+
+- **`archive/`** - 一次性修复过程报告（API 集成修复报告、搜索工具集成分析），仅作历史留档，日常开发无需阅读
+
 ## 📖 文档使用建议
 
 ### 新用户入门顺序
@@ -40,7 +43,7 @@
 ### 开发者参考
 
 1. **架构理解**: 阅读 `PROJECT_STRUCTURE.md` 了解项目结构
-2. **技术细节**: 查看 `API_Integration_Fix_Report.md` 了解核心技术实现
+2. **技术细节**: 查看 `TOOLS_REFERENCE.md` 与 `Feature_Usage_Guide.md` 了解工具行为
 3. **测试指南**: 参考 `Testing_Guide.md` 进行测试开发
 4. **部署发布**: 查看部署指南进行版本发布
 

@@ -49,6 +49,7 @@ class TestCrossRefServiceAsyncMethods:
         else:
             pytest.skip("search_works_async 方法尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_crossref_search_works_async_basic(self, crossref_service):
         """测试：CrossRef 异步搜索基本功能"""
@@ -125,6 +126,7 @@ class TestOpenAlexServiceAsyncMethods:
         else:
             pytest.skip("search_works_async 方法尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_openalex_search_works_async_basic(self, openalex_service):
         """测试：OpenAlex 异步搜索基本功能"""
@@ -174,6 +176,7 @@ class TestOpenAlexServiceAsyncMethods:
 class TestCrossRefOpenAlexParallelSearch:
     """测试 CrossRef 和 OpenAlex 的并行搜索"""
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_parallel_crossref_openalex_search(self):
         """测试：CrossRef 和 OpenAlex 并行搜索"""
@@ -215,48 +218,42 @@ class TestCrossRefOpenAlexParallelSearch:
 
 def test_crossref_async_signature():
     """测试：检查 CrossRef 异步方法签名"""
-    try:
-        import inspect
+    import inspect
 
-        from article_mcp.services.crossref_service import CrossRefService
+    from article_mcp.services.crossref_service import CrossRefService
 
-        service = CrossRefService(logger=Mock())
+    service = CrossRefService(logger=Mock())
+    assert hasattr(service, "search_works_async")
 
-        if hasattr(service, "search_works_async"):
-            sig = inspect.signature(service.search_works_async)
-            params = list(sig.parameters.keys())
+    # 注意：绑定方法的签名里不含 self，要取未绑定方法才看得到
+    sig = inspect.signature(CrossRefService.search_works_async)
+    params = list(sig.parameters.keys())
 
-            expected_params = ["self", "query", "max_results"]
-            for param in expected_params:
-                assert param in params
+    expected_params = ["self", "query", "max_results"]
+    for param in expected_params:
+        assert param in params, f"签名应包含 {param}，实际: {params}"
 
-            assert inspect.iscoroutinefunction(service.search_works_async)
-
-    except (ImportError, AssertionError):
-        pytest.skip("CrossRefService 或 search_works_async 尚未实现")
+    assert inspect.iscoroutinefunction(CrossRefService.search_works_async)
 
 
 def test_openalex_async_signature():
     """测试：检查 OpenAlex 异步方法签名"""
-    try:
-        import inspect
+    import inspect
 
-        from article_mcp.services.openalex_service import OpenAlexService
+    from article_mcp.services.openalex_service import OpenAlexService
 
-        service = OpenAlexService(logger=Mock())
+    service = OpenAlexService(logger=Mock())
+    assert hasattr(service, "search_works_async")
 
-        if hasattr(service, "search_works_async"):
-            sig = inspect.signature(service.search_works_async)
-            params = list(sig.parameters.keys())
+    # 注意：绑定方法的签名里不含 self，要取未绑定方法才看得到
+    sig = inspect.signature(OpenAlexService.search_works_async)
+    params = list(sig.parameters.keys())
 
-            expected_params = ["self", "query", "max_results"]
-            for param in expected_params:
-                assert param in params
+    expected_params = ["self", "query", "max_results"]
+    for param in expected_params:
+        assert param in params, f"签名应包含 {param}，实际: {params}"
 
-            assert inspect.iscoroutinefunction(service.search_works_async)
-
-    except (ImportError, AssertionError):
-        pytest.skip("OpenAlexService 或 search_works_async 尚未实现")
+    assert inspect.iscoroutinefunction(OpenAlexService.search_works_async)
 
 
 if __name__ == "__main__":

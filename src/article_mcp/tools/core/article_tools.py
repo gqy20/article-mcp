@@ -13,7 +13,7 @@
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, cast
 
 from fastmcp import FastMCP
 
@@ -97,7 +97,7 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
         )
 
 
-def _normalize_sections_param(sections: str | list[str] | None) -> list[str] | None:
+def _normalize_sections_param(sections: Any) -> list[str] | None:
     """规范化 sections 参数，自动转换字符串为数组。
 
     支持的格式：
@@ -125,7 +125,7 @@ def _normalize_sections_param(sections: str | list[str] | None) -> list[str] | N
     return None
 
 
-def _normalize_pmcid_param(pmcid: str | list[str]) -> str | list[str]:
+def _normalize_pmcid_param(pmcid: Any) -> str | list[str]:
     """规范化 pmcid 参数，自动修复字符串化的数组。
 
     支持的格式：
@@ -177,7 +177,7 @@ def _normalize_pmcid_param(pmcid: str | list[str]) -> str | list[str]:
         return pmcid
 
     # 其他类型，直接返回
-    return pmcid
+    return cast(str | list[str], pmcid)
 
 
 async def get_article_details_async(
@@ -338,7 +338,7 @@ async def _fetch_single_article(
             logger.warning(f"未找到文献: {pmcid} - {error_msg}")
             return None
 
-        article = result["article"]
+        article: dict[str, Any] = result["article"]
 
         # 获取全文（这是全文获取工具，总是获取全文）
         try:
@@ -406,7 +406,7 @@ async def _batch_get_article_details(
 
     # 并发获取所有文章
     tasks = [fetch_with_semaphore(pmcid) for pmcid in pmcids]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    results: list[Any] = await asyncio.gather(*tasks, return_exceptions=True)
 
     # 处理结果
     successful_articles = []

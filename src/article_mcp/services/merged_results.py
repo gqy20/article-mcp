@@ -57,7 +57,7 @@ def merge_same_doi_articles(articles: list[dict]) -> dict:
 
     # 从 data_sources 中提升字段到顶层
     sources_list = [a.get("source_from", "unknown") for a in articles]
-    data_sources_dict = {}
+    data_sources_dict: dict[str, dict[str, Any]] = {}
 
     for a in articles:
         source = a.get("source_from", "unknown")

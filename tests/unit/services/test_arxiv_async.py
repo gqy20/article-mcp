@@ -13,7 +13,7 @@
 import asyncio
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -49,6 +49,7 @@ class TestArXivServiceAsyncMethods:
         except ImportError:
             pytest.skip("search_async 函数尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_arxiv_search_async_basic_query(self):
         """测试：异步搜索基本查询"""
@@ -64,6 +65,7 @@ class TestArXivServiceAsyncMethods:
         except (ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_arxiv_search_async_with_arxiv_specific_fields(self):
         """测试：异步搜索返回 arXiv 特有字段"""
@@ -91,6 +93,7 @@ class TestArXivServiceAsyncMethods:
         except (ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_arxiv_search_async_respects_max_results(self):
         """测试：异步搜索遵守 max_results 参数"""
@@ -105,6 +108,7 @@ class TestArXivServiceAsyncMethods:
         except (ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_arxiv_search_async_with_date_filter(self):
         """测试：异步搜索支持日期过滤"""
@@ -166,16 +170,20 @@ class TestArXivServiceAsyncWithMocking:
     @pytest.mark.asyncio
     async def test_arxiv_search_async_with_mock_api(self, mock_arxiv_xml_response):
         """测试：使用 Mock API 测试异步搜索"""
-        # Mock aiohttp 响应
+        # 实现用的是 async with session.get(...) as response，
+        # 所以 get() 要返回一个"异步上下文管理器"（而不是协程）
         mock_response = Mock()
         mock_response.status = 200
+        mock_response.headers = {"Content-Type": "application/atom+xml"}
         mock_response.text = AsyncMock(return_value=mock_arxiv_xml_response)
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=False)
 
         with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = Mock()
-            mock_session.get = AsyncMock(return_value=mock_response)
+            mock_session.get = MagicMock(return_value=mock_response)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=False)
             mock_session_class.return_value = mock_session
 
             try:
@@ -208,14 +216,18 @@ class TestArXivServiceAsyncErrorHandling:
             with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
-                # Mock 超时
+                # Mock 超时：返回一个永不完成的上下文管理器
+                mock_response = Mock()
+                mock_response.status = 200
+                mock_response.headers = {"Content-Type": "application/atom+xml"}
+                mock_response.text = AsyncMock(side_effect=TimeoutError("请求超时"))
+
                 async def mock_get_with_timeout(*args, **kwargs):
-                    await asyncio.sleep(10)  # 超过超时限制
-                    return Mock(status=200)
+                    return mock_response
 
                 mock_session.get = mock_get_with_timeout
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock()
+                mock_session.__aexit__ = AsyncMock(return_value=False)
                 mock_session_class.return_value = mock_session
 
                 # 应该处理超时
@@ -236,12 +248,13 @@ class TestArXivServiceAsyncErrorHandling:
             with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = Mock()
 
-                async def mock_get_with_error(*args, **kwargs):
+                # Mock 网络错误：get() 直接抛异常
+                def mock_get_with_error(*args, **kwargs):
                     raise Exception("Network error")
 
                 mock_session.get = mock_get_with_error
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock()
+                mock_session.__aexit__ = AsyncMock(return_value=False)
                 mock_session_class.return_value = mock_session
 
                 result = await search_async("test", max_results=10)
@@ -274,7 +287,7 @@ class TestArXivServiceAsyncErrorHandling:
                 mock_session = Mock()
                 mock_session.get = AsyncMock(return_value=mock_response)
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock()
+                mock_session.__aexit__ = AsyncMock(return_value=False)
                 mock_session_class.return_value = mock_session
 
                 result = await search_async("nonexistent", max_results=10)
@@ -290,6 +303,7 @@ class TestArXivServiceAsyncErrorHandling:
 class TestArXivServiceAsyncPerformance:
     """测试异步方法的性能"""
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_arxiv_search_async_parallel_execution(self):
         """测试：多个异步搜索可以并行执行"""
@@ -318,6 +332,7 @@ class TestArXivServiceAsyncPerformance:
         except (ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现")
 
+    @pytest.mark.network
     @pytest.mark.asyncio
     async def test_arxiv_search_async_respects_rate_limit(self):
         """测试：异步搜索遵守 arXiv 的速率限制
@@ -387,12 +402,13 @@ def test_arxiv_async_imports():
 
         source = inspect.getsource(arxiv_module)
 
-        # 检查是否有必要的异步导入
-        has_asyncio = "asyncio" in source or "import asyncio" in source
+        # 异步实现基于 aiohttp，不需要显式 import asyncio
+        # （asyncio.TimeoutError 在 Python 3.11+ 已是内置 TimeoutError 的别名）
+        has_aiohttp = "aiohttp" in source
 
         # 如果实现了异步函数，应该有这些导入
         if hasattr(arxiv_module, "search_async"):
-            assert has_asyncio, "实现异步函数需要 asyncio"
+            assert has_aiohttp, "实现异步函数需要 aiohttp"
 
     except ImportError:
         pytest.skip("arxiv_search 模块未找到")

@@ -29,6 +29,41 @@
 - `pre-commit` 的 ruff hook 升到 v0.17.6；CI action 升到 checkout@v6.0.1 / setup-python@v6.1.0
 - 新增一次真实的 MCP 握手与工具调用验证（initialize / tools/list / tools/call，含错误路径）
 
+### 功能缺陷修复 🐛
+- **arXiv 日期过滤失效**: 关键词未整体加引号时，arXiv 的 search_query 解析器会把
+  `submittedDate:[... TO ...]` 约束丢掉，静默返回最新文献。同步与异步两条检索路径都改为
+  `all:"关键词"`，并替换掉关键词里自带的双引号
+- **include_metrics 传字符串时的语义错误**: 单个指标名此前会被当作字符串做子串匹配，
+  现在统一规范化为列表
+- **异常被 Mock 吞掉**: 测试里 `__aexit__ = AsyncMock()` 返回真值，会把 `async with`
+  内的异常整个抑制掉，导致"网络错误"用例走成了成功路径。已改为 `return_value=False`
+
+### 补齐缺失的异步能力 ⚡
+- 新增模块级 `search_async()`（arXiv），此前只有 `search_arxiv_async()` 与类方法，
+  测试因找不到入口而长期 skip
+- 14 个长期 skip 的用例全部恢复执行（398 passed / 14 skipped → 412 passed / 0 skipped），
+  打真实 API 的用例统一标 `@pytest.mark.network`，CI 用 `-m "not network"` 排除
+
+### 工程基建 🏗️
+- **新增 CI**（`.github/workflows/ci.yml`）：lint（ruff + mypy）、test（Python 3.11/3.12 矩阵）、
+  smoke（FastMCP 合规性，得分低于 80 失败）三个作业；原先只有 publish 与合规性两个 workflow，
+  测试与 lint 完全没有 CI 兜底
+- **mypy 打通**: 清理 13 个类型错误（`mypy src` 现为 Success），并把 mypy 挂进 pre-commit 与 CI
+- **配置单一来源**: 删掉 `pyproject.toml` 里与 `pytest.ini` / `mypy.ini` 重复的
+  `[tool.pytest.ini_options]` 与 `[tool.mypy]`，避免两处配置不一致
+
+### 仓库清理 🧹
+- `scripts/` 下 12 个一次性验证脚本删除（功能已被 pytest 套件覆盖），
+  保留合规性检查、客户端兼容性模拟与清理工具；需要本地服务/真实 API 的两个脚本移到
+  `scripts/manual/`
+- 两个伪装成测试的手工脚本（HTTP 客户端、关系工具）从 `tests/` 移到 `scripts/manual/`
+- 过程性文档 `API_Integration_Fix_Report.md`、`search_tools_integration_analysis.md` 归档到
+  `docs/archive/`
+- `config://version` / `config://status` 资源改为读 `__version__`，消除版本号漂移；
+  配套的 `scripts/sync_version.py` 删除
+- 文档同步：安装命令补 `filelock`/`urllib3` 与 Python 3.11+ 要求、
+  CLAUDE.md 的"6 个工具/兼容性 main.py"过时描述、PROJECT_STRUCTURE 目录树、测试命令
+
 ### 兼容性说明 ⚠️
 - 本版本**要求 MCP SDK 2.x**（由 `fastmcp>=4.2.4` 约束），不再兼容 fastmcp 2.x
 - `uv.lock` 已按新依赖重新生成，`uv sync` 即可得到一致环境

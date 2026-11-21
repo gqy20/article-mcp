@@ -28,15 +28,9 @@ def simulate_cherry_studio_calls():
     print("2. 📋 模拟工具列表请求...")
     tools_request = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
 
-    # 3. 测试原版本
-    print("3. 🔍 测试原版本 (v0.1.3):")
-    test_server("原版本", "article-mcp", ["server"], [init_request, tools_request])
-
-    print()
-
-    # 4. 测试修复版本
-    print("4. 🔧 测试修复版本:")
-    test_server("修复版", "python", ["test_fixed_mcp.py"], [init_request, tools_request])
+    # 3. 测试当前版本
+    print("3. 🔍 测试当前版本:")
+    test_server("当前版本", "uv", ["run", "article-mcp", "server"], [init_request, tools_request])
 
 
 def test_server(name, command, args, requests):

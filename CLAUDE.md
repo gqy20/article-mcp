@@ -11,11 +11,11 @@ Article MCP is a high-performance literature search server based on FastMCP fram
 The project follows a standard Python src layout with layered architecture:
 
 - **CLI Layer** (`cli.py`): Main CLI entry point and MCP server creation via `create_mcp_server()`
-- **Tool Layer** (`tools/core/`): 6 core MCP tool registrations
+- **Tool Layer** (`tools/core/`): 5 core MCP tool registrations
 - **Service Layer** (`services/`): API integrations using dependency injection pattern
 - **Middleware Layer** (`middleware/`): Error handling, logging, and performance monitoring
 - **Resource Layer** (`resources/`): MCP resources for config and journal data
-- **Compatibility Layer** (`main.py`): Backward-compatible CLI entry point
+- **Entry Points** (`__main__.py`): `python -m article_mcp` 入口，转发到 `cli.py`
 
 ### The 5 Core Tools
 
@@ -53,11 +53,11 @@ Access global performance stats via `middleware.get_global_performance_stats()`.
 
 ### Environment Setup
 ```bash
-# Install dependencies
-uv sync
+# Install dependencies (Python 3.11+)
+uv sync --extra dev
 
 # Or using pip
-pip install fastmcp requests python-dateutil aiohttp markdownify
+pip install "fastmcp>=4.2.4" requests python-dateutil urllib3 aiohttp markdownify filelock
 ```
 
 ### Running the Server
@@ -68,9 +68,6 @@ uvx article-mcp server
 # Local development - using new CLI
 uv run python -m article_mcp server
 
-# Compatibility through main.py (still works)
-uv run main.py server
-
 # Alternative transport modes
 uv run python -m article_mcp server --transport stdio
 uv run python -m article_mcp server --transport sse --host 0.0.0.0 --port 9000
@@ -79,24 +76,29 @@ uv run python -m article_mcp server --transport streamable-http --host 0.0.0.0 -
 
 ### Testing
 ```bash
-# Core functionality (recommended for daily use)
-uv run python scripts/test_working_functions.py
+# 全量测试
+uv run pytest
 
-# Quick validation
-uv run python scripts/quick_test.py
+# 跳过打真实外部 API 的用例（CI 用的就是这个）
+uv run pytest -m "not network"
 
-# Complete test suite
-uv run python scripts/run_all_tests.py
+# 只跑单元测试
+uv run pytest tests/unit/
 
-# Individual tests
-uv run python scripts/test_basic_functionality.py
-uv run python scripts/test_cli_functions.py
-uv run python scripts/test_service_modules.py
-uv run python scripts/test_integration.py
-uv run python scripts/test_performance.py
+# 单个用例
+uv run pytest tests/unit/test_six_tools.py -k test_all_tools_registered
+```
 
-# Pytest-based tests
-pytest                    # Run all tests
+### Quality Checks
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src          # 类型检查（CI 与 pre-commit 都会跑）
+uv run python scripts/test_fastmcp_compliance.py   # FastMCP 合规性（CI smoke 作业）
+```
+
+> `scripts/` 下只保留不属于测试套件的辅助脚本（合规性检查、客户端兼容性模拟、清理工具），
+> 索引见 `scripts/README.md`。
 pytest tests/unit/        # Unit tests only
 pytest -m integration     # Integration tests only
 pytest -m "not slow"      # Exclude slow tests
@@ -106,21 +108,24 @@ pytest tests/unit/test_six_tools.py  # Test all 5 core tools (legacy filename)
 ### Code Quality
 ```bash
 # Format code (Ruff formatter - 100x faster than black)
-ruff format src/ tests/
+uv run ruff format .
 
 # Lint (Ruff linter - replaces flake8, isort)
-ruff check src/ tests/
-ruff check src/ tests/ --fix  # Auto-fix issues
+uv run ruff check .
+uv run ruff check . --fix  # Auto-fix issues
 
 # Type checking
-mypy src/
+uv run mypy src
 
 # All quality checks
-ruff check src/ tests/ --fix && mypy src/ && ruff format --check src/ tests/
+uv run ruff check . && uv run ruff format --check . && uv run mypy src
 
 # Pre-commit hooks (install)
-pre-commit install
+uv run pre-commit install
 ```
+
+> ruff 0.17 起会一并格式化 Markdown 里的 Python 代码块，因此 `ruff format .` 与
+> CI 的 `ruff format --check .` 覆盖范围一致（含 `docs/`）。
 
 ### Package Management
 ```bash

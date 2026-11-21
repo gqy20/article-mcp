@@ -7,7 +7,7 @@
 import logging
 from typing import Any
 
-from markdownify import markdownify as md  # type: ignore[import-untyped]
+from markdownify import markdownify as md
 
 
 def html_to_markdown(html_content: str, **options: Any) -> str | None:

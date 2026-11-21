@@ -137,6 +137,8 @@ pytest
 pytest -m unit              # 只运行单元测试
 pytest -m integration       # 只运行集成测试
 pytest -m "not slow"         # 排除慢速测试
+pytest -m "not network"       # 排除打真实外部 API 的用例（CI 用这个）
+pytest -m network            # 只跑打真实 API 的用例
 
 # 运行特定测试文件
 pytest tests/unit/test_search_tools.py
@@ -231,29 +233,20 @@ def test_search_with_mocked_api(mock_search):
 
 ## 📈 持续集成
 
-### GitHub Actions配置示例
+仓库内置 `.github/workflows/ci.yml`，包含三个作业：
 
-```yaml
-name: Tests
-on: [push, pull_request]
+| 作业 | 内容 |
+|------|------|
+| `lint` | `ruff check .`、`ruff format --check .`、`mypy src` |
+| `test` | Python 3.11 / 3.12 矩阵，`pytest -m "not network"` |
+| `smoke` | FastMCP 合规性检查（`scripts/test_fastmcp_compliance.py`），得分低于 80 直接失败 |
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.11
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
-    - name: Run tests
-      run: pytest --cov=src/article_mcp
-    - name: Upload coverage
-      uses: codecov/codecov-action@v1
+打了真实外部 API（Europe PMC / arXiv / CrossRef / OpenAlex）的用例统一标
+`@pytest.mark.network`，CI 用 `-m "not network"` 排除，避免受外部限流影响导致假失败。
+本地想跑这部分：
+
+```bash
+uv run pytest -m network
 ```
 
 ## 📋 测试清单

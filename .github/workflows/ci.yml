@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: 静态检查 (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Mypy type check
+        run: uv run mypy src
+
+  test:
+    name: 单元测试 (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      # network 标记的用例会打真实外部 API（Europe PMC / arXiv / CrossRef / OpenAlex），
+      # 慢且易受限流影响，因此 CI 只跑离线的部分。
+      - name: Run unit tests
+        run: uv run pytest -m "not network" -q
+
+  smoke:
+    name: MCP 端到端冒烟
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: FastMCP 合规性检查
+        run: uv run python scripts/test_fastmcp_compliance.py
+
+      - name: 校验合规性得分
+        run: |
+          if [ ! -f scripts/fastmcp_compliance_report.txt ]; then
+            echo "❌ 合规性报告未生成"
+            exit 1
+          fi
+          SCORE=$(grep "总体合规性得分" scripts/fastmcp_compliance_report.txt | grep -o '[0-9]\+' | head -1)
+          echo "📊 合规性得分: $SCORE/100"
+          if [ "$SCORE" -lt 80 ]; then
+            echo "❌ 合规性得分低于 80"
+            exit 1
+          fi
+
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: compliance-report
+          path: scripts/fastmcp_compliance_report.txt
+          retention-days: 30

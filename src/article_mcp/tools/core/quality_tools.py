@@ -99,6 +99,24 @@ def _parse_json_param(value: Any) -> Any:
     return value
 
 
+def _normalize_metrics_list(value: Any) -> list[str]:
+    """把 include_metrics 规范化为字符串列表。
+
+    兼容三种输入：
+    1. None → 使用默认指标集
+    2. JSON 字符串形式（'["a", "b"]'）→ 解析后的列表
+    3. 单个指标名字符串 → 单元素列表（此前会被当作字符串做子串匹配）
+    """
+    parsed = _parse_json_param(value)
+    if parsed is None:
+        return ["impact_factor", "quartile", "jci"]
+    if isinstance(parsed, str):
+        return [parsed]
+    if isinstance(parsed, list):
+        return [str(item) for item in parsed]
+    return ["impact_factor", "quartile", "jci"]
+
+
 async def get_journal_quality_async(
     journal_name: str | list[str],
     include_metrics: list[str] | None = None,
@@ -129,10 +147,7 @@ async def get_journal_quality_async(
     try:
         # 参数预处理
         journal_name = _parse_json_param(journal_name)
-        include_metrics = _parse_json_param(include_metrics)
-
-        if include_metrics is None:
-            include_metrics = ["impact_factor", "quartile", "jci"]
+        metrics = _normalize_metrics_list(include_metrics)
 
         # 判断是单个期刊还是批量期刊
         if isinstance(journal_name, list):
@@ -148,7 +163,7 @@ async def get_journal_quality_async(
                 }
             result = await _batch_journal_quality(
                 journal_name,
-                include_metrics,
+                metrics,
                 use_cache,
                 services=services,
                 logger=logger,
@@ -159,7 +174,7 @@ async def get_journal_quality_async(
             # 单个期刊质量评估 - 直接调用异步函数
             return await _single_journal_quality(
                 journal_name,
-                include_metrics,
+                metrics,
                 use_cache,
                 services=services,
                 logger=logger,
@@ -236,11 +251,7 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
             # ========== 参数预处理：解析字符串形式的 JSON 参数 ==========
             # 某些 MCP 客户端会将列表/字典参数序列化为字符串
             journal_name = _parse_json_param(journal_name)
-            include_metrics = _parse_json_param(include_metrics)
-
-            # 处理 None 值的 include_metrics 参数
-            if include_metrics is None:
-                include_metrics = ["impact_factor", "quartile", "jci"]
+            metrics = _normalize_metrics_list(include_metrics)
 
             # 判断是单个期刊还是批量期刊
             if isinstance(journal_name, list):
@@ -256,7 +267,7 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                     }
                 result = await _batch_journal_quality(
                     journal_name,
-                    include_metrics,
+                    metrics,
                     use_cache,
                     services=services,  # 使用闭包捕获的 services
                     logger=logger,
@@ -267,7 +278,7 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
                 # 单个期刊质量评估 - 纯异步调用
                 return await _single_journal_quality(
                     journal_name,
-                    include_metrics,
+                    metrics,
                     use_cache,
                     services=services,  # 使用闭包捕获的 services
                     logger=logger,

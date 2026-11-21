@@ -18,6 +18,7 @@ import logging
 import os
 import time
 from pathlib import Path
+from typing import cast
 
 import aiohttp
 
@@ -174,7 +175,7 @@ class OpenAlexMetricsService:
                     openalex_metrics = cached.get("openalex_metrics")
                     if openalex_metrics:
                         self.logger.debug(f"OpenAlex 缓存命中: {journal_name}")
-                        return openalex_metrics
+                        return cast(dict[str, float], openalex_metrics)
 
         except Exception as e:
             self.logger.error(f"读取 OpenAlex 缓存失败: {e}")

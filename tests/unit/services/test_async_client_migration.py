@@ -191,7 +191,7 @@ class TestArxivSearchServiceAsyncOnly:
             mock_response.status = 200
             mock_response.text = AsyncMock(return_value="<feed></feed>")
             mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_response.__aexit__ = AsyncMock()
+            mock_response.__aexit__ = AsyncMock(return_value=False)
 
             mock_get.return_value = mock_response
 

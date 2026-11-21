@@ -313,7 +313,7 @@ class PubMedService:
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 # 1. 使用 Semantic Scholar Graph API 获取引用列表
                 ss_url = f"https://api.semanticscholar.org/graph/v1/paper/PMID:{pmid}/citations"
-                ss_params = {
+                ss_params: dict[str, Any] = {
                     "fields": "title,year,authors,venue,externalIds,publicationDate",
                     "limit": max_results,
                 }
@@ -745,7 +745,7 @@ class PubMedService:
                     fulltext_text = fulltext_xml
 
             # 构建返回值
-            result = {
+            result: dict[str, Any] = {
                 "pmc_id": normalized_pmc_id,
                 "fulltext_xml": fulltext_xml,
                 "fulltext_markdown": fulltext_markdown,

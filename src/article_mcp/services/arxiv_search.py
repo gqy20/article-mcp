@@ -157,7 +157,11 @@ def search_arxiv(
         session = create_retry_session()
 
         # 构建基础查询
-        search_query_parts = [f"all:{keyword.strip()}"]
+        # 关键词必须整体加引号：arXiv 的 search_query 解析器会把未加引号的多词短语
+        # 拆成多个独立字段，导致后面的 submittedDate 日期过滤被忽略（静默返回最新文献）。
+        # 关键词里自带的双引号会破坏引号包裹，先替换成空格。
+        safe_keyword = keyword.strip().replace('"', " ")
+        search_query_parts = [f'all:"{safe_keyword}"']
 
         # 处理日期参数
         if start_date or end_date:
@@ -361,7 +365,11 @@ async def search_arxiv_async(
             }
 
         # 构建基础查询
-        search_query_parts = [f"all:{keyword.strip()}"]
+        # 关键词必须整体加引号：arXiv 的 search_query 解析器会把未加引号的多词短语
+        # 拆成多个独立字段，导致后面的 submittedDate 日期过滤被忽略（静默返回最新文献）。
+        # 关键词里自带的双引号会破坏引号包裹，先替换成空格。
+        safe_keyword = keyword.strip().replace('"', " ")
+        search_query_parts = [f'all:"{safe_keyword}"']
 
         # 处理日期参数
         if start_date or end_date:
@@ -535,6 +543,37 @@ async def search_arxiv_async(
             "message": f"处理错误: {str(e)}",
             "error": f"处理错误: {str(e)}",
         }
+
+
+async def search_async(
+    query: str,
+    max_results: int = 10,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    email: str | None = None,
+    logger: logging.Logger | None = None,
+) -> dict[str, Any]:
+    """异步搜索 arXiv（通用入口）
+
+    参数:
+        query: 搜索关键词
+        max_results: 最大返回结果数量，默认10
+        start_date: 开始日期，格式：YYYY-MM-DD（可选）
+        end_date: 结束日期，格式：YYYY-MM-DD（可选）
+        email: 联系邮箱（可选）
+        logger: 日志记录器（可选）
+
+    返回:
+        包含搜索结果的字典，结构与 search_arxiv_async 一致
+    """
+    return await search_arxiv_async(
+        keyword=query,
+        max_results=max_results,
+        start_date=start_date,
+        end_date=end_date,
+        email=email,
+        logger=logger,
+    )
 
 
 class ArXivSearchService:

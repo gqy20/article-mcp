@@ -40,11 +40,11 @@ Article MCP采用6工具统一架构，替代了原来分散的多个工具：
 # 确保uv已安装
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 同步项目依赖
-uv sync
+# 同步项目依赖（含开发依赖，用于跑测试与合规性检查）
+uv sync --extra dev
 
 # 测试项目运行
-uv run python -m article_mcp test
+uv run article-mcp test
 ```
 
 #### 2. 构建和发布
@@ -222,7 +222,7 @@ git clone https://github.com/gqy20/article-mcp.git
 cd article-mcp
 
 # 安装依赖
-uv sync
+uv sync --extra dev
 
 # 运行服务器
 uv run python -m article_mcp server

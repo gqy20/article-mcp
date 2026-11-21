@@ -272,7 +272,7 @@ class UnifiedReferenceService:
             query = " OR ".join(doi_queries)
 
             url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-            params = {
+            params: dict[str, Any] = {
                 "query": query,
                 "format": "json",
                 "resultType": "core",
