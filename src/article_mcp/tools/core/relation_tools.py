@@ -61,7 +61,9 @@ def register_relation_tools(mcp: FastMCP, services: dict[str, Any], logger: Any)
 - 单个文献：传入单个标识符
 - 批量分析：传入标识符列表 + analysis_type="basic"
 - 网络分析：传入标识符列表 + analysis_type="network\"""",
-        annotations=ToolAnnotations(title="文献关系分析", readOnlyHint=True, openWorldHint=False),
+        annotations=ToolAnnotations(
+            title="文献关系分析", read_only_hint=True, open_world_hint=False
+        ),
         tags={"relations", "network", "analysis", "citations"},
     )
     async def get_literature_relations(

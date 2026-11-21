@@ -28,7 +28,7 @@ Article MCP采用6工具统一架构，替代了原来分散的多个工具：
 ## 🐍 PyPI 发布 (推荐)
 
 ### 前提条件
-- Python 3.10+
+- Python 3.11+
 - uv 包管理器
 - PyPI 账号和 API Token
 - 项目代码已推送到 GitHub

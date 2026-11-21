@@ -4,10 +4,8 @@ import logging as std_logging
 import time
 from typing import Any
 
-from fastmcp.exceptions import ToolError
+from fastmcp.exceptions import McpError, ToolError
 from fastmcp.server.middleware import Middleware, MiddlewareContext
-from mcp import McpError
-from mcp.types import ErrorData
 
 # 导入具体的中间件实现
 from .logging import LoggingMiddleware, TimingMiddleware
@@ -40,9 +38,7 @@ class MCPErrorHandlingMiddleware(Middleware):
             else:
                 # 系统错误，转换为MCP标准错误
                 error_code = self._get_error_code(e)
-                raise McpError(
-                    ErrorData(code=error_code, message=f"系统错误: {type(e).__name__}: {str(e)}")
-                )
+                raise McpError(code=error_code, message=f"系统错误: {type(e).__name__}: {str(e)}")
 
     def _is_user_input_error(self, error: Exception) -> bool:
         """判断是否为用户输入错误"""
@@ -87,7 +83,7 @@ class StandardErrorWrapper:
             except McpError:
                 raise
             except Exception as e:
-                raise McpError(ErrorData(code=-32603, message=f"{type(e).__name__}: {str(e)}"))
+                raise McpError(code=-32603, message=f"{type(e).__name__}: {str(e)}")
 
         return wrapper
 
@@ -101,6 +97,6 @@ class StandardErrorWrapper:
             except McpError:
                 raise
             except Exception as e:
-                raise McpError(ErrorData(code=-32603, message=f"{type(e).__name__}: {str(e)}"))
+                raise McpError(code=-32603, message=f"{type(e).__name__}: {str(e)}")
 
         return wrapper

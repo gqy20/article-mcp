@@ -26,7 +26,7 @@ def register_reference_tools(mcp: FastMCP, services: dict[str, Any], logger: Any
 
 支持的数据源：Europe PMC、CrossRef、PubMed
 去重规则：优先按DOI去重，其次按标题去重；按数据源优先级排序""",
-        annotations=ToolAnnotations(title="参考文献", readOnlyHint=True, openWorldHint=False),
+        annotations=ToolAnnotations(title="参考文献", read_only_hint=True, open_world_hint=False),
         tags={"references", "citations", "bibliography"},
     )
     async def get_references(
@@ -272,9 +272,6 @@ async def get_references_async(
     except Exception as e:
         logger.error(f"获取参考文献异常: {e}")
         # 抛出MCP标准错误
-        from mcp import McpError
-        from mcp.types import ErrorData
+        from fastmcp.exceptions import McpError
 
-        raise McpError(
-            ErrorData(code=-32603, message=f"获取参考文献失败: {type(e).__name__}: {str(e)}")
-        )
+        raise McpError(code=-32603, message=f"获取参考文献失败: {type(e).__name__}: {str(e)}")

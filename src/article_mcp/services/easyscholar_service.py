@@ -89,7 +89,7 @@ class EasyScholarService:
                 timeout=timeout or self._timeout_val,
             )
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return {
                 "success": False,
                 "error": f"请求超时：超过 {timeout or self._timeout_val} 秒未响应",

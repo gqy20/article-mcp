@@ -195,7 +195,9 @@ OpenAlex 提供：h_index（h指数）、citation_rate（2年引用率）、cite
 - sort_order: 排序顺序，仅批量查询有效（默认desc）：desc降序/asc升序
 
 使用示例：单个期刊查询、批量期刊查询、批量查询并排序、指定返回指标""",
-        annotations=ToolAnnotations(title="期刊质量评估", readOnlyHint=True, openWorldHint=False),
+        annotations=ToolAnnotations(
+            title="期刊质量评估", read_only_hint=True, open_world_hint=False
+        ),
         tags={"quality", "journal", "metrics"},
     )
     async def get_journal_quality(

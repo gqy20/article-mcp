@@ -285,7 +285,7 @@ class PubMedService:
                         "processing_time": round(time.time() - start_time, 2),
                     }
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return {"articles": [], "error": "请求超时", "message": None}
             except aiohttp.ClientError as e:
                 return {"articles": [], "error": f"网络请求错误: {e}", "message": None}

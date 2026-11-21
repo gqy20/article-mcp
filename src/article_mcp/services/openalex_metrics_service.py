@@ -124,7 +124,7 @@ class OpenAlexMetricsService:
 
                     return self._parse_openalex_response(source)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.logger.warning(f"OpenAlex API 超时: {journal_name}")
             return None
         except Exception as e:

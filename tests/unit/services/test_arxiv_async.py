@@ -224,7 +224,7 @@ class TestArXivServiceAsyncErrorHandling:
                 # 应该返回错误而不是抛出异常
                 assert "error" in result or len(result.get("articles", [])) == 0
 
-        except (ImportError, NotImplementedError, asyncio.TimeoutError):
+        except (TimeoutError, ImportError, NotImplementedError):
             pytest.skip("search_async 尚未实现或超时处理未完成")
 
     @pytest.mark.asyncio

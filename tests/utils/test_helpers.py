@@ -204,7 +204,7 @@ def run_async_with_timeout(coro, timeout: float = 10.0):
 
     try:
         return loop.run_until_complete(asyncio.wait_for(coro, timeout=timeout))
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise TimeoutError(f"操作在 {timeout} 秒后超时") from None
     finally:
         if not loop.is_running():

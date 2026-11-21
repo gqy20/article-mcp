@@ -254,7 +254,7 @@ class TestPubMedServiceAsyncErrorHandling:
                 # 应该返回错误而不是抛出异常
                 assert "error" in result or len(result.get("articles", [])) == 0
 
-        except (NotImplementedError, AttributeError, asyncio.TimeoutError):
+        except (TimeoutError, NotImplementedError, AttributeError):
             pytest.skip("search_async 尚未实现或超时处理未完成")
 
     @pytest.mark.asyncio

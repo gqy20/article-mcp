@@ -2,7 +2,6 @@
 基于 arXiv API 的学术文献搜索功能
 """
 
-import asyncio
 import logging
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -501,7 +500,7 @@ async def search_arxiv_async(
             },
         }
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("arXiv API 异步请求超时")
         return {
             "articles": [],

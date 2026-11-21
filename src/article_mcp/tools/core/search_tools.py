@@ -539,7 +539,7 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
 - use_cache: 是否使用24小时缓存（默认true）
 
 返回数据包含：标题、作者、期刊、摘要、PMCID、DOI等元数据（不含全文）""",
-        annotations=ToolAnnotations(title="文献搜索", readOnlyHint=True, openWorldHint=False),
+        annotations=ToolAnnotations(title="文献搜索", read_only_hint=True, open_world_hint=False),
         tags={"search", "literature", "academic"},
     )
     async def search_literature(
@@ -697,9 +697,6 @@ def register_search_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) -
         except Exception as e:
             logger.error(f"异步搜索过程中发生异常: {e}")
             # 抛出MCP标准错误
-            from mcp import McpError
-            from mcp.types import ErrorData
+            from fastmcp.exceptions import McpError
 
-            raise McpError(
-                ErrorData(code=-32603, message=f"搜索失败: {type(e).__name__}: {str(e)}")
-            )
+            raise McpError(code=-32603, message=f"搜索失败: {type(e).__name__}: {str(e)}")

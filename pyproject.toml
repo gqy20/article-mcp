@@ -1,22 +1,22 @@
 [project]
 name = "article-mcp"
-version = "0.2.2"
+version = "0.2.3"
 description = "Article MCP文献搜索服务器 - 基于Europe PMC、arXiv等多个数据源的学术文献搜索工具"
 authors = [
     {name = "gqy20", email = "qingyu_ge@foxmail.com"}
 ]
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["mcp", "literature", "search", "europe-pmc", "arxiv", "academic"]
 dependencies = [
-    "fastmcp>=2.13.0",
-    "requests>=2.25.0",
-    "python-dateutil>=2.8.0",
-    "urllib3>=1.26.0",
-    "aiohttp>=3.9.0",
-    "markdownify>=0.12.0",
-    "filelock>=3.20.0",
+    "fastmcp>=4.2.4",
+    "requests>=2.34.2",
+    "python-dateutil>=4.0.0",
+    "urllib3>=2.8.0",
+    "aiohttp>=3.14.5",
+    "markdownify>=1.2.4",
+    "filelock>=4.2.12",
 ]
 
 [project.urls]
@@ -29,26 +29,26 @@ article-mcp = "article_mcp.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.5.0",
+    "pytest-cov>=7.1.0",
     # Ruff: 替代 black + isort + flake8
-    "ruff>=0.1.0",
+    "ruff>=0.17.6",
     # 类型检查
-    "mypy>=1.0.0",
-    "types-requests",
+    "mypy>=2.4.1",
+    "types-requests>=2.33.0.20261030",
     # Pre-commit hooks
-    "pre-commit>=3.0.0",
-    "psutil>=5.9.0"
+    "pre-commit>=4.7.0",
+    "psutil>=7.2.2"
 ]
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=84.2.1", "wheel>=0.48.0"]
 build-backend = "setuptools.build_meta"
 
 # Ruff: 替代 black + isort + flake8
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 
 # Ruff 格式化配置 (替代 black)
@@ -92,7 +92,7 @@ known-first-party = ["article_mcp", "tests"]
 # mypy per-file ignores (通过 comments 实现，见各文件)
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 explicit_package_bases = true
 ignore_missing_imports = true
 exclude = [

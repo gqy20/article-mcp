@@ -92,10 +92,12 @@ def test_search_literature():
 import pytest
 from unittest.mock import Mock
 
+
 @pytest.fixture
 def mock_logger():
     """模拟日志记录器"""
     return Mock()
+
 
 @pytest.fixture
 def sample_article_data():
@@ -104,7 +106,7 @@ def sample_article_data():
         "pmid": "12345678",
         "title": "Test Article",
         "authors": ["Test Author"],
-        "abstract": "Test abstract"
+        "abstract": "Test abstract",
     }
 ```
 
@@ -172,10 +174,12 @@ pytest -n auto
 class TestSearchTools:
     pass
 
+
 # 测试方法
 def test_search_literature_success():
     """测试成功的文献搜索"""
     pass
+
 
 def test_search_literature_empty_keyword():
     """测试空关键词处理"""
@@ -188,17 +192,13 @@ def test_search_literature_empty_keyword():
 # 使用fixtures提供测试数据
 @pytest.fixture
 def mock_search_response():
-    return {
-        "success": True,
-        "articles": [...]
-    }
+    return {"success": True, "articles": [...]}
+
 
 # 使用参数化测试
-@pytest.mark.parametrize("keyword,expected_count", [
-    ("machine learning", 10),
-    ("cancer", 15),
-    ("", 0)
-])
+@pytest.mark.parametrize(
+    "keyword,expected_count", [("machine learning", 10), ("cancer", 15), ("", 0)]
+)
 def test_search_with_different_keywords(keyword, expected_count):
     result = search_literature(keyword=keyword)
     assert len(result["articles"]) >= expected_count
@@ -208,7 +208,7 @@ def test_search_with_different_keywords(keyword, expected_count):
 
 ```python
 # Mock外部API调用
-@patch('src.article_mcp.services.europe_pmc.EuropePMCService.search')
+@patch("src.article_mcp.services.europe_pmc.EuropePMCService.search")
 def test_search_with_mocked_api(mock_search):
     mock_search.return_value = {"success": True, "articles": []}
 
@@ -245,7 +245,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.10
+        python-version: 3.11
     - name: Install dependencies
       run: |
         pip install -r requirements.txt

@@ -456,12 +456,12 @@ def test_async_api_client_imports():
 
         # 检查是否有 aiohttp 导入
         has_aiohttp = "aiohttp" in source or "import aiohttp" in source
-        has_asyncio = "asyncio" in source or "import asyncio" in source
 
         # 如果实现了异步客户端，应该有这些导入
+        # 注意：异步实现基于 aiohttp，不需要显式 import asyncio
+        # （asyncio.TimeoutError 在 Python 3.11+ 已是内置 TimeoutError 的别名）
         if hasattr(api_utils_module, "AsyncAPIClient"):
             assert has_aiohttp, "异步客户端需要 aiohttp"
-            assert has_asyncio, "异步客户端需要 asyncio"
 
     except ImportError:
         pytest.skip("api_utils 模块未找到")

@@ -19,10 +19,10 @@
 **修复方案**:
 ```python
 # 修复前：过度编码斜杠
-encoded_doi = urllib.parse.quote(doi, safe='')
+encoded_doi = urllib.parse.quote(doi, safe="")
 
 # 修复后：保留斜杠的正确编码
-encoded_doi = urllib.parse.quote(doi, safe='/')
+encoded_doi = urllib.parse.quote(doi, safe="/")
 
 # 修复前：使用有问题的select参数
 params = {"select": "reference,title,DOI,author,year"}
@@ -50,12 +50,12 @@ api_result = self.api_client.get(url)
 ```python
 # 添加专门的OpenAlex API客户端配置
 from .api_utils import UnifiedAPIClient
+
 self.api_client = UnifiedAPIClient(logger)
 # 添加符合OpenAlex要求的User-Agent
-self.api_client.session.headers.update({
-    "User-Agent": "Article-MCP/2.0 (mailto:user@example.com)",
-    "Accept": "application/json"
-})
+self.api_client.session.headers.update(
+    {"User-Agent": "Article-MCP/2.0 (mailto:user@example.com)", "Accept": "application/json"}
+)
 ```
 
 **修复效果**:

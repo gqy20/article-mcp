@@ -68,7 +68,7 @@ def register_article_tools(mcp: FastMCP, services: dict[str, Any], logger: Any) 
 - conclusion（结论）: conclusion, conclusions
 - abstract（摘要）: abstract, summary
 - references（参考文献）: references, bibliography""",
-        annotations=ToolAnnotations(title="文献全文", readOnlyHint=True, openWorldHint=False),
+        annotations=ToolAnnotations(title="文献全文", read_only_hint=True, open_world_hint=False),
         tags={"literature", "fulltext", "pmc"},
     )
     async def get_article_details(

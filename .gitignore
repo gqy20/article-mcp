@@ -33,6 +33,9 @@ test-reports/
 # pytest临时fixture目录
 <pytest_fixture(*)>
 
+# FastMCP 合规性测试生成的报告
+scripts/fastmcp_compliance_report.txt
+
 # 缓存目录
 .mypy_cache/
 .ruff_cache/

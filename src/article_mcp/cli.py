@@ -36,6 +36,8 @@ def create_mcp_server() -> "FastMCP":
     """创建MCP服务器 - 集成新的6工具架构"""
     from fastmcp import FastMCP
 
+    # 创建 MCP 服务器实例（版本号取自包内 __version__，避免发布后版本漂移）
+    from . import __version__
     from .services.arxiv_search import create_arxiv_service
     from .services.crossref_service import CrossRefService
 
@@ -56,8 +58,7 @@ def create_mcp_server() -> "FastMCP":
     # 导入核心工具模块（使用新的包结构）
     from .tools.core.search_tools import register_search_tools
 
-    # 创建 MCP 服务器实例
-    mcp = FastMCP("Article MCP Server", version="0.2.2")
+    mcp = FastMCP("Article MCP Server", version=__version__)
 
     # 创建服务实例
     logger = logging.getLogger(__name__)

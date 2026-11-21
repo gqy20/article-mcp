@@ -1,5 +1,38 @@
 # 版本更新说明
 
+## v0.2.3 (2026-11-21) - 依赖全面升级 + MCP SDK 2.x 适配
+
+### 核心修复 🔧
+- **MCPError 导入兼容**: `from mcp import McpError` → `from fastmcp.exceptions import McpError`
+  - MCP SDK 2.x 将 `McpError` 更名为 `MCPError` 并移除顶层导出，直接从 `mcp` 导入会在启动时抛
+    `ImportError: cannot import name 'McpError' from 'mcp'`，导致 MCP server 进程直接退出
+  - fastmcp 2.13.0 与 4.2.4 均通过 `fastmcp.exceptions` 提供该名字，一处改动兼容两代
+- **MCPError 构造方式适配**: MCP SDK 2.x 的签名为 `MCPError(code, message, data)`，不再是
+  `McpError(ErrorData(...))`；中间件与工具层的 5 处抛出点已同步更新（否则错误路径会抛 TypeError）
+- **ToolAnnotations 字段改名**: `readOnlyHint`/`openWorldHint` → `read_only_hint`/`open_world_hint`
+  - 旧写法在 pydantic 下被静默丢弃，工具的只读/开放世界标注实际未生效
+- **版本号漂移**: `cli.py` 硬编码的 `version="0.2.2"` 改为读取包内 `__version__`；
+  `tests/unit/test_cli.py` 的断言不再写死版本号
+
+### 依赖升级 📦
+- `fastmcp` 2.13.0 → **4.2.4**（配套 `mcp` 1.19.0 → **2.3.0**）
+- `requests` → 2.34.2、`aiohttp` → 3.14.5、`urllib3` → 2.8.0、`markdownify` → 1.2.4、
+  `filelock` → 4.2.12、`python-dateutil` → 4.0.0
+- 开发依赖：`pytest` → 9.2.0、`pytest-asyncio` → 1.5.0、`pytest-cov` → 7.1.0、
+  `ruff` → 0.17.6、`mypy` → 2.4.1、`pre-commit` → 4.7.0、`psutil` → 7.2.2
+- `requires-python` 从 `>=3.10` 提升到 `>=3.11`（fastmcp 4.x 的下限），ruff/mypy 目标版本同步为 py311
+- 依赖下界统一抬到"已验证通过的版本"，避免再出现"包版本被 pin、依赖却浮动"导致的启动崩溃
+
+### 测试与工具链 🧪
+- FastMCP 4.x 将 `get_tools()` 更名为 `list_tools()`（返回列表而非字典），相关测试已同步
+- 移除已过时的 `asyncio.TimeoutError` 别名用法（Python 3.11+ 已是内置 `TimeoutError`）
+- `pre-commit` 的 ruff hook 升到 v0.17.6；CI action 升到 checkout@v6.0.1 / setup-python@v6.1.0
+- 新增一次真实的 MCP 握手与工具调用验证（initialize / tools/list / tools/call，含错误路径）
+
+### 兼容性说明 ⚠️
+- 本版本**要求 MCP SDK 2.x**（由 `fastmcp>=4.2.4` 约束），不再兼容 fastmcp 2.x
+- `uv.lock` 已按新依赖重新生成，`uv sync` 即可得到一致环境
+
 ## v0.2.2 (2025-01-04) - 文档修正与代码质量提升
 
 ### 文档修正 📚

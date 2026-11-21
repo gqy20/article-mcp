@@ -253,8 +253,9 @@ async def search_literature(...):
 # europe_pmc.py
 class EuropePMCService:
     def __init__(self):
-        self.cache = {}           # 内存缓存
-        self.cache_expiry = {}    # 过期时间
+        self.cache = {}  # 内存缓存
+        self.cache_expiry = {}  # 过期时间
+
 
 # search_tools_improvements.py
 class SearchCache:
@@ -480,7 +481,9 @@ def search_literature(...):
 ```python
 # 验证方法
 import fastmcp
+
 print(fastmcp.__version__)  # 检查版本
+
 
 # 尝试注册异步工具
 @mcp.tool(...)
@@ -639,6 +642,7 @@ from article_mcp.tools.core.search_tools_improvements import (
 
 # 全局缓存
 _global_cache = SearchCache()
+
 
 def search_literature(keyword, sources=None, max_results=10, search_type="comprehensive"):
     # 1. 应用策略

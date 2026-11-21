@@ -80,12 +80,11 @@ class FastMCPComplianceTester:
                 "get_references",
                 "get_literature_relations",
                 "get_journal_quality",
-                "export_batch_results",
             ]
 
             # 获取工具列表
             try:
-                tools = await mcp._list_tools(None)
+                tools = await mcp.list_tools()
                 tool_names = [tool.name for tool in tools]
 
                 for expected_tool in expected_tools:
@@ -107,7 +106,7 @@ class FastMCPComplianceTester:
             # 测试3: 工具元数据验证
             self.logger.info("测试3: 工具元数据验证")
             try:
-                tools = await mcp._list_tools(None)
+                tools = await mcp.list_tools()
                 for tool in tools:
                     if hasattr(tool, "annotations") and tool.annotations:
                         self.logger.info(f"✅ 工具 {tool.name} 有annotations")
@@ -121,7 +120,7 @@ class FastMCPComplianceTester:
             # 测试4: 资源访问
             self.logger.info("测试4: 资源访问验证")
             try:
-                resources = await mcp._list_resources(None)
+                resources = await mcp.list_resources()
                 resource_uris = [str(resource.uri) for resource in resources]
 
                 expected_resources = [

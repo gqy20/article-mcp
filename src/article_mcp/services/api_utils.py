@@ -217,7 +217,6 @@ def simple_post(url: str, **kwargs: Any) -> dict[str, Any]:
 # 异步 API 客户端
 # ============================================================================
 
-import asyncio
 from typing import Any
 
 import aiohttp
@@ -295,7 +294,7 @@ class AsyncAPIClient:
                     "url": str(response.url),
                 }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.logger.error(f"异步GET请求超时 {url}")
             return {"success": False, "error": "请求超时", "error_type": "timeout", "url": url}
         except aiohttp.ClientError as e:
@@ -358,7 +357,7 @@ class AsyncAPIClient:
                     "url": str(response.url),
                 }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.logger.error(f"异步POST请求超时 {url}")
             return {"success": False, "error": "请求超时", "error_type": "timeout", "url": url}
         except aiohttp.ClientError as e:

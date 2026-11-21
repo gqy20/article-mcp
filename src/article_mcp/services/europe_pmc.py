@@ -484,7 +484,7 @@ class EuropePMCService:
                                     else {"error": "处理文献信息失败", "article": None}
                                 )
 
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         self.logger.warning(f"异步请求超时，重试 ({attempt + 1}/{max_retries})")
                         if attempt < max_retries - 1:
                             await asyncio.sleep(2**attempt)  # 指数退避

@@ -330,10 +330,10 @@ class TestToolIntegration:
         from article_mcp.cli import create_mcp_server
 
         server = create_mcp_server()
-        # 使用 get_tools() 方法替代遍历属性
+        # 使用 list_tools() 方法替代遍历属性
         # 这样避免触发 FastMCP .settings 废弃警告
-        tools = asyncio.run(server.get_tools())
-        tool_names = list(tools.keys())
+        tools = asyncio.run(server.list_tools())
+        tool_names = [tool.name for tool in tools]
 
         # 验证5个核心工具存在
         expected_tools = [
